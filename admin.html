@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <title>CGI Admin - Ultimate</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 5px; font-weight: bold; }
+        .tab-btn.active { background: #27ae60; color: white; }
+        .content { display: none; }
+        .content.active { display: block; }
+        .add-form { background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: flex-end; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #34495e; color: white; }
+        .summary-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+        .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>CGI කළමනාකරණ පද්ධතිය (CGI Electrical & Graphics)</h2>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('stock')">භාණ්ඩ සහ තොග පාලනය</button>
+        <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+    </div>
+
+    <div id="stock" class="content active">
+        <div class="add-form">
+            <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+            <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option></select></div>
+            <div><label>ගැනුම් මිල</label><input type="number" id="buyPrice"></div>
+            <div><label>විකුණුම් මිල</label><input type="number" id="sellPrice"></div>
+            <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
+            <div><label>පින්තූරයේ නම</label><input type="text" id="itemImg" placeholder="උදා: carrot.jpg"></div>
+            <button class="tab-btn" style="background:#27ae60; color:white; width: 100%;" onclick="handleUpdate()">Update / Add</button>
+        </div>
+        <table>
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th>මකන්න</th></tr></thead>
+            <tbody id="inventoryBody"></tbody>
+        </table>
+        <button class="tab-btn" style="background:#2980b9; color:white; width:100%; margin-top:20px;" onclick="saveData()">සියල්ල සුරකින්න (Save All)</button>
+    </div>
+
+    <div id="sales" class="content">
+        <div class="summary-card">
+            <div class="card" style="background:#2980b9;"><h3>මුළු ආදායම</h3><h2 id="totalSales">Rs. 0.00</h2></div>
+            <div class="card" style="background:#27ae60;"><h3>ශුද්ධ ලාභය</h3><h2 id="totalProfit">Rs. 0.00</h2></div>
+            <div class="card" style="background:#f39c12;"><h3>බිල්පත් ගණන</h3><h2 id="totalBills">0</h2></div>
+        </div>
+        <table>
+            <thead><tr><th>දිනය/වේලාව</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
+            <tbody id="salesBody"></tbody>
+        </table>
+        <button class="tab-btn" style="background:#e74c3c; color:white; margin-top:20px;" onclick="clearSales()">වාර්තා මකන්න (Reset)</button>
+    </div>
+</div>
+
+<script>
+    let inventory = JSON.parse(localStorage.getItem('cgi_inventory')) || [];
+    let salesData = JSON.parse(localStorage.getItem('cgi_sales')) || [];
+
+    function showTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(id === 'sales') renderSales();
+    }
+
+    function renderInventory() {
+        document.getElementById('inventoryBody').innerHTML = inventory.map((item, i) => `
+            <tr>
+                <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td>
+                <td><button onclick="del(${i})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button></td>
+            </tr>
+        `).join('');
+        document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
+    }
+
+    function renderSales() {
+        let totalRev = 0, totalProf = 0;
+        document.getElementById('salesBody').innerHTML = salesData.map(s => {
+            totalRev += s.total;
+            totalProf += s.profit;
+            return `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total.toFixed(2)}</td><td>${s.profit.toFixed(2)}</td></tr>`;
+        }).join('');
+        document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
+        document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
+        document.getElementById('totalBills').innerText = salesData.length;
+    }
+
+    function handleUpdate() {
+        let n = document.getElementById('itemName').value;
+        let u = document.getElementById('itemUnit').value;
+        let b = parseFloat(document.getElementById('buyPrice').value) || 0;
+        let s = parseFloat(document.getElementById('sellPrice').value) || 0;
+        let st = parseFloat(document.getElementById('addStock').value) || 0;
+        let img = document.getElementById('itemImg').value;
+        if(!n) return;
+        let idx = inventory.findIndex(i => i.name.toLowerCase() === n.toLowerCase());
+        if (idx !== -1) { 
+            inventory[idx].buy = b; inventory[idx].sell = s; inventory[idx].unit = u; 
+            inventory[idx].stock = (parseFloat(inventory[idx].stock) + st).toFixed(2);
+            inventory[idx].img = img;
+        } else { inventory.push({ id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st, img: img }); }
+        renderInventory(); clear();
+    }
+
+    function clear() { document.getElementById('itemName').value=''; document.getElementById('addStock').value='0'; document.getElementById('itemImg').value=''; }
+    function clearSales() { if(confirm("සියලු විකුණුම් වාර්තා මකන්නද?")) { salesData = []; localStorage.setItem('cgi_sales', JSON.stringify([])); renderSales(); } }
+    function del(i) { if(confirm("මකන්නද?")) { inventory.splice(i, 1); renderInventory(); } }
+    function saveData() { localStorage.setItem('cgi_inventory', JSON.stringify(inventory)); alert("දත්ත සාර්ථකව සුරැකුණා!"); }
+    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
+    renderInventory();
+</script>
+</body>
+</html>
