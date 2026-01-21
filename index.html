@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGI Billing - Advanced POS</title>
+    <title>CGI Billing - Smart Cloud POS</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; }
         .left { width: 60%; padding: 20px; overflow-y: auto; border-right: 2px solid #ddd; }
@@ -17,7 +17,6 @@
         th, td { border-bottom: 1px solid #eee; padding: 8px 4px; text-align: left; }
         .footer { margin-top: auto; padding-top: 10px; border-top: 2px dashed #333; text-align: center; }
         .calc-row { display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold; }
-        input[type="number"] { width: 50px; padding: 3px; border: 1px solid #ccc; border-radius: 3px; }
         .btn-print { background: #27ae60; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         @media print { .left, .btn-print, .no-print { display: none !important; } .right { width: 100%; } }
     </style>
@@ -32,16 +31,16 @@
     <div class="bill-header">
         <h3 style="margin: 0;">CGI ELECTRICAL & GRAPHICS</h3>
         <p style="margin: 2px 0; font-size: 11px;">බණ්ඩාරගම | දුරකථන: 07x-xxxxxxx</p>
-        <div style="text-align: left; font-size: 11px; margin-top: 8px; display: flex; justify-content: space-between;">
+        <div style="text-align: left; font-size: 11px; margin-top: 8px; display: flex; justify-content: space-between; flex-direction: column;">
             <span>බිල් අංකය: <b id="billNo"></b></span>
-            <span>දිනය: <span id="billDate"></span></span>
+            <span>දිනය සහ වෙලාව: <b id="billDateTime"></b></span>
         </div>
     </div>
 
     <div style="flex-grow: 1; overflow-y: auto;">
         <table id="billTable">
             <thead>
-                <tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණය/ඒකක</th><th>එකතුව</th><th class="no-print"></th></tr>
+                <tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණය</th><th>එකතුව</th><th class="no-print"></th></tr>
             </thead>
             <tbody></tbody>
         </table>
@@ -50,7 +49,7 @@
     <div class="footer">
         <div class="calc-row"><span>මුළු භාණ්ඩ ගණන:</span><span id="itemCount">0</span></div>
         <div class="calc-row" style="font-size: 18px;"><span>මුළු එකතුව:</span><span id="totalDisplay">0.00</span></div>
-        <div class="calc-row no-print"><span>ගෙවූ මුදල:</span><input type="number" id="cashInput" oninput="calcBalance()"></div>
+        <div class="calc-row no-print"><span>ගෙවූ මුදල:</span><input type="number" id="cashInput" style="width: 80px;" oninput="calcBalance()"></div>
         <div class="calc-row"><span>ඉතිරි මුදල:</span><span id="balanceDisplay">0.00</span></div>
         <p style="margin: 10px 0 0 0; font-weight: bold;">ස්තූතියි, නැවත එන්න!</p>
         <button class="btn-print" onclick="window.print()">මුද්‍රණය කරන්න (Print)</button>
@@ -71,19 +70,27 @@
 
     function render() {
         document.getElementById('grid').innerHTML = inventory.map(p => `
-            <div class="card" onclick="addToBill(${p.id})">
+            <div class="card" onclick="askQty(${p.id})">
                 <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/130x80?text=${p.name}'">
                 <h4 style="margin: 5px 0;">${p.name}</h4>
                 <div style="color:#27ae60; font-size:12px;">Rs. ${p.sell} / ${p.unit}</div>
             </div>`).join('');
     }
 
-    function addToBill(id) {
+    function askQty(id) {
         const item = inventory.find(p => p.id === id);
-        const existing = bill.find(b => b.id === id);
-        if (existing) { existing.qty++; } 
-        else { bill.push({...item, qty: 1}); }
-        updateBill();
+        // භාණ්ඩය මත එබූ විට ප්‍රමාණය සහ ඒකකය ඇසීම
+        let qty = prompt(`'${item.name}' සඳහා ප්‍රමාණය ඇතුළත් කරන්න (${item.unit}):`, "1");
+        
+        if (qty !== null && qty > 0) {
+            const existing = bill.find(b => b.id === id);
+            if (existing) {
+                existing.qty = parseFloat(qty);
+            } else {
+                bill.push({...item, qty: parseFloat(qty)});
+            }
+            updateBill();
+        }
     }
 
     function updateBill() {
@@ -92,9 +99,9 @@
             <tr>
                 <td>${item.name}</td>
                 <td>${item.sell}</td>
-                <td><input type="number" value="${item.qty}" onchange="changeQty(${index}, this.value)"> ${item.unit}</td>
+                <td>${item.qty} ${item.unit}</td>
                 <td>${(item.sell * item.qty).toFixed(2)}</td>
-                <td class="no-print"><button onclick="removeItem(${index})">x</button></td>
+                <td class="no-print"><button onclick="removeItem(${index})" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">X</button></td>
             </tr>`).join('');
         
         let total = bill.reduce((sum, i) => sum + (i.sell * i.qty), 0);
@@ -103,17 +110,25 @@
         calcBalance();
     }
 
-    function changeQty(index, val) { bill[index].qty = parseFloat(val); updateBill(); }
     function removeItem(index) { bill.splice(index, 1); updateBill(); }
+    
     function calcBalance() {
         let cash = parseFloat(document.getElementById('cashInput').value) || 0;
         let total = parseFloat(document.getElementById('totalDisplay').innerText);
         document.getElementById('balanceDisplay').innerText = (cash - total).toFixed(2);
     }
 
-    // බිල් විස්තර ස්වයංක්‍රීයව සැකසීම
-    document.getElementById('billNo').innerText = Math.floor(1000 + Math.random() * 9000);
-    document.getElementById('billDate').innerText = new Date().toLocaleDateString();
+    // බිල් විස්තර සැකසීම
+    document.getElementById('billNo').innerText = "CGI-" + Math.floor(1000 + Math.random() * 9000);
+    
+    function updateDateTime() {
+        const now = new Date();
+        const formatted = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+        document.getElementById('billDateTime').innerText = formatted;
+    }
+    
+    updateDateTime();
+    setInterval(updateDateTime, 1000); // සෑම තත්පරයකම වෙලාව යාවත්කාලීන වේ
 
     fetchInventory();
 </script>
