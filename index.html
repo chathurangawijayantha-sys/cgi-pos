@@ -124,7 +124,10 @@
                 ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
             </div>`;
         }).join('');
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString([], {hour: '2-digit', minute:'2-digit'});
+        
+        // දිනය සහ වේලාව යන දෙකම පෙන්වීමට යාවත්කාලීන කළා
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK', options);
     }
     
     function openM(id) {
@@ -164,7 +167,7 @@
     async function finalizeBillAndPrint() {
         if(cart.length === 0) return;
         const now = new Date().toLocaleString();
-        const bNo = document.getElementById('bNoDisplay').innerText; // බිල්පත් අංකය ලබා ගැනීම
+        const bNo = document.getElementById('bNoDisplay').innerText; 
 
         for (let c of cart) {
             let itm = inventory.find(i => i.id === c.id);
@@ -172,7 +175,6 @@
                 let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
                 let profit = (parseFloat(c.up) - parseFloat(c.buy)) * c.d;
-                // විකුණුම් වාර්තාවට බිල්පත් අංකය (bNo) එක් කළා
                 let saleEntry = { bNo: bNo, date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
             }
