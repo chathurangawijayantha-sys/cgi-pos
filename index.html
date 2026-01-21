@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGI Billing - Cloud POS with Remove</title>
+    <title>CGI Billing - Cloud Sales Sync</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         #product-section { width: 60%; padding: 15px; overflow-y: auto; border-right: 1px solid #ddd; }
@@ -11,27 +11,16 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
         .item-card { background: white; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
-        
         .bill-scroll { flex: 1; overflow-y: auto; padding-bottom: 160px; }
         .bill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
         .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; vertical-align: middle; }
-
-        /* භාණ්ඩය ඉවත් කිරීමේ බොත්තම */
-        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 5px; border-radius: 3px; margin-right: 8px; text-decoration: none; }
-        .rem-btn:hover { background: red; color: white; }
-
-        .total-area { 
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: white; border-top: 2px solid #333; padding: 12px; 
-            box-shadow: 0 -5px 10px rgba(0,0,0,0.05);
-        }
+        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 5px; border-radius: 3px; margin-right: 8px; }
+        .total-area { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #333; padding: 12px; box-shadow: 0 -5px 10px rgba(0,0,0,0.05); }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; font-weight: bold; }
-        
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:100; min-width:280px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99; }
-
-        @media print {
+        @media print { 
             @page { size: 80mm auto; margin: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
             #bill-section { width: 72mm; padding: 2mm; position: absolute; left: 0; top: 0; height: auto; }
@@ -39,7 +28,6 @@
             .total-area { position: static; border-top: 1px dashed black; box-shadow: none; padding: 5px 0; }
             .bill-table { font-size: 11px; }
             .rem-btn { display: none !important; }
-            body { background: white; }
         }
     </style>
 </head>
@@ -91,11 +79,11 @@
 </div>
 
 <script>
-    const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/inventory.json";
+    const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; let cur = null;
 
     async function fetchInventory() {
-        const res = await fetch(DB_URL);
+        const res = await fetch(`${DB_URL}inventory.json`);
         const data = await res.json();
         inventory = data ? Object.values(data) : [];
         render();
@@ -124,28 +112,19 @@
         let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        cart.push({ id: cur.id, n: cur.name, up: cur.sell, dq: (u==='g' ? q+"g" : q+" "+cur.unit), t: t, d: d });
+        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+" "+cur.unit), t: t, d: d });
         updateUI(); closeModal();
     }
 
     function updateUI() {
         document.getElementById('bBody').innerHTML = cart.map((i,idx) => `
-            <tr>
-                <td><span class="rem-btn no-print" onclick="removeItem(${idx})">x</span>${i.n}</td>
-                <td>${i.up}</td>
-                <td>${i.dq}</td>
-                <td style="text-align:right;">${i.t.toFixed(2)}</td>
-            </tr>`).join('');
+            <tr><td><span class="rem-btn no-print" onclick="removeItem(${idx})">x</span>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
         calc();
     }
 
-    function removeItem(idx) {
-        cart.splice(idx, 1);
-        updateUI();
-    }
-
+    function removeItem(idx) { cart.splice(idx, 1); updateUI(); }
     function calc() {
         let t = parseFloat(document.getElementById('gTot').innerText);
         let c = parseFloat(document.getElementById('cashInput').value) || 0;
@@ -155,13 +134,19 @@
 
     async function finalizeBillAndPrint() {
         if(cart.length === 0) return;
+        const now = new Date().toLocaleString();
+        
         for (let c of cart) {
             let itm = inventory.find(i => i.id === c.id);
             if(itm) {
+                // 1. තොග අඩු කිරීම
                 let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
-                await fetch(`https://cgi-pos-default-rtdb.firebaseio.com/inventory/${itm.id}/stock.json`, {
-                    method: 'PUT', body: JSON.stringify(newStock)
-                });
+                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
+
+                // 2. විකුණුම් වාර්තාවට දත්ත එකතු කිරීම (Sales Sync)
+                let profit = (parseFloat(c.up) - parseFloat(c.buy)) * c.d;
+                let saleEntry = { date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
+                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
             }
         }
         window.print();
