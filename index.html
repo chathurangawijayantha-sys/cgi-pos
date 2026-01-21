@@ -2,31 +2,46 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGI Billing - Cloud Sales Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CGI Billing - Phone Optimized</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
-        #product-section { width: 60%; padding: 15px; overflow-y: auto; border-right: 1px solid #ddd; }
-        #bill-section { width: 40%; background: white; padding: 15px; display: flex; flex-direction: column; position: relative; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-        .item-card { background: white; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
-        .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
-        .bill-scroll { flex: 1; overflow-y: auto; padding-bottom: 160px; }
-        .bill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
-        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; vertical-align: middle; }
-        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 5px; border-radius: 3px; margin-right: 8px; }
-        .total-area { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #333; padding: 12px; box-shadow: 0 -5px 10px rgba(0,0,0,0.05); }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; font-weight: bold; }
-        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:100; min-width:280px; }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99; }
-        @media print { 
+        #product-section { width: 55%; padding: 10px; overflow-y: auto; border-right: 1px solid #ddd; }
+        #bill-section { width: 45%; background: white; display: flex; flex-direction: column; position: relative; height: 100vh; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+        .item-card { background: white; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; }
+        .item-card img { width: 100%; height: 70px; object-fit: cover; border-radius: 5px; }
+        
+        /* බිල්පත් කොටස පෝන් එකට ගැලපෙන ලෙස */
+        .bill-scroll { flex: 1; overflow-y: auto; padding: 5px; margin-bottom: 185px; } 
+        .bill-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .bill-table th { border-bottom: 1px solid black; padding: 3px; text-align: left; }
+        .bill-table td { padding: 6px 2px; border-bottom: 1px dashed #eee; }
+        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 4px; border-radius: 3px; margin-right: 4px; }
+
+        /* පෝන් එකේ පල්ලෙහා ස්ථාවරව පවතින (Fixed) කොටස */
+        .total-area { 
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: white; border-top: 2px solid #333; padding: 8px; 
+            box-shadow: 0 -3px 10px rgba(0,0,0,0.1); z-index: 100;
+        }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; font-weight: bold; }
+        
+        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
+
+        @media screen and (max-width: 600px) {
+            #product-section { width: 50%; }
+            #bill-section { width: 50%; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); }
+        }
+
+        @media print {
             @page { size: 80mm auto; margin: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
             #bill-section { width: 72mm; padding: 2mm; position: absolute; left: 0; top: 0; height: auto; }
-            .bill-scroll { overflow: visible; padding-bottom: 0; }
+            .bill-scroll { overflow: visible; padding-bottom: 0; margin-bottom: 0; }
             .total-area { position: static; border-top: 1px dashed black; box-shadow: none; padding: 5px 0; }
-            .bill-table { font-size: 11px; }
             .rem-btn { display: none !important; }
         }
     </style>
@@ -35,11 +50,11 @@
 
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
-    <h3 id="mTitle" style="margin:0;"></h3>
-    <p id="uDisp" style="color:#27ae60; font-weight:bold;"></p>
-    <select id="uSel" style="width:100%; padding:10px; margin-bottom:10px;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
-    <input type="number" id="qty" value="1" style="width:90%; padding:10px;">
-    <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <h3 id="mTitle" style="margin:0; font-size: 16px;"></h3>
+    <p id="uDisp" style="color:#27ae60; font-weight:bold; font-size: 14px;"></p>
+    <select id="uSel" style="width:100%; padding:8px; margin: 10px 0;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
+    <input type="number" id="qty" value="1" style="width:90%; padding:8px;">
+    <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:10px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div id="product-section">
@@ -47,11 +62,10 @@
 </div>
 
 <div id="bill-section">
-    <div style="text-align:center; padding-bottom: 10px;">
-        <h3 style="margin:0;">CGI ELECTRICAL & GRAPHICS</h3>
-        <p style="margin:2px 0; font-size:11px;">බණ්ඩාරගම</p>
-        <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px;">
-            <span>අංකය: <b id="bNoDisplay"></b></span>
+    <div style="text-align:center; padding: 5px; border-bottom: 1px solid #eee;">
+        <h4 style="margin:0; font-size: 12px;">CGI ELECTRICAL & GRAPHICS</h4>
+        <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:3px;">
+            <span>බිල්: <b id="bNoDisplay"></b></span>
             <span id="dtDisplay"></span>
         </div>
     </div>
@@ -59,22 +73,22 @@
     <div class="bill-scroll">
         <table class="bill-table">
             <thead>
-                <tr><th style="width:45%;">භාණ්ඩය</th><th style="width:15%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr>
+                <tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr>
             </thead>
             <tbody id="bBody"></tbody>
         </table>
     </div>
 
     <div class="total-area">
-        <div class="summary-row"><span>මුළු භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-        <div class="summary-row" style="font-size:16px; border-top: 1px dashed black; padding-top: 5px;">
-            <span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span>
+        <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+        <div class="summary-row" style="font-size:14px; border-top: 1px dashed black; padding-top: 3px;">
+            <span>එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span>
         </div>
-        <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:70px;"></div>
-        <div class="summary-row"><span>ලැබුණු මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-        <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-        <p style="text-align:center; margin:10px 0 0 0; font-weight:bold; font-size:12px; border-top: 1px solid black; padding-top: 5px;">ස්තූතියි, නැවත එන්න!</p>
-        <button class="no-print" onclick="finalizeBillAndPrint()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; margin-top:10px; border-radius:8px; font-weight:bold; cursor:pointer;">ප්‍රින්ට් (Print)</button>
+        <div class="summary-row no-print"><span>මුදල්:</span> <input type="number" id="cashInput" oninput="calc()" style="width:60px; font-size: 12px;"></div>
+        <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+        <div class="summary-row" style="color:red;"><span>ඉතිරි:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+        <p style="text-align:center; margin:3px 0; font-weight:bold; font-size:11px; border-top: 1px solid #ccc; padding-top: 3px;">ස්තූතියි, නැවත එන්න!</p>
+        <button class="no-print" onclick="finalizeBillAndPrint()" style="width:100%; padding:10px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">ප්‍රින්ට් (Print)</button>
     </div>
 </div>
 
@@ -92,11 +106,11 @@
     function render() {
         document.getElementById('grid').innerHTML = inventory.map(p => `
             <div class="item-card" onclick="openM(${p.id})">
-                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
-                <h4 style="margin:5px 0; font-size:12px;">${p.name}</h4>
-                <small>Rs. ${p.sell} / ${p.unit}</small>
+                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/80?text=${p.name}'">
+                <h5 style="margin:4px 0; font-size:11px;">${p.name}</h5>
+                <small style="font-size:10px;">Rs. ${p.sell}</small>
             </div>`).join('');
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString();
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString([], {hour: '2-digit', minute:'2-digit'});
     }
     
     function openM(id) {
@@ -112,7 +126,7 @@
         let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+" "+cur.unit), t: t, d: d });
+        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+cur.unit), t: t, d: d });
         updateUI(); closeModal();
     }
 
@@ -135,15 +149,11 @@
     async function finalizeBillAndPrint() {
         if(cart.length === 0) return;
         const now = new Date().toLocaleString();
-        
         for (let c of cart) {
             let itm = inventory.find(i => i.id === c.id);
             if(itm) {
-                // 1. තොග අඩු කිරීම
                 let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-
-                // 2. විකුණුම් වාර්තාවට දත්ත එකතු කිරීම (Sales Sync)
                 let profit = (parseFloat(c.up) - parseFloat(c.buy)) * c.d;
                 let saleEntry = { date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
