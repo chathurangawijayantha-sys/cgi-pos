@@ -36,27 +36,19 @@
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
 
-        /* මුද්‍රණයේදී අකුරු ලොකු කිරීම */
         @media print {
             @page { size: 80mm auto; margin: 0; }
             html, body { width: 78mm; margin: 0; padding: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
             #bill-section { width: 78mm; padding: 2mm; display: block; border: none; }
-            
-            /* හෙඩින් එක ලොකු කිරීම */
             .bill-header h4 { font-size: 18px !important; margin-bottom: 5px; }
             .bill-header p, .bill-header span { font-size: 14px !important; }
-            
-            /* වගුවේ අකුරු ලොකු කිරීම */
             .bill-table { font-size: 15px !important; width: 100%; }
             .bill-table th { font-size: 15px !important; border-bottom: 2px solid black; }
             .bill-table td { padding: 10px 2px; border-bottom: 1px solid #ccc; font-weight: bold; }
-            
-            /* එකතුව සහ අනෙක් විස්තර ලොකු කිරීම */
             .total-area { border-top: 2px dashed black; padding-top: 10px; }
             .summary-row { font-size: 16px !important; margin-bottom: 8px; }
             .summary-row span:last-child { font-size: 18px !important; }
-            
             p[style*="text-align:center"] { font-size: 15px !important; margin-top: 15px !important; }
             .rem-btn { display: none !important; }
         }
@@ -172,13 +164,16 @@
     async function finalizeBillAndPrint() {
         if(cart.length === 0) return;
         const now = new Date().toLocaleString();
+        const bNo = document.getElementById('bNoDisplay').innerText; // බිල්පත් අංකය ලබා ගැනීම
+
         for (let c of cart) {
             let itm = inventory.find(i => i.id === c.id);
             if(itm) {
                 let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
                 let profit = (parseFloat(c.up) - parseFloat(c.buy)) * c.d;
-                let saleEntry = { date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
+                // විකුණුම් වාර්තාවට බිල්පත් අංකය (bNo) එක් කළා
+                let saleEntry = { bNo: bNo, date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
             }
         }
