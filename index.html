@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGI Billing - Thermal Optimized</title>
+    <title>CGI Billing - Cloud POS with Remove</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         #product-section { width: 60%; padding: 15px; overflow-y: auto; border-right: 1px solid #ddd; }
         #bill-section { width: 40%; background: white; padding: 15px; display: flex; flex-direction: column; position: relative; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-        .item-card { background: white; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; border: 1px solid #eee; }
+        .item-card { background: white; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; border: 1px solid #eee; transition: 0.2s; }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         
         .bill-scroll { flex: 1; overflow-y: auto; padding-bottom: 160px; }
         .bill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
-        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
+        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; vertical-align: middle; }
+
+        /* භාණ්ඩය ඉවත් කිරීමේ බොත්තම */
+        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 5px; border-radius: 3px; margin-right: 8px; text-decoration: none; }
+        .rem-btn:hover { background: red; color: white; }
 
         .total-area { 
             position: absolute; bottom: 0; left: 0; right: 0;
@@ -24,7 +28,6 @@
         }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; font-weight: bold; }
         
-        /* Modal for Qty */
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:100; min-width:280px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99; }
 
@@ -35,6 +38,7 @@
             .bill-scroll { overflow: visible; padding-bottom: 0; }
             .total-area { position: static; border-top: 1px dashed black; box-shadow: none; padding: 5px 0; }
             .bill-table { font-size: 11px; }
+            .rem-btn { display: none !important; }
             body { background: white; }
         }
     </style>
@@ -67,7 +71,7 @@
     <div class="bill-scroll">
         <table class="bill-table">
             <thead>
-                <tr><th style="width:40%;">භාණ්ඩය</th><th style="width:15%;">මිල</th><th style="width:25%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr>
+                <tr><th style="width:45%;">භාණ්ඩය</th><th style="width:15%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr>
             </thead>
             <tbody id="bBody"></tbody>
         </table>
@@ -126,10 +130,20 @@
 
     function updateUI() {
         document.getElementById('bBody').innerHTML = cart.map((i,idx) => `
-            <tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
+            <tr>
+                <td><span class="rem-btn no-print" onclick="removeItem(${idx})">x</span>${i.n}</td>
+                <td>${i.up}</td>
+                <td>${i.dq}</td>
+                <td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
         calc();
+    }
+
+    function removeItem(idx) {
+        cart.splice(idx, 1);
+        updateUI();
     }
 
     function calc() {
