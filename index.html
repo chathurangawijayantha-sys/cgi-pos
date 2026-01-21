@@ -3,17 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CGI Billing - Cloud POS</title>
+    <title>CGI Billing - Professional Cloud POS</title>
     <style>
-        /* ඔබේ පැරණි CSS මෝස්තර මෙතැනට ඇතුළත් කළ හැකියි */
         body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; }
         .left { width: 65%; padding: 20px; overflow-y: auto; border-right: 2px solid #ddd; }
-        .right { width: 35%; padding: 20px; background: white; display: flex; flex-direction: column; }
+        .right { width: 35%; padding: 20px; background: white; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
+        .card { background: white; padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.2s; border: 1px solid #eee; }
+        .card:hover { transform: scale(1.03); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 85px; object-fit: cover; border-radius: 5px; }
+        .bill-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px 5px; text-align: left; font-size: 14px; }
+        .total-sec { margin-top: auto; padding-top: 20px; border-top: 2px solid #333; }
+        .btn-print { background: #27ae60; color: white; padding: 15px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px; }
+        
+        @media print {
+            .left, .btn-print { display: none !important; }
+            .right { width: 100%; padding: 0; }
+            body { background: white; }
+        }
     </style>
 </head>
 <body>
@@ -23,58 +32,68 @@
 </div>
 
 <div class="right">
-    <h2>CGI එළවළු කඩේ</h2>
-    <table id="billTable">
-        <thead><tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණය</th></tr></thead>
-        <tbody></tbody>
-    </table>
-    <h3 id="total">එකතුව: Rs. 0.00</h3>
-    <button onclick="window.print()" style="background:#27ae60; color:white; padding:15px; border:none; border-radius:5px; cursor:pointer;">ප්‍රින්ට් (Print)</button>
+    <div class="bill-header">
+        <h2 style="margin: 0; color: #2c3e50;">CGI ELECTRICAL & GRAPHICS</h2>
+        <p style="margin: 3px 0; font-size: 13px;">බණ්ඩාරගම</p>
+        <p style="margin: 3px 0; font-size: 13px;">දුරකථන: 07x-xxxxxxx</p>
+        <div style="text-align: left; font-size: 12px; margin-top: 10px;">
+            දිනය: <span id="billDate"></span> | වේලාව: <span id="billTime"></span>
+        </div>
+    </div>
+
+    <div style="flex-grow: 1; overflow-y: auto;">
+        <table id="billTable">
+            <thead>
+                <tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණය</th><th>එකතුව</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="total-sec">
+        <h3 style="display: flex; justify-content: space-between;">මුළු එකතුව: <span id="totalDisplay">Rs. 0.00</span></h3>
+        <button class="btn-print" onclick="window.print()">මුද්‍රණය කරන්න (Print)</button>
+    </div>
 </div>
 
 <script>
-    // ඔබේ Firebase URL එක
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/inventory.json";
     let inventory = [];
+    let billItems = [];
 
-    // Cloud එකෙන් දත්ත ලබා ගැනීම
     async function fetchInventory() {
-        try {
-            const res = await fetch(DB_URL);
-            const data = await res.json();
-            inventory = data ? Object.values(data) : [];
-            render();
-        } catch (e) {
-            console.error("දත්ත ලබා ගැනීමට නොහැක: ", e);
-        }
+        const res = await fetch(DB_URL);
+        const data = await res.json();
+        inventory = data ? Object.values(data) : [];
+        render();
     }
 
     function render() {
-        const grid = document.getElementById('grid');
-        grid.innerHTML = inventory.map(p => `
+        document.getElementById('grid').innerHTML = inventory.map(p => `
             <div class="card" onclick="addToBill(${p.id})">
-                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/130x80?text=${p.name}'">
-                <h4>${p.name}</h4>
-                <p>Rs. ${p.sell}</p>
+                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/130x85?text=${p.name}'">
+                <h4 style="margin: 8px 0 4px 0;">${p.name}</h4>
+                <div style="color:#27ae60; font-weight:bold;">Rs. ${p.sell}</div>
             </div>
         `).join('');
     }
 
     function addToBill(id) {
         const item = inventory.find(p => p.id === id);
+        billItems.push(item);
         const tbody = document.querySelector('#billTable tbody');
-        const row = `<tr><td>${item.name}</td><td>${item.sell}</td><td>1</td></tr>`;
+        const row = `<tr><td>${item.name}</td><td>${item.sell}</td><td>1</td><td>${item.sell}</td></tr>`;
         tbody.innerHTML += row;
-        updateTotal(item.sell);
+        
+        let total = billItems.reduce((sum, i) => sum + parseFloat(i.sell), 0);
+        document.getElementById('totalDisplay').innerText = `Rs. ${total.toFixed(2)}`;
     }
 
-    let totalAmount = 0;
-    function updateTotal(price) {
-        totalAmount += parseFloat(price);
-        document.getElementById('total').innerText = `එකතුව: Rs. ${totalAmount.toFixed(2)}`;
-    }
+    // දිනය සහ වේලාව සැකසීම
+    const now = new Date();
+    document.getElementById('billDate').innerText = now.toLocaleDateString();
+    document.getElementById('billTime').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-    // පිටුව විවෘත වන විට දත්ත පූරණය කිරීම
     fetchInventory();
 </script>
 
