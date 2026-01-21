@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CGI Billing - Stock & Price POS</title>
+    <title>CGI Billing - Professional POS</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; }
@@ -11,12 +11,9 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
         .item-card { background: white; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; }
         .item-card img { width: 100%; height: 70px; object-fit: cover; border-radius: 5px; }
-        .item-card h4 { margin: 5px 0 2px 0; font-size: 12px; }
-        
-        /* මිල සහ තොග පෙන්වන කොටස */
+        .item-card h4 { margin: 5px 0; font-size: 12px; }
         .price-tag { font-size: 11px; font-weight: bold; color: #27ae60; margin-bottom: 2px; }
         .stock-tag { font-size: 10px; color: #7f8c8d; }
-        
         .out-of-stock { opacity: 0.5; cursor: not-allowed; }
         .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px; font-size: 10px; border-radius: 4px; font-weight: bold; z-index: 10; }
 
@@ -39,12 +36,28 @@
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
 
+        /* මුද්‍රණයේදී අකුරු ලොකු කිරීම */
         @media print {
             @page { size: 80mm auto; margin: 0; }
+            html, body { width: 78mm; margin: 0; padding: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
-            #bill-section { width: 72mm; padding: 2mm; display: block; }
-            .total-area { border-top: 1px dashed black; }
-            .bill-table { font-size: 10px; }
+            #bill-section { width: 78mm; padding: 2mm; display: block; border: none; }
+            
+            /* හෙඩින් එක ලොකු කිරීම */
+            .bill-header h4 { font-size: 18px !important; margin-bottom: 5px; }
+            .bill-header p, .bill-header span { font-size: 14px !important; }
+            
+            /* වගුවේ අකුරු ලොකු කිරීම */
+            .bill-table { font-size: 15px !important; width: 100%; }
+            .bill-table th { font-size: 15px !important; border-bottom: 2px solid black; }
+            .bill-table td { padding: 10px 2px; border-bottom: 1px solid #ccc; font-weight: bold; }
+            
+            /* එකතුව සහ අනෙක් විස්තර ලොකු කිරීම */
+            .total-area { border-top: 2px dashed black; padding-top: 10px; }
+            .summary-row { font-size: 16px !important; margin-bottom: 8px; }
+            .summary-row span:last-child { font-size: 18px !important; }
+            
+            p[style*="text-align:center"] { font-size: 15px !important; margin-top: 15px !important; }
             .rem-btn { display: none !important; }
         }
     </style>
