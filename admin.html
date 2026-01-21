@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Inventory & Shortage</title>
+    <title>CGI Admin - Smart Shortage Tracking</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -19,6 +19,7 @@
         th { background: #34495e; color: white; }
         .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
         .shortage-row { background: #ffebee; color: #c62828; font-weight: bold; }
+        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
     </style>
 </head>
 <body>
@@ -43,18 +44,18 @@
             <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
         </div>
         <table>
-            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>විකුණුම්</th><th>තොගය</th><th>මකන්න</th></tr></thead>
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th>මකන්න</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
 
     <div id="shortage" class="content">
-        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ (මුළු එකතුවට වඩා 5 ට අඩු)</h3>
+        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ (Kg < 0.5 | මිටි/පැකට් < 2)</h3>
         <table>
             <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th><th>ඒකකය</th></tr></thead>
             <tbody id="shortageBody"></tbody>
         </table>
-        <button class="tab-btn" style="margin-top:20px; background:#2980b9; color:white;" onclick="window.print()">ලැයිස්තුව මුද්‍රණය කරන්න</button>
+        <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">Shortage List එක WhatsApp කරන්න 🟢</button>
     </div>
 
     <div id="sales" class="content">
@@ -67,6 +68,7 @@
             <thead><tr><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
+        <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">අද දින විකුණුම් වාර්තාව WhatsApp කරන්න 🟢</button>
     </div>
 </div>
 
@@ -78,11 +80,9 @@
         const invRes = await fetch(`${BASE_URL}inventory.json`);
         const invData = await invRes.json();
         inventory = invData ? Object.values(invData) : [];
-        
         const salesRes = await fetch(`${BASE_URL}sales.json`);
         const sData = await salesRes.json();
         salesData = sData ? Object.values(sData) : [];
-        
         renderInventory();
         renderShortage();
     }
@@ -100,14 +100,20 @@
             <tr>
                 <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
                 <td><strong>${item.name}</strong></td>
-                <td>${item.unit}</td><td>${item.sell}</td><td>${item.stock}</td>
+                <td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td>
                 <td><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td>
             </tr>`).join('');
         document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
     }
 
     function renderShortage() {
-        const lowStock = inventory.filter(i => parseFloat(i.stock) < 5);
+        // ඔබ ඉල්ලා සිටි නව කොන්දේසි
+        const lowStock = inventory.filter(i => {
+            const stockVal = parseFloat(i.stock);
+            if (i.unit === "Kg") return stockVal < 0.5; // ග්‍රෑම් 500 ට අඩු
+            return stockVal < 2; // මිටි හෝ පැකට් 2 ට අඩු
+        });
+
         document.getElementById('shortageBody').innerHTML = lowStock.map(item => `
             <tr class="shortage-row">
                 <td>${item.name}</td>
@@ -128,6 +134,29 @@
         document.getElementById('totalBills').innerText = salesData.length;
     }
 
+    function sendShortageToWhatsApp() {
+        const lowStock = inventory.filter(i => {
+            const stockVal = parseFloat(i.stock);
+            if (i.unit === "Kg") return stockVal < 0.5;
+            return stockVal < 2;
+        });
+        if(lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්!");
+
+        let message = "*CGI Shortage List*\n\n";
+        lowStock.forEach(item => { message += `• ${item.name} - ${item.stock} ${item.unit}\n`; });
+        const wpUrl = `https://wa.me/94706920007?text=${encodeURIComponent(message)}`;
+        window.open(wpUrl, '_blank');
+    }
+
+    function sendSalesReportToWhatsApp() {
+        let message = "*CGI Sales Report*\n" + 
+                      `දිනය: ${new Date().toLocaleDateString()}\n\n` +
+                      `• මුළු ආදායම: ${document.getElementById('totalSales').innerText}\n` +
+                      `• ශුද්ධ ලාභය: ${document.getElementById('totalProfit').innerText}\n` +
+                      `• බිල්පත්: ${document.getElementById('totalBills').innerText}`;
+        window.open(`https://wa.me/94706920007?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
     async function handleUpdate() {
         let n = document.getElementById('itemName').value;
         let u = document.getElementById('itemUnit').value;
@@ -144,7 +173,6 @@
     }
 
     async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
-    async function clearSales() { if(confirm("වාර්තා මකන්නද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); salesData = []; renderSales(); } }
     function clear() { document.getElementById('itemName').value=''; document.getElementById('addStock').value='0'; }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
     fetchData();
