@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Smart Shortage Tracking</title>
+    <title>CGI Admin - Ultimate Cloud Sync</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -19,7 +19,8 @@
         th { background: #34495e; color: white; }
         .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
         .shortage-row { background: #ffebee; color: #c62828; font-weight: bold; }
-        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-reset { background: #e74c3c; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
     </style>
 </head>
 <body>
@@ -41,7 +42,7 @@
             <div><label>විකුණුම්</label><input type="number" id="sellPrice"></div>
             <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
             <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-            <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
+            <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add to Cloud</button>
         </div>
         <table>
             <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th>මකන්න</th></tr></thead>
@@ -64,11 +65,12 @@
             <div class="card" style="background:#27ae60;"><h3>ශුද්ධ ලාභය</h3><h2 id="totalProfit">0.00</h2></div>
             <div class="card" style="background:#f39c12;"><h3>බිල්පත්</h3><h2 id="totalBills">0</h2></div>
         </div>
+        <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">අද දින විකුණුම් වාර්තාව WhatsApp කරන්න 🟢</button>
         <table>
             <thead><tr><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
-        <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">අද දින විකුණුම් වාර්තාව WhatsApp කරන්න 🟢</button>
+        <button class="btn-reset" onclick="clearSales()">වාර්තා මකන්න (Reset Cloud Sales Data)</button>
     </div>
 </div>
 
@@ -85,6 +87,7 @@
         salesData = sData ? Object.values(sData) : [];
         renderInventory();
         renderShortage();
+        renderSales();
     }
 
     function showTab(id) {
@@ -92,7 +95,6 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         event.currentTarget.classList.add('active');
-        if(id === 'sales') renderSales();
     }
 
     function renderInventory() {
@@ -107,19 +109,13 @@
     }
 
     function renderShortage() {
-        // ඔබ ඉල්ලා සිටි නව කොන්දේසි
         const lowStock = inventory.filter(i => {
             const stockVal = parseFloat(i.stock);
-            if (i.unit === "Kg") return stockVal < 0.5; // ග්‍රෑම් 500 ට අඩු
-            return stockVal < 2; // මිටි හෝ පැකට් 2 ට අඩු
+            if (i.unit === "Kg") return stockVal < 0.5;
+            return stockVal < 2;
         });
-
         document.getElementById('shortageBody').innerHTML = lowStock.map(item => `
-            <tr class="shortage-row">
-                <td>${item.name}</td>
-                <td>${item.stock}</td>
-                <td>${item.unit}</td>
-            </tr>`).join('');
+            <tr class="shortage-row"><td>${item.name}</td><td>${item.stock}</td><td>${item.unit}</td></tr>`).join('');
         if(lowStock.length === 0) document.getElementById('shortageBody').innerHTML = "<tr><td colspan='3' style='text-align:center;'>සියලු තොග සෑහෙන ප්‍රමාණයට ඇත.</td></tr>";
     }
 
@@ -134,6 +130,14 @@
         document.getElementById('totalBills').innerText = salesData.length;
     }
 
+    async function clearSales() {
+        if(confirm("සියලු විකුණුම් වාර්තා Cloud එකෙන් ස්ථිරවම මකා දැමීමට අවශ්‍යද?")) {
+            await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' });
+            alert("විකුණුම් වාර්තා සාර්ථකව මකා දැමුණා!");
+            fetchData(); 
+        }
+    }
+
     function sendShortageToWhatsApp() {
         const lowStock = inventory.filter(i => {
             const stockVal = parseFloat(i.stock);
@@ -141,16 +145,13 @@
             return stockVal < 2;
         });
         if(lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්!");
-
         let message = "*CGI Shortage List*\n\n";
         lowStock.forEach(item => { message += `• ${item.name} - ${item.stock} ${item.unit}\n`; });
-        const wpUrl = `https://wa.me/94706920007?text=${encodeURIComponent(message)}`;
-        window.open(wpUrl, '_blank');
+        window.open(`https://wa.me/94706920007?text=${encodeURIComponent(message)}`, '_blank');
     }
 
     function sendSalesReportToWhatsApp() {
-        let message = "*CGI Sales Report*\n" + 
-                      `දිනය: ${new Date().toLocaleDateString()}\n\n` +
+        let message = "*CGI Sales Report*\n" + `දිනය: ${new Date().toLocaleDateString()}\n\n` +
                       `• මුළු ආදායම: ${document.getElementById('totalSales').innerText}\n` +
                       `• ශුද්ධ ලාභය: ${document.getElementById('totalProfit').innerText}\n` +
                       `• බිල්පත්: ${document.getElementById('totalBills').innerText}`;
