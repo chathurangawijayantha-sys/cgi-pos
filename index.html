@@ -2,177 +2,81 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Billing - Fully Functional</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGI Billing - Cloud POS</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
-        #product-section { width: 65%; padding: 20px; overflow-y: auto; border-right: 1px solid #ddd; }
-        #bill-section { width: 35%; background: white; padding: 15px; display: flex; flex-direction: column; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-        .item-card { background: white; padding: 10px; text-align: center; border-radius: 12px; cursor: pointer; border: 1px solid #eee; }
-        .item-card img { width: 100%; height: 85px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
-        .bill-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-        .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
-        .bill-table td { padding: 8px 4px; border-bottom: 1px dashed #eee; vertical-align: top; }
-        .total-area { margin-top: auto; border-top: 2px solid #333; padding-top: 10px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
-        .rem-btn { color: red; font-weight: bold; cursor: pointer; margin-right: 8px; border: 1px solid red; padding: 0 4px; border-radius: 3px; }
-        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:100; min-width:300px; }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99; }
-        @media print {
-            @page { size: auto; margin: 0; }
-            #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
-            #bill-section { width: 80mm; position: absolute; left: 0; top: 0; padding: 5mm; }
-            .bill-table th, .bill-table td { font-size: 12px; }
-        }
+        /* ඔබේ පැරණි CSS මෝස්තර මෙතැනට ඇතුළත් කළ හැකියි */
+        body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; }
+        .left { width: 65%; padding: 20px; overflow-y: auto; border-right: 2px solid #ddd; }
+        .right { width: 35%; padding: 20px; background: white; display: flex; flex-direction: column; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
     </style>
 </head>
 <body>
-<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
-<div id="unitModal">
-    <h3 id="mTitle" style="margin:0;"></h3>
-    <p id="uDisp" style="color:#27ae60; font-weight:bold;"></p>
-    <select id="uSel" style="width:100%; padding:10px; margin-bottom:10px;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
-    <input type="number" id="qty" value="1" style="width:90%; padding:10px;">
-    <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+
+<div class="left">
+    <div id="grid" class="grid"></div>
 </div>
 
-<div id="product-section">
-    <input type="text" id="srch" onkeyup="filter()" style="width:100%; padding:12px; margin-bottom:20px; border-radius:25px; border: 1px solid #ddd;" placeholder="සොයන්න...">
-    <div class="grid" id="grid"></div>
-</div>
-
-<div id="bill-section">
-    <div style="text-align:center; border-bottom: 1px solid black; padding-bottom: 5px;">
-        <h3 style="margin:0;">CGI එළවළු කඩේ</h3>
-        <p style="margin:2px 0; font-size:11px;">බණ්ඩාරගම</p>
-        <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:5px;">
-            <span>අංකය: <span id="bNoDisplay">2006</span></span>
-            <span id="dtDisplay"></span>
-        </div>
-    </div>
-
-    <table class="bill-table">
-        <thead>
-            <tr>
-                <th style="width:40%;">භාණ්ඩය</th>
-                <th style="width:15%;">මිල</th>
-                <th style="width:20%;">ප්‍රමාණ</th>
-                <th style="width:25%; text-align:right;">මුදල</th>
-            </tr>
-        </thead>
-        <tbody id="bBody"></tbody>
+<div class="right">
+    <h2>CGI එළවළු කඩේ</h2>
+    <table id="billTable">
+        <thead><tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණය</th></tr></thead>
+        <tbody></tbody>
     </table>
-
-    <div class="total-area">
-        <div class="summary-row"><span>මුළු භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-        <div class="summary-row" style="font-weight:bold; font-size:18px; border-top: 1px dashed black; padding-top: 5px;">
-            <span>එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span>
-        </div>
-        <div class="summary-row"><span>ලැබුණු මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-        <div class="summary-row" style="color:red; font-weight:bold;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-        
-        <div class="no-print" style="margin-top:10px; background:#eee; padding:10px; border-radius:5px;">
-            මුදල්: <input type="number" id="cashInput" oninput="calc()" style="width:80px;">
-        </div>
-        
-        <div style="text-align:center; margin-top:10px; font-size:11px; font-weight:bold; border-top: 1px solid black; padding-top: 5px;">ස්තූතියි, නැවත එන්න!</div>
-        <button class="no-print" onclick="finalizeBillAndPrint()" style="width:100%; padding:15px; background:#27ae60; color:white; border:none; margin-top:10px; border-radius:8px; font-weight:bold; cursor:pointer;">ප්‍රින්ට් (Print)</button>
-    </div>
+    <h3 id="total">එකතුව: Rs. 0.00</h3>
+    <button onclick="window.print()" style="background:#27ae60; color:white; padding:15px; border:none; border-radius:5px; cursor:pointer;">ප්‍රින්ට් (Print)</button>
 </div>
 
 <script>
-    let inventory = JSON.parse(localStorage.getItem('cgi_inventory')) || [];
-    let cart = []; let cur = null; let bNo = 2006;
+    // ඔබේ Firebase URL එක
+    const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/inventory.json";
+    let inventory = [];
+
+    // Cloud එකෙන් දත්ත ලබා ගැනීම
+    async function fetchInventory() {
+        try {
+            const res = await fetch(DB_URL);
+            const data = await res.json();
+            inventory = data ? Object.values(data) : [];
+            render();
+        } catch (e) {
+            console.error("දත්ත ලබා ගැනීමට නොහැක: ", e);
+        }
+    }
 
     function render() {
-        document.getElementById('grid').innerHTML = inventory.map(p => `
-            <div class="item-card" onclick="openM(${p.id})">
-                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=No+Image'">
+        const grid = document.getElementById('grid');
+        grid.innerHTML = inventory.map(p => `
+            <div class="card" onclick="addToBill(${p.id})">
+                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/130x80?text=${p.name}'">
                 <h4>${p.name}</h4>
-                <small>තොග: ${p.stock} ${p.unit}</small>
-            </div>`).join('');
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString();
-    }
-    
-    function openM(id) {
-        cur = inventory.find(x => x.id === id);
-        if(cur.stock <= 0) return alert("තොග අවසන්!");
-        document.getElementById('mTitle').innerText = cur.name;
-        document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
-        document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
+                <p>Rs. ${p.sell}</p>
+            </div>
+        `).join('');
     }
 
-    function confirmAdd() {
-        let q = parseFloat(document.getElementById('qty').value);
-        let u = document.getElementById('uSel').value;
-        let d = (u==='g') ? q/1000 : q;
-        if(d > cur.stock) return alert("තොග මදි!");
-        let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        cart.push({ id: cur.id, n: cur.name, up: cur.sell, dq: (u==='g' ? q+"g" : q+cur.unit), t: t, d: d });
-        updateUI(); closeModal();
+    function addToBill(id) {
+        const item = inventory.find(p => p.id === id);
+        const tbody = document.querySelector('#billTable tbody');
+        const row = `<tr><td>${item.name}</td><td>${item.sell}</td><td>1</td></tr>`;
+        tbody.innerHTML += row;
+        updateTotal(item.sell);
     }
 
-    function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map((i,idx) => `
-            <tr>
-                <td><span class="rem-btn no-print" onclick="rem(${idx})">x</span>${i.n}</td>
-                <td>${i.up}</td>
-                <td>${i.dq}</td>
-                <td style="text-align:right;">${i.t.toFixed(2)}</td>
-            </tr>`).join('');
-        let tot = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-        document.getElementById('gTot').innerText = tot;
-        document.getElementById('itemCount').innerText = cart.length;
-        calc();
+    let totalAmount = 0;
+    function updateTotal(price) {
+        totalAmount += parseFloat(price);
+        document.getElementById('total').innerText = `එකතුව: Rs. ${totalAmount.toFixed(2)}`;
     }
 
-    function rem(idx) { cart.splice(idx, 1); updateUI(); }
-
-    function calc() {
-        let t = parseFloat(document.getElementById('gTot').innerText);
-        let c = parseFloat(document.getElementById('cashInput').value) || 0;
-        document.getElementById('cashDisplay').innerText = c.toFixed(2);
-        document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
-    }
-
-    function finalizeBillAndPrint() {
-        if(cart.length === 0) return;
-        let sales = JSON.parse(localStorage.getItem('cgi_sales')) || [];
-
-        cart.forEach(c => {
-            let itm = inventory.find(i => i.id === c.id);
-            if(itm) {
-                // තොග අඩු කිරීම
-                itm.stock = (parseFloat(itm.stock) - c.d).toFixed(2);
-                // ලාභය සහ විකුණුම් වාර්තාවට දත්ත එකතු කිරීම
-                let profit = (parseFloat(itm.sell) - parseFloat(itm.buy)) * c.d;
-                sales.push({
-                    date: new Date().toLocaleString(),
-                    name: itm.name,
-                    qty: c.dq,
-                    total: c.t,
-                    profit: profit
-                });
-            }
-        });
-
-        // දත්ත ස්ථිරව සුරැකීම
-        localStorage.setItem('cgi_inventory', JSON.stringify(inventory));
-        localStorage.setItem('cgi_sales', JSON.stringify(sales));
-
-        // මුද්‍රණය
-        window.print();
-
-        // බිල අලුත් කිරීම
-        cart = []; bNo++; 
-        document.getElementById('bNoDisplay').innerText = bNo;
-        document.getElementById('cashInput').value = ""; 
-        updateUI(); render();
-    }
-
-    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; document.getElementById('qty').value=1; }
-    function filter() { let v = document.getElementById('srch').value.toLowerCase(); Array.from(document.getElementsByClassName('item-card')).forEach(c => c.style.display = c.innerText.toLowerCase().includes(v) ? "" : "none"); }
-    render();
+    // පිටුව විවෘත වන විට දත්ත පූරණය කිරීම
+    fetchInventory();
 </script>
+
 </body>
 </html>
