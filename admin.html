@@ -23,7 +23,6 @@
         .btn-print-short { background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
         .btn-reset { background: #e74c3c; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
 
-        /* මුද්‍රණයේදී පෙනෙන ආකාරය සකස් කිරීම */
         @media print {
             body { margin: 0; padding: 0; background: white; }
             .container { box-shadow: none; max-width: 100%; padding: 0; }
@@ -85,7 +84,7 @@
         </div>
         <button class="btn-whatsapp no-print" onclick="sendSalesReportToWhatsApp()">අද දින විකුණුම් වාර්තාව WhatsApp කරන්න 🟢</button>
         <table>
-            <thead><tr><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
+            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
         <button class="btn-reset no-print" onclick="clearSales()">වාර්තා මකන්න (Reset Cloud Sales Data)</button>
@@ -141,11 +140,12 @@
         let totalRev = 0, totalProf = 0;
         document.getElementById('salesBody').innerHTML = salesData.map(s => {
             totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
-            return `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
+            return `<tr><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
         }).join('');
         document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
         document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
-        document.getElementById('totalBills').innerText = salesData.length;
+        // එකම බිල්පත් අංකය සහිත භාණ්ඩ එකම බිල්පතක් ලෙස ගණනය කිරීම
+        document.getElementById('totalBills').innerText = [...new Set(salesData.map(s => s.bNo))].filter(n => n).length;
     }
 
     async function clearSales() {
