@@ -47,7 +47,6 @@
             .bill-table { font-size: 10px !important; }
             .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            /* කතිර සලකුණ ප්‍රින්ට් එකේදී සැඟවීමට */
             .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
@@ -116,13 +115,7 @@
     }
 
     function render() {
-        // තොග ප්‍රමාණය අනුව භාණ්ඩ පෙළගැස්වීම (තොග ඇති ඒවා මුලට, නැති ඒවා අගට)
-        const sortedInventory = [...inventory].sort((a, b) => {
-            const stockA = parseFloat(a.stock) <= 0;
-            const stockB = parseFloat(b.stock) <= 0;
-            return stockA - stockB; 
-        });
-
+        const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
         document.getElementById('grid').innerHTML = sortedInventory.map(p => {
             const isOut = parseFloat(p.stock) <= 0;
             return `
@@ -159,7 +152,7 @@
         let qVal = document.getElementById('qty').value; if(!qVal) return;
         let q = parseFloat(qVal); let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
-        if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
+        if(d > parseFloat(cur.stock)) return alert("තොග මදි!");
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
         let displayQty = (u==='g') ? q + "g" : q + " " + cur.unit;
         cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
@@ -176,7 +169,7 @@
     }
 
     function removeItem(index) {
-        if(confirm("මෙම භාණ්ඩය බිල්පතෙන් ඉවත් කිරීමට අවශ්‍යද?")) { cart.splice(index, 1); updateUI(); }
+        if(confirm("ඉවත් කරනවාද?")) { cart.splice(index, 1); updateUI(); }
     }
 
     function calc() {
@@ -198,7 +191,11 @@
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
             }
         }
-        if(shouldPrint) window.print();
+        // පිටුවෙන් ඉවත් වීමට පෙර පණිවිඩ පෙන්වීම වැළැක්වීමට
+        window.onbeforeunload = null;
+        if(shouldPrint) {
+            window.print();
+        }
         location.reload();
     }
 
@@ -208,9 +205,7 @@
     fetchInventory();
 
     window.onbeforeunload = function() {
-        if (cart.length > 0) {
-            return "ඔබ බිල්පතක් සකසමින් සිටී. ඔබට ඉවත් වීමට අවශ්‍ය බව සහතිකද?";
-        }
+        if (cart.length > 0) return "ඉවත් වීමට අවශ්‍යද?";
     };
 </script>
 </body>
