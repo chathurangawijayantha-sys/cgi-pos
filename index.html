@@ -1,58 +1,62 @@
 <!DOCTYPE html>
 <html lang="si">
 <head>
-    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
     <title>CGI Billing - Professional POS</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
-        .main-container { display: flex; flex-direction: row; min-height: 100vh; }
-        #product-section { width: 55%; padding: 10px; border-right: 1px solid #ddd; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
-        .item-card { background: white; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; }
-        .item-card img { width: 100%; height: 70px; object-fit: cover; border-radius: 5px; }
-        .item-card h4 { margin: 5px 0; font-size: 12px; }
-        .price-tag { font-size: 11px; font-weight: bold; color: #27ae60; margin-bottom: 2px; }
-        .stock-tag { font-size: 10px; color: #7f8c8d; }
-        .out-of-stock { opacity: 0.5; cursor: not-allowed; }
-        .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px; font-size: 10px; border-radius: 4px; font-weight: bold; z-index: 10; }
+        .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
+        
+        /* භාණ්ඩ ලැයිස්තුවට අවශ්‍ය මෝස්තර */
+        #product-section { 
+            width: 60%; 
+            padding: 15px; 
+            border-right: 1px solid #ddd; 
+            background: #fff;
+            overflow-y: auto;
+            display: block !important; /* අනිවාර්යයෙන්ම පෙන්වීමට */
+        }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
+        .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
+        .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
+        .stock-tag { font-size: 11px; color: #7f8c8d; }
 
-        #bill-section { width: 45%; background: white; padding: 10px; display: flex; flex-direction: column; min-height: 100vh; }
-        .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
-        .bill-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-        .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
-        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
-        .rem-btn { color: red; font-weight: bold; cursor: pointer; border: 1px solid red; padding: 0 4px; border-radius: 3px; margin-right: 4px; }
-        .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
-        .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 15px; }
-
-        @media screen and (max-width: 600px) {
-            .main-container { flex-direction: column; }
-            #product-section { width: auto; border-right: none; border-bottom: 2px solid #ddd; }
-            #bill-section { width: auto; min-height: auto; }
+        /* බිල්පත් කොටස */
+        #bill-section { 
+            width: 40%; 
+            background: #fff; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: -2px 0 10px rgba(0,0,0,0.05);
         }
 
-        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
+        .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+        .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
+        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
+        .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
+        .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
+
+        @media screen and (max-width: 800px) {
+            .main-container { flex-direction: column; }
+            #product-section { width: auto; border-right: none; }
+            #bill-section { width: auto; }
+        }
+
+        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:280px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
-        .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #333; }
+        .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
 
         @media print {
-            @page { size: 80mm auto; margin: 0; }
-            html, body { width: 78mm; margin: 0; padding: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
-            #bill-section { width: 78mm; padding: 2mm; display: block; border: none; }
-            .bill-header h4 { font-size: 18px !important; margin-bottom: 5px; }
-            .bill-header p, .bill-header span { font-size: 14px !important; }
-            .bill-table { font-size: 15px !important; width: 100%; }
-            .bill-table th { font-size: 15px !important; border-bottom: 2px solid black; }
-            .bill-table td { padding: 10px 2px; border-bottom: 1px solid #ccc; font-weight: bold; }
-            .total-area { border-top: 2px dashed black; padding-top: 10px; }
-            .summary-row { font-size: 16px !important; margin-bottom: 8px; }
-            .summary-row span:last-child { font-size: 18px !important; }
-            p[style*="text-align:center"] { font-size: 15px !important; margin-top: 15px !important; }
-            .rem-btn { display: none !important; }
+            #bill-section { width: 100%; display: block; }
         }
     </style>
 </head>
@@ -61,9 +65,11 @@
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
-    <div class="price-info" id="pricePreview"></div> <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
+    <div class="price-info" id="pricePreview"></div>
+    <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
     <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
-    <input type="number" id="qty" placeholder="ප්‍රමාණය ඇතුළත් කරන්න" style="width:90%; padding:10px;"> <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <input type="number" id="qty" placeholder="ප්‍රමාණය ඇතුළත් කරන්න" style="width:92%; padding:10px; margin-bottom: 10px;">
+    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -80,23 +86,16 @@
                 <span id="dtDisplay"></span>
             </div>
         </div>
-
         <table class="bill-table">
-            <thead>
-                <tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr>
-            </thead>
+            <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
             <tbody id="bBody"></tbody>
         </table>
-
         <div class="total-area">
             <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-            <div class="summary-row" style="font-size:16px; border-top: 1px dashed black; padding-top: 5px;">
-                <span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span>
-            </div>
-            <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:70px;"></div>
+            <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+            <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
             <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
             <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-            <p style="text-align:center; margin:10px 0 0 0; font-weight:bold; font-size:12px; border-top: 1px solid black; padding-top: 5px;">ස්තූතියි, නැවත එන්න!</p>
             <button class="btn-print no-print" onclick="finalizeBillAndPrint()">ප්‍රින්ට් (Print Receipt)</button>
         </div>
     </div>
@@ -114,37 +113,26 @@
     }
 
     function render() {
-        document.getElementById('grid').innerHTML = inventory.map(p => {
-            const isOut = parseFloat(p.stock) <= 0;
-            return `
-            <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
-                <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
+        document.getElementById('grid').innerHTML = inventory.map(p => `
+            <div class="item-card" onclick="openM(${p.id})">
+                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
                 <h4>${p.name}</h4>
                 <div class="price-tag">Rs. ${p.sell}</div>
                 <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-            </div>`;
-        }).join('');
-        
-        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK', options);
+            </div>`).join('');
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
     function openM(id) {
         cur = inventory.find(x => x.id === id);
         document.getElementById('mTitle').innerText = cur.name;
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
-        
-        // ග්‍රෑම් 100 සහ 250 මිල පෙන්වීම
         if(cur.unit === "Kg") {
-            let p100 = (cur.sell / 10).toFixed(2);
-            let p250 = (cur.sell / 4).toFixed(2);
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${p100}</b> | 250g: <b>Rs. ${p250}</b>`;
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(cur.sell/10).toFixed(2)}</b> | 250g: <b>Rs. ${(cur.sell/4).toFixed(2)}</b>`;
         } else {
-            document.getElementById('pricePreview').innerHTML = `1 ${cur.unit}: <b>Rs. ${cur.sell}</b>`;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${cur.sell}</b>`;
         }
-
-        document.getElementById('qty').value = ""; // කොටුව හිස්ව පෙන්වීමට
+        document.getElementById('qty').value = "";
         document.getElementById('unitModal').style.display = 'block'; 
         document.getElementById('overlay').style.display = 'block';
         document.getElementById('qty').focus();
@@ -152,11 +140,10 @@
 
     function confirmAdd() {
         let qVal = document.getElementById('qty').value;
-        if(!qVal) return alert("කරුණාකර ප්‍රමාණය ඇතුළත් කරන්න!");
+        if(!qVal) return;
         let q = parseFloat(qVal);
         let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
-        if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
         cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+cur.unit), t: t, d: d });
         updateUI(); closeModal();
@@ -164,13 +151,12 @@
 
     function updateUI() {
         document.getElementById('bBody').innerHTML = cart.map((i,idx) => `
-            <tr><td><span class="rem-btn no-print" onclick="removeItem(${idx})">x</span>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
+            <tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
         calc();
     }
 
-    function removeItem(idx) { cart.splice(idx, 1); updateUI(); }
     function calc() {
         let t = parseFloat(document.getElementById('gTot').innerText);
         let c = parseFloat(document.getElementById('cashInput').value) || 0;
@@ -180,16 +166,13 @@
 
     async function finalizeBillAndPrint() {
         if(cart.length === 0) return;
-        const now = new Date().toLocaleString();
         const bNo = document.getElementById('bNoDisplay').innerText; 
-
         for (let c of cart) {
             let itm = inventory.find(i => i.id === c.id);
             if(itm) {
                 let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-                let profit = (parseFloat(c.up) - parseFloat(c.buy)) * c.d;
-                let saleEntry = { bNo: bNo, date: now, name: c.n, qty: c.dq, total: c.t, profit: profit };
+                let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * c.d };
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
             }
         }
@@ -199,13 +182,8 @@
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     fetchInventory();
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
 </script>
 </body>
-
 </html>
-
