@@ -127,7 +127,6 @@
         inventory = invData ? Object.values(invData) : [];
         const salesRes = await fetch(`${BASE_URL}sales.json`);
         const sData = await salesRes.json();
-        // දත්ත ලබා ගැනීමේ ක්‍රමය නිවැරදි කළා
         salesData = sData ? Object.values(sData) : [];
         renderInventory();
         renderShortage();
@@ -169,7 +168,10 @@
         const customDateInput = document.getElementById('customDate').value;
         
         const now = new Date();
-        const todayStr = now.toLocaleDateString('si-LK'); // දේශීය දිනයට සසඳයි
+        // විවිධ දිනයන් සසඳන ආකාරය වඩාත් නිවැරදි කළා
+        const todayStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
 
         document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
@@ -177,17 +179,25 @@
             if (filter === 'all') return true;
             
             // දත්ත ගබඩාවේ ඇති දිනය පිරිසිදු කර ගැනීම
-            const sDateFull = s.date.split(',')[0].trim(); 
+            const sDateParts = s.date.split(',')[0].trim().split('/');
+            let sDateObj;
             
-            if (filter === 'today') return sDateFull === todayStr;
-            if (filter === 'month') {
-                const sMonth = new Date(s.date).getMonth();
-                const sYear = new Date(s.date).getFullYear();
-                return sMonth === now.getMonth() && sYear === now.getFullYear();
+            // දිනය ආකාර දෙකකට තිබිය හැකි නිසා එය නිවැරදිව හඳුනා ගැනීම
+            if (sDateParts[0].length > 2) { // YYYY/MM/DD
+                sDateObj = new Date(sDateParts[0], sDateParts[1]-1, sDateParts[2]);
+            } else if (parseInt(sDateParts[0]) > 12) { // DD/MM/YYYY
+                sDateObj = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+            } else { // MM/DD/YYYY
+                sDateObj = new Date(sDateParts[2], sDateParts[0]-1, sDateParts[1]);
             }
+
+            const sDateISO = sDateObj.toLocaleDateString('en-GB');
+
+            if (filter === 'today') return sDateISO === todayStr;
+            if (filter === 'month') return sDateObj.getMonth() === currentMonth && sDateObj.getFullYear() === currentYear;
             if (filter === 'custom' && customDateInput) {
-                const cDate = new Date(customDateInput).toLocaleDateString('si-LK');
-                return sDateFull === cDate;
+                const cDate = new Date(customDateInput).toLocaleDateString('en-GB');
+                return sDateISO === cDate;
             }
             return true;
         });
@@ -196,7 +206,7 @@
             totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
             let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-weight: bold; background: #fff8e1;" : "";
             return `<tr style="${rowStyle}"><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
-        }).join('');
+        }).sort((a, b) => new Date(b.date) - new Date(a.date)).join('');
 
         document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
         document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
@@ -210,16 +220,18 @@
         
         let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-        
+
         if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
             let newStock = (parseFloat(item.stock) - q).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
 
             let loss = -(parseFloat(item.buy) * q);
-            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString('si-LK'), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
+            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
             
             alert("සාර්ථකව ඉවත් කළා!");
+            document.getElementById('wasteItemName').value = "";
+            document.getElementById('wasteQty').value = "";
             fetchData();
         }
     }
