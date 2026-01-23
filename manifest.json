@@ -1,5 +1,5 @@
 {
-  "name": "CGI Billing POS",
+  "name": "ගැමි එළවළු",
   "short_name": "CGI POS",
   "start_url": "index.html",
   "display": "standalone",
@@ -17,4 +17,5 @@
       "type": "image/png"
     }
   ]
+
 }
