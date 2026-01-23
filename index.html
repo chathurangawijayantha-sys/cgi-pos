@@ -197,6 +197,14 @@
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     fetchInventory();
+
+    // පිටුව රිප්‍රෙෂ් වීම වැළැක්වීම සඳහා
+window.onbeforeunload = function() {
+    if (cart.length > 0) {
+        return "ඔබ බිල්පතක් සකසමින් සිටී. ඔබට ඉවත් වීමට අවශ්‍ය බව සහතිකද?";
+    }
+};
 </script>
 </body>
 </html>
+
