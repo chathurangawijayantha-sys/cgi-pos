@@ -41,7 +41,7 @@
 <body>
 
 <div class="container">
-    <h2>CGI කළමනාකරණ පද්ධතිය (CGI Electrical & Graphics)</h2>
+    <h2>ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
     
     <div class="tabs no-print">
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
@@ -142,7 +142,8 @@
 
         if (lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්ව පවතී!");
 
-        let message = "*CGI Shortage List - ගේන්න ඕනෑ බඩු*\n";
+        // මෙසේ වෙනස් කරන්න
+let message = "*ගැමි එළවළු - ගේන්න ඕනෑ බඩු*\n";
         message += `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n`;
         lowStock.forEach((item, index) => {
             message += `${index + 1}. ${item.name} - (තිබෙන ප්‍රමාණය: ${item.stock} ${item.unit})\n`;
@@ -260,7 +261,7 @@
     function sendSalesReportToWhatsApp() {
         const filter = document.getElementById('reportFilter').value;
         let title = (filter === 'today') ? "Today's Report" : "Sales Report";
-        let message = `*CGI ${title}*\n` + `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n` +
+        let message = `*ගැමි එළවළු - ${title}*\n` + `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n` +
                       `• මුළු ආදායම: ${document.getElementById('totalSales').innerText}\n` +
                       `• ශුද්ධ ලාභය: ${document.getElementById('totalProfit').innerText}\n` +
                       `• බිල්පත්: ${document.getElementById('totalBills').innerText}`;
@@ -290,3 +291,4 @@
 </script>
 </body>
 </html>
+
