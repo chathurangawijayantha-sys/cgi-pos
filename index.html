@@ -19,7 +19,6 @@
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
         
-        /* තොග අවසන් භාණ්ඩ සඳහා මෝස්තර */
         .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
 
@@ -58,8 +57,15 @@
     <h3 id="mTitle" style="margin:0;"></h3>
     <div class="price-info" id="pricePreview"></div>
     <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
-    <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
-    <input type="number" id="qty" placeholder="ප්‍රමාණය ඇතුළත් කරන්න" style="width:92%; padding:10px; margin-bottom: 10px;">
+    
+    <div id="unitSelectorDiv">
+        <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
+            <option value="main">ප්‍රධාන ඒකකය</option>
+            <option value="g">ග්‍රෑම් (g)</option>
+        </select>
+    </div>
+    
+    <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
     <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
@@ -105,7 +111,7 @@
 
     function render() {
         document.getElementById('grid').innerHTML = inventory.map(p => {
-            const isOut = parseFloat(p.stock) <= 0; // තොග පරීක්ෂාව
+            const isOut = parseFloat(p.stock) <= 0;
             return `
             <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
                 <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
@@ -122,15 +128,28 @@
         cur = inventory.find(x => x.id === id);
         document.getElementById('mTitle').innerText = cur.name;
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
+        
+        const uSel = document.getElementById('uSel');
+        const qtyInput = document.getElementById('qty');
+        
         if(cur.unit === "Kg") {
+            // Kg භාණ්ඩ සඳහා කෙලින්ම ග්‍රෑම් (g) තේරී පවතී
+            uSel.value = "g";
+            uSel.disabled = false;
+            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන ඇතුළත් කරන්න";
             document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(cur.sell/10).toFixed(2)}</b> | 250g: <b>Rs. ${(cur.sell/4).toFixed(2)}</b>`;
         } else {
+            // මිටි/පැකට් සඳහා ප්‍රධාන ඒකකය පමණක් තේරේ
+            uSel.value = "main";
+            uSel.disabled = true; // මේවාට ග්‍රෑම් නැති නිසා මාරු කළ නොහැක
+            qtyInput.placeholder = "ප්‍රමාණය ඇතුළත් කරන්න";
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${cur.sell}</b>`;
         }
-        document.getElementById('qty').value = "";
+        
+        qtyInput.value = "";
         document.getElementById('unitModal').style.display = 'block'; 
         document.getElementById('overlay').style.display = 'block';
-        document.getElementById('qty').focus();
+        qtyInput.focus();
     }
 
     function confirmAdd() {
@@ -138,10 +157,14 @@
         if(!qVal) return;
         let q = parseFloat(qVal);
         let u = document.getElementById('uSel').value;
+        
         let d = (u==='g') ? q/1000 : q;
         if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
+        
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+cur.unit), t: t, d: d });
+        let displayQty = (u==='g') ? q + "g" : q + " " + cur.unit;
+        
+        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
         updateUI(); closeModal();
     }
 
