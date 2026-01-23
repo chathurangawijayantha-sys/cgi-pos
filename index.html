@@ -9,33 +9,24 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
         
-        /* භාණ්ඩ ලැයිස්තුවට අවශ්‍ය මෝස්තර */
         #product-section { 
-            width: 60%; 
-            padding: 15px; 
-            border-right: 1px solid #ddd; 
-            background: #fff;
-            overflow-y: auto;
-            display: block !important; /* අනිවාර්යයෙන්ම පෙන්වීමට */
+            width: 60%; padding: 15px; border-right: 1px solid #ddd; 
+            background: #fff; overflow-y: auto; display: block !important; 
         }
         
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
         .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
+        
+        /* තොග අවසන් භාණ්ඩ සඳහා මෝස්තර */
+        .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
+
         .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
         .stock-tag { font-size: 11px; color: #7f8c8d; }
 
-        /* බිල්පත් කොටස */
-        #bill-section { 
-            width: 40%; 
-            background: #fff; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: -2px 0 10px rgba(0,0,0,0.05);
-        }
-
+        #bill-section { width: 40%; background: #fff; padding: 15px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
         .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
         .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
         .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
@@ -50,7 +41,7 @@
             #bill-section { width: auto; }
         }
 
-        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:280px; }
+        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
 
@@ -113,13 +104,17 @@
     }
 
     function render() {
-        document.getElementById('grid').innerHTML = inventory.map(p => `
-            <div class="item-card" onclick="openM(${p.id})">
+        document.getElementById('grid').innerHTML = inventory.map(p => {
+            const isOut = parseFloat(p.stock) <= 0; // තොග පරීක්ෂාව
+            return `
+            <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
                 <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
                 <h4>${p.name}</h4>
                 <div class="price-tag">Rs. ${p.sell}</div>
                 <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-            </div>`).join('');
+                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+            </div>`;
+        }).join('');
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
@@ -144,6 +139,7 @@
         let q = parseFloat(qVal);
         let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
+        if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
         cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: (u==='g' ? q+"g" : q+cur.unit), t: t, d: d });
         updateUI(); closeModal();
