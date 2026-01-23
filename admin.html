@@ -127,6 +127,7 @@
         inventory = invData ? Object.values(invData) : [];
         const salesRes = await fetch(`${BASE_URL}sales.json`);
         const sData = await salesRes.json();
+        // දත්ත ලබා ගැනීමේ ක්‍රමය නිවැරදි කළා
         salesData = sData ? Object.values(sData) : [];
         renderInventory();
         renderShortage();
@@ -168,19 +169,26 @@
         const customDateInput = document.getElementById('customDate').value;
         
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+        const todayStr = now.toLocaleDateString('si-LK'); // දේශීය දිනයට සසඳයි
 
         document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
         const filteredSales = salesData.filter(s => {
-            const sDateObj = new Date(s.date);
-            const sDateISO = sDateObj.toISOString().split('T')[0];
-
-            if (filter === 'today') return sDateISO === todayStr;
-            if (filter === 'month') return sDateObj.getMonth() === currentMonth && sDateObj.getFullYear() === currentYear;
-            if (filter === 'custom' && customDateInput) return sDateISO === customDateInput;
+            if (filter === 'all') return true;
+            
+            // දත්ත ගබඩාවේ ඇති දිනය පිරිසිදු කර ගැනීම
+            const sDateFull = s.date.split(',')[0].trim(); 
+            
+            if (filter === 'today') return sDateFull === todayStr;
+            if (filter === 'month') {
+                const sMonth = new Date(s.date).getMonth();
+                const sYear = new Date(s.date).getFullYear();
+                return sMonth === now.getMonth() && sYear === now.getFullYear();
+            }
+            if (filter === 'custom' && customDateInput) {
+                const cDate = new Date(customDateInput).toLocaleDateString('si-LK');
+                return sDateFull === cDate;
+            }
             return true;
         });
 
@@ -202,19 +210,16 @@
         
         let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-        if(q > parseFloat(item.stock)) return alert("තොගයේ ඇති ප්‍රමාණයට වඩා වැඩියෙන් ඉවත් කළ නොහැක!");
-
+        
         if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
             let newStock = (parseFloat(item.stock) - q).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
 
             let loss = -(parseFloat(item.buy) * q);
-            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
+            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString('si-LK'), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
             
             alert("සාර්ථකව ඉවත් කළා!");
-            document.getElementById('wasteItemName').value = "";
-            document.getElementById('wasteQty').value = "";
             fetchData();
         }
     }
@@ -226,18 +231,10 @@
         }
     }
 
-    function sendShortageToWhatsApp() {
-        const lowStock = inventory.filter(i => parseFloat(i.stock) < 5);
-        if(lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්!");
-        let message = "*CGI Shortage List*\n\n";
-        lowStock.forEach(item => { message += `• ${item.name} - ${item.stock} ${item.unit}\n`; });
-        window.open(`https://wa.me/94706920007?text=${encodeURIComponent(message)}`, '_blank');
-    }
-
     function sendSalesReportToWhatsApp() {
         const filter = document.getElementById('reportFilter').value;
-        let title = (filter === 'today') ? "Today's Report" : (filter === 'month' ? "Monthly Report" : "Sales Report");
-        let message = `*CGI ${title}*\n` + `දිනය: ${new Date().toLocaleDateString()}\n\n` +
+        let title = (filter === 'today') ? "Today's Report" : "Sales Report";
+        let message = `*CGI ${title}*\n` + `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n` +
                       `• මුළු ආදායම: ${document.getElementById('totalSales').innerText}\n` +
                       `• ශුද්ධ ලාභය: ${document.getElementById('totalProfit').innerText}\n` +
                       `• බිල්පත්: ${document.getElementById('totalBills').innerText}`;
@@ -256,11 +253,10 @@
         let item = existing ? { ...existing, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
                             : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
         await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
-        fetchData(); clear();
+        fetchData();
     }
 
     async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
-    function clear() { document.getElementById('itemName').value=''; document.getElementById('addStock').value='0'; }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
     fetchData();
 </script>
