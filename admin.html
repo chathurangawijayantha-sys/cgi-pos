@@ -132,32 +132,34 @@
         renderShortage();
         renderSales();
     }
-    function sendShortageToWhatsApp() {
-    // තොග අඩු භාණ්ඩ පෙරීම
-    const lowStock = inventory.filter(i => {
-        const stockVal = parseFloat(i.stock);
-        if (i.unit === "Kg") return stockVal < 0.5;
-        return stockVal < 2;
-    });
 
-    if (lowStock.length === 0) {
-        return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්ව පවතී!");
+    function sendShortageToWhatsApp() {
+        const lowStock = inventory.filter(i => {
+            const stockVal = parseFloat(i.stock);
+            if (i.unit === "Kg") return stockVal < 0.5;
+            return stockVal < 2;
+        });
+
+        if (lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්ව පවතී!");
+
+        let message = "*CGI Shortage List - ගේන්න ඕනෑ බඩු*\n";
+        message += `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n`;
+        lowStock.forEach((item, index) => {
+            message += `${index + 1}. ${item.name} - (තිබෙන ප්‍රමාණය: ${item.stock} ${item.unit})\n`;
+        });
+        message += "\n_කරුණාකර මෙම භාණ්ඩ ඉක්මනින් ලබා දෙන්න._";
+        const phone = "94706920007";
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
-    // WhatsApp පණිවිඩය සකස් කිරීම
-    let message = "*CGI Shortage List - ගේන්න ඕනෑ බඩු*\n";
-    message += `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n`;
-
-    lowStock.forEach((item, index) => {
-        message += `${index + 1}. ${item.name} - (තිබෙන ප්‍රමාණය: ${item.stock} ${item.unit})\n`;
-    });
-
-    message += "\n_කරුණාකර මෙම භාණ්ඩ ඉක්මනින් ලබා දෙන්න._";
-
-    // WhatsApp විවෘත කිරීම
-    const phone = "94706920007"; // ඔබගේ දුරකථන අංකය මෙතැනට ඇතුළත් කරන්න
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-}
+    // දත්ත ඇතුළත් කළ පසු කොටු හිස් කරන ශ්‍රිතය
+    function clearForm() {
+        document.getElementById('itemName').value = "";
+        document.getElementById('buyPrice').value = "";
+        document.getElementById('sellPrice').value = "";
+        document.getElementById('addStock').value = "0";
+        document.getElementById('itemImg').value = "";
+    }
 
     function showTab(id) {
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
@@ -192,35 +194,25 @@
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
         const customDateInput = document.getElementById('customDate').value;
-        
         const now = new Date();
-        // විවිධ දිනයන් සසඳන ආකාරය වඩාත් නිවැරදි කළා
-        const todayStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+        const todayStr = now.toLocaleDateString('en-GB');
 
         document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
         const filteredSales = salesData.filter(s => {
             if (filter === 'all') return true;
-            
-            // දත්ත ගබඩාවේ ඇති දිනය පිරිසිදු කර ගැනීම
             const sDateParts = s.date.split(',')[0].trim().split('/');
             let sDateObj;
-            
-            // දිනය ආකාර දෙකකට තිබිය හැකි නිසා එය නිවැරදිව හඳුනා ගැනීම
-            if (sDateParts[0].length > 2) { // YYYY/MM/DD
+            if (sDateParts[0].length > 2) {
                 sDateObj = new Date(sDateParts[0], sDateParts[1]-1, sDateParts[2]);
-            } else if (parseInt(sDateParts[0]) > 12) { // DD/MM/YYYY
+            } else if (parseInt(sDateParts[0]) > 12) {
                 sDateObj = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-            } else { // MM/DD/YYYY
+            } else {
                 sDateObj = new Date(sDateParts[2], sDateParts[0]-1, sDateParts[1]);
             }
-
             const sDateISO = sDateObj.toLocaleDateString('en-GB');
-
             if (filter === 'today') return sDateISO === todayStr;
-            if (filter === 'month') return sDateObj.getMonth() === currentMonth && sDateObj.getFullYear() === currentYear;
+            if (filter === 'month') return sDateObj.getMonth() === now.getMonth() && sDateObj.getFullYear() === now.getFullYear();
             if (filter === 'custom' && customDateInput) {
                 const cDate = new Date(customDateInput).toLocaleDateString('en-GB');
                 return sDateISO === cDate;
@@ -243,18 +235,14 @@
         let n = document.getElementById('wasteItemName').value;
         let q = parseFloat(document.getElementById('wasteQty').value);
         if(!n || !q) return alert("නම සහ ප්‍රමාණය ඇතුළත් කරන්න!");
-        
         let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-
         if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
             let newStock = (parseFloat(item.stock) - q).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-
             let loss = -(parseFloat(item.buy) * q);
             let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
-            
             alert("සාර්ථකව ඉවත් කළා!");
             document.getElementById('wasteItemName').value = "";
             document.getElementById('wasteQty').value = "";
@@ -291,6 +279,8 @@
         let item = existing ? { ...existing, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
                             : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
         await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        
+        clearForm(); // දත්ත ඇතුළත් කළ පසු කොටු හිස් කරයි
         fetchData();
     }
 
@@ -299,5 +289,4 @@
     fetchData();
 </script>
 </body>
-
 </html>
