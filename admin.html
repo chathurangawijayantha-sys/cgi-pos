@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Advanced Reports</title>
+    <title>CGI Admin - Inventory, Sales & Wastage</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -23,11 +23,12 @@
         .btn-print-short { background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
         .btn-reset { background: #e74c3c; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
         .filter-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; display: flex; gap: 15px; align-items: center; }
+        .wastage-form { background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ffe0b2; }
 
         @media print {
             body { margin: 0; padding: 0; background: white; }
             .container { box-shadow: none; max-width: 100%; padding: 0; }
-            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-print-short, .btn-reset, .no-print, .filter-section, th:last-child, td:last-child { display: none !important; }
+            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-print-short, .btn-reset, .no-print, .filter-section, .wastage-form, th:last-child, td:last-child { display: none !important; }
             .content { display: none; }
             .content.active { display: block; }
             h2 { font-size: 16px; text-align: center; border-bottom: 1px solid black; padding-bottom: 5px; }
@@ -52,12 +53,22 @@
         <div class="add-form no-print">
             <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
             <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option></select></div>
-            <div><label>ගැනුම්</label><input type="number" id="buyPrice"></div>
-            <div><label>විකුණුම්</label><input type="number" id="sellPrice"></div>
+            <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
+            <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
             <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
             <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
             <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
         </div>
+        
+        <div class="wastage-form no-print">
+            <h4 style="margin-top:0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:10px;">
+                <input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම">
+                <input type="number" id="wasteQty" placeholder="ප්‍රමාණය">
+                <button class="tab-btn" style="background:#ef6c00; color:white; padding:8px;" onclick="addWastage()">ඉවත් කරන්න</button>
+            </div>
+        </div>
+
         <table>
             <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
@@ -171,12 +182,39 @@
 
         document.getElementById('salesBody').innerHTML = filteredSales.map(s => {
             totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
-            return `<tr><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
+            let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-style: italic;" : "";
+            return `<tr style="${rowStyle}"><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
         }).join('');
 
         document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
         document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
-        document.getElementById('totalBills').innerText = [...new Set(filteredSales.map(s => s.bNo))].filter(n => n).length;
+        document.getElementById('totalBills').innerText = [...new Set(filteredSales.filter(s => s.bNo !== "WASTAGE").map(s => s.bNo))].filter(n => n).length;
+    }
+
+    async function addWastage() {
+        let n = document.getElementById('wasteItemName').value;
+        let q = parseFloat(document.getElementById('wasteQty').value);
+        if(!n || !q) return alert("නම සහ ප්‍රමාණය ඇතුළත් කරන්න!");
+        
+        let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+        if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
+        if(q > parseFloat(item.stock)) return alert("තොගයේ ඇති ප්‍රමාණයට වඩා වැඩියෙන් ඉවත් කළ නොහැක!");
+
+        if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
+            // තොගයෙන් අඩු කිරීම
+            let newStock = (parseFloat(item.stock) - q).toFixed(2);
+            await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
+
+            // ලාභයෙන් අඩු කිරීම (විකුණුම් වාර්තාවට Wastage ලෙස ඇතුළත් කිරීම)
+            let loss = -(parseFloat(item.buy) * q);
+            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
+            await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
+            
+            alert("සාර්ථකව ඉවත් කළා!");
+            document.getElementById('wasteItemName').value = "";
+            document.getElementById('wasteQty').value = "";
+            fetchData();
+        }
     }
 
     async function clearSales() {
@@ -201,7 +239,6 @@
     function sendSalesReportToWhatsApp() {
         const filter = document.getElementById('reportFilter').value;
         let title = (filter === 'today') ? "Today's Report" : (filter === 'month' ? "Monthly Report" : "Sales Report");
-        
         let message = `*CGI ${title}*\n` + `දිනය: ${new Date().toLocaleDateString()}\n\n` +
                       `• මුළු ආදායම: ${document.getElementById('totalSales').innerText}\n` +
                       `• ශුද්ධ ලාභය: ${document.getElementById('totalProfit').innerText}\n` +
