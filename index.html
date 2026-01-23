@@ -35,6 +35,7 @@
 
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
+        .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; color: #333; }
 
         @media print {
             @page { size: 80mm auto; margin: 0; }
@@ -59,10 +60,9 @@
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
-    <p id="uDisp" style="color:#27ae60; font-weight:bold;"></p>
+    <div class="price-info" id="pricePreview"></div> <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
     <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;"><option value="main">ප්‍රධාන ඒකකය</option><option value="g">ග්‍රෑම් (g)</option></select>
-    <input type="number" id="qty" value="1" style="width:90%; padding:10px;">
-    <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <input type="number" id="qty" placeholder="ප්‍රමාණය ඇතුළත් කරන්න" style="width:90%; padding:10px;"> <button onclick="confirmAdd()" style="width:100%; margin-top:10px; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -125,7 +125,6 @@
             </div>`;
         }).join('');
         
-        // දිනය සහ වේලාව යන දෙකම පෙන්වීමට යාවත්කාලීන කළා
         const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK', options);
     }
@@ -134,12 +133,26 @@
         cur = inventory.find(x => x.id === id);
         document.getElementById('mTitle').innerText = cur.name;
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
+        
+        // ග්‍රෑම් 100 සහ 250 මිල පෙන්වීම
+        if(cur.unit === "Kg") {
+            let p100 = (cur.sell / 10).toFixed(2);
+            let p250 = (cur.sell / 4).toFixed(2);
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${p100}</b> | 250g: <b>Rs. ${p250}</b>`;
+        } else {
+            document.getElementById('pricePreview').innerHTML = `1 ${cur.unit}: <b>Rs. ${cur.sell}</b>`;
+        }
+
+        document.getElementById('qty').value = ""; // කොටුව හිස්ව පෙන්වීමට
         document.getElementById('unitModal').style.display = 'block'; 
         document.getElementById('overlay').style.display = 'block';
+        document.getElementById('qty').focus();
     }
 
     function confirmAdd() {
-        let q = parseFloat(document.getElementById('qty').value);
+        let qVal = document.getElementById('qty').value;
+        if(!qVal) return alert("කරුණාකර ප්‍රමාණය ඇතුළත් කරන්න!");
+        let q = parseFloat(qVal);
         let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
         if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
@@ -183,7 +196,7 @@
         location.reload();
     }
 
-    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; document.getElementById('qty').value=1; }
+    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     fetchInventory();
 </script>
