@@ -8,28 +8,21 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
-        
-        #product-section { 
-            width: 60%; padding: 15px; border-right: 1px solid #ddd; 
-            background: #fff; overflow-y: auto; display: block !important; 
-        }
-        
+        #product-section { width: 60%; padding: 15px; border-right: 1px solid #ddd; background: #fff; overflow-y: auto; display: block !important; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
         .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
-        
         .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
-
         .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
         .stock-tag { font-size: 11px; color: #7f8c8d; }
-
         #bill-section { width: 40%; background: #fff; padding: 15px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
         .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
         .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
         .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
         .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
+        .bill-table tr:hover { background-color: #ffebee; }
         .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
@@ -44,7 +37,6 @@
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
 
-        /* Thermal Printer එක සඳහා විශේෂ සැකසුම් */
         @media print {
             @page { size: 58mm auto; margin: 0; }
             body { width: 58mm; margin: 0; padding: 0; }
@@ -56,7 +48,7 @@
             .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
         }
-        .footer-msg { display: none; } /* පරිගණක තිරයේදී මෙය නොපෙනේ */
+        .footer-msg { display: none; }
     </style>
 </head>
 <body>
@@ -66,14 +58,12 @@
     <h3 id="mTitle" style="margin:0;"></h3>
     <div class="price-info" id="pricePreview"></div>
     <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
-    
     <div id="unitSelectorDiv">
         <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
             <option value="main">ප්‍රධාන ඒකකය</option>
             <option value="g">ග්‍රෑම් (g)</option>
         </select>
     </div>
-    
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
     <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
@@ -103,12 +93,7 @@
             <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
             <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
             <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-            
-            <div class="footer-msg">
-                ස්තුතියි, නැවත එන්න !
-                <p style="font-size: 8px; font-weight: normal; margin-top: 5px;">Software by CGI Graphics</p>
-            </div>
-
+            <div class="footer-msg">ස්තුතියි, නැවත එන්න !<p style="font-size: 8px; font-weight: normal; margin-top: 5px;">Software by CGI Graphics</p></div>
             <div style="display: flex; gap: 5px;">
                 <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
                 <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
@@ -147,68 +132,64 @@
         cur = inventory.find(x => x.id === id);
         document.getElementById('mTitle').innerText = cur.name;
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
-        
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
-        
         if(cur.unit === "Kg") {
-            uSel.value = "g";
-            uSel.disabled = false;
-            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන ඇතුළත් කරන්න";
+            uSel.value = "g"; uSel.disabled = false;
+            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(cur.sell/10).toFixed(2)}</b> | 250g: <b>Rs. ${(cur.sell/4).toFixed(2)}</b>`;
         } else {
-            uSel.value = "main";
-            uSel.disabled = true;
-            qtyInput.placeholder = "ප්‍රමාණය ඇතුළත් කරන්න";
+            uSel.value = "main"; uSel.disabled = true;
+            qtyInput.placeholder = "ප්‍රමාණය";
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${cur.sell}</b>`;
         }
-        
-        qtyInput.value = "";
-        document.getElementById('unitModal').style.display = 'block'; 
-        document.getElementById('overlay').style.display = 'block';
-        qtyInput.focus();
+        qtyInput.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; qtyInput.focus();
     }
 
     function confirmAdd() {
-        let qVal = document.getElementById('qty').value;
-        if(!qVal) return;
-        let q = parseFloat(qVal);
-        let u = document.getElementById('uSel').value;
-        
+        let qVal = document.getElementById('qty').value; if(!qVal) return;
+        let q = parseFloat(qVal); let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
         if(d > parseFloat(cur.stock)) return alert("පවතින තොග ප්‍රමාණයට වඩා වැඩි අගයක් ඇතුළත් කළ නොහැක!");
-        
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
         let displayQty = (u==='g') ? q + "g" : q + " " + cur.unit;
-        
         cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
         updateUI(); closeModal();
     }
 
-   // දැනට ඇති updateUI ශ්‍රිතය වෙනුවට මෙය සම්පූර්ණයෙන්ම පේස්ට් කරන්න
-function updateUI() {
-    document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
-        <tr onclick="removeItem(${idx})" style="cursor:pointer;" title="ඉවත් කිරීමට ක්ලික් කරන්න">
-            <td>${i.n} <span style="color:red; font-size:10px;">(අයින් කරන්න ❌)</span></td>
-            <td>${i.up}</td>
-            <td>${i.dq}</td>
-            <td style="text-align:right;">${i.t.toFixed(2)}</td>
-        </tr>`).join('');
-    document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-    document.getElementById('itemCount').innerText = cart.length;
-    calc();
-}
-
-// භාණ්ඩයක් බිල්පතෙන් ඉවත් කරන අලුත් ශ්‍රිතය
-function removeItem(index) {
-    if(confirm("මෙම භාණ්ඩය බිල්පතෙන් ඉවත් කිරීමට අවශ්‍යද?")) {
-        cart.splice(index, 1);
-        updateUI();
+    function updateUI() {
+        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+            <tr onclick="removeItem(${idx})" style="cursor:pointer;">
+                <td>${i.n} ❌</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
+        document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
+        document.getElementById('itemCount').innerText = cart.length; calc();
     }
-}
-        if(shouldPrint) {
-            window.print();
+
+    function removeItem(index) {
+        if(confirm("මෙම භාණ්ඩය බිල්පතෙන් ඉවත් කිරීමට අවශ්‍යද?")) { cart.splice(index, 1); updateUI(); }
+    }
+
+    function calc() {
+        let t = parseFloat(document.getElementById('gTot').innerText);
+        let c = parseFloat(document.getElementById('cashInput').value) || 0;
+        document.getElementById('cashDisplay').innerText = c.toFixed(2);
+        document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
+    }
+
+    async function finalizeBillAndPrint(shouldPrint) {
+        if(cart.length === 0) return;
+        const bNo = document.getElementById('bNoDisplay').innerText; 
+        for (let c of cart) {
+            let itm = inventory.find(i => i.id === c.id);
+            if(itm) {
+                let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
+                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
+                let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * c.d };
+                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
+            }
         }
+        if(shouldPrint) window.print();
         location.reload();
     }
 
@@ -219,4 +200,3 @@ function removeItem(index) {
 </script>
 </body>
 </html>
-
