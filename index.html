@@ -185,33 +185,27 @@
         updateUI(); closeModal();
     }
 
-    function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map((i,idx) => `
-            <tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
-        document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-        document.getElementById('itemCount').innerText = cart.length;
-        calc();
-    }
+   // දැනට ඇති updateUI ශ්‍රිතය වෙනුවට මෙය සම්පූර්ණයෙන්ම පේස්ට් කරන්න
+function updateUI() {
+    document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+        <tr onclick="removeItem(${idx})" style="cursor:pointer;" title="ඉවත් කිරීමට ක්ලික් කරන්න">
+            <td>${i.n} <span style="color:red; font-size:10px;">(අයින් කරන්න ❌)</span></td>
+            <td>${i.up}</td>
+            <td>${i.dq}</td>
+            <td style="text-align:right;">${i.t.toFixed(2)}</td>
+        </tr>`).join('');
+    document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
+    document.getElementById('itemCount').innerText = cart.length;
+    calc();
+}
 
-    function calc() {
-        let t = parseFloat(document.getElementById('gTot').innerText);
-        let c = parseFloat(document.getElementById('cashInput').value) || 0;
-        document.getElementById('cashDisplay').innerText = c.toFixed(2);
-        document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
+// භාණ්ඩයක් බිල්පතෙන් ඉවත් කරන අලුත් ශ්‍රිතය
+function removeItem(index) {
+    if(confirm("මෙම භාණ්ඩය බිල්පතෙන් ඉවත් කිරීමට අවශ්‍යද?")) {
+        cart.splice(index, 1);
+        updateUI();
     }
-
-    async function finalizeBillAndPrint(shouldPrint) {
-        if(cart.length === 0) return;
-        const bNo = document.getElementById('bNoDisplay').innerText; 
-        for (let c of cart) {
-            let itm = inventory.find(i => i.id === c.id);
-            if(itm) {
-                let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
-                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-                let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * c.d };
-                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
-            }
-        }
+}
         if(shouldPrint) {
             window.print();
         }
@@ -225,3 +219,4 @@
 </script>
 </body>
 </html>
+
