@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Inventory, Sales & Wastage</title>
+    <title>CGI Admin - Final Report Fix</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -165,24 +165,28 @@
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
-        const customDate = document.getElementById('customDate').value;
-        const todayStr = new Date().toLocaleDateString();
-        const thisMonth = new Date().getMonth();
-        const thisYear = new Date().getFullYear();
+        const customDateInput = document.getElementById('customDate').value;
+        
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
 
         document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
         const filteredSales = salesData.filter(s => {
-            const sDate = new Date(s.date);
-            if (filter === 'today') return sDate.toLocaleDateString() === todayStr;
-            if (filter === 'month') return sDate.getMonth() === thisMonth && sDate.getFullYear() === thisYear;
-            if (filter === 'custom' && customDate) return sDate.toLocaleDateString() === new Date(customDate).toLocaleDateString();
+            const sDateObj = new Date(s.date);
+            const sDateISO = sDateObj.toISOString().split('T')[0];
+
+            if (filter === 'today') return sDateISO === todayStr;
+            if (filter === 'month') return sDateObj.getMonth() === currentMonth && sDateObj.getFullYear() === currentYear;
+            if (filter === 'custom' && customDateInput) return sDateISO === customDateInput;
             return true;
         });
 
         document.getElementById('salesBody').innerHTML = filteredSales.map(s => {
             totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
-            let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-style: italic;" : "";
+            let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-weight: bold; background: #fff8e1;" : "";
             return `<tr style="${rowStyle}"><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
         }).join('');
 
@@ -201,11 +205,9 @@
         if(q > parseFloat(item.stock)) return alert("තොගයේ ඇති ප්‍රමාණයට වඩා වැඩියෙන් ඉවත් කළ නොහැක!");
 
         if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
-            // තොගයෙන් අඩු කිරීම
             let newStock = (parseFloat(item.stock) - q).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
 
-            // ලාභයෙන් අඩු කිරීම (විකුණුම් වාර්තාවට Wastage ලෙස ඇතුළත් කිරීම)
             let loss = -(parseFloat(item.buy) * q);
             let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
@@ -225,11 +227,7 @@
     }
 
     function sendShortageToWhatsApp() {
-        const lowStock = inventory.filter(i => {
-            const stockVal = parseFloat(i.stock);
-            if (i.unit === "Kg") return stockVal < 0.5;
-            return stockVal < 2;
-        });
+        const lowStock = inventory.filter(i => parseFloat(i.stock) < 5);
         if(lowStock.length === 0) return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්!");
         let message = "*CGI Shortage List*\n\n";
         lowStock.forEach(item => { message += `• ${item.name} - ${item.stock} ${item.unit}\n`; });
