@@ -47,6 +47,8 @@
             .bill-table { font-size: 10px !important; }
             .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            /* කතිර සලකුණ ප්‍රින්ට් එකේදී සැඟවීමට */
+            .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
     </style>
@@ -113,27 +115,27 @@
         render();
     }
 
-function render() {
-    // තොග ප්‍රමාණය අනුව භාණ්ඩ පෙළගැස්වීම (තොග ඇති ඒවා මුලට, නැති ඒවා අගට)
-    const sortedInventory = [...inventory].sort((a, b) => {
-        const stockA = parseFloat(a.stock) <= 0;
-        const stockB = parseFloat(b.stock) <= 0;
-        return stockA - stockB; 
-    });
+    function render() {
+        // තොග ප්‍රමාණය අනුව භාණ්ඩ පෙළගැස්වීම (තොග ඇති ඒවා මුලට, නැති ඒවා අගට)
+        const sortedInventory = [...inventory].sort((a, b) => {
+            const stockA = parseFloat(a.stock) <= 0;
+            const stockB = parseFloat(b.stock) <= 0;
+            return stockA - stockB; 
+        });
 
-    document.getElementById('grid').innerHTML = sortedInventory.map(p => {
-        const isOut = parseFloat(p.stock) <= 0;
-        return `
-        <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
-            <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
-            <h4>${p.name}</h4>
-            <div class="price-tag">Rs. ${p.sell}</div>
-            <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-            ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-        </div>`;
-    }).join('');
-    document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
-}
+        document.getElementById('grid').innerHTML = sortedInventory.map(p => {
+            const isOut = parseFloat(p.stock) <= 0;
+            return `
+            <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
+                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
+                <h4>${p.name}</h4>
+                <div class="price-tag">Rs. ${p.sell}</div>
+                <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+            </div>`;
+        }).join('');
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
+    }
     
     function openM(id) {
         cur = inventory.find(x => x.id === id);
@@ -167,7 +169,7 @@ function render() {
     function updateUI() {
         document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
             <tr onclick="removeItem(${idx})" style="cursor:pointer;">
-                <td>${i.n} ❌</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
         document.getElementById('itemCount').innerText = cart.length; calc();
@@ -205,14 +207,11 @@ function render() {
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     fetchInventory();
 
-    // පිටුව රිප්‍රෙෂ් වීම වැළැක්වීම සඳහා
-window.onbeforeunload = function() {
-    if (cart.length > 0) {
-        return "ඔබ බිල්පතක් සකසමින් සිටී. ඔබට ඉවත් වීමට අවශ්‍ය බව සහතිකද?";
-    }
-};
+    window.onbeforeunload = function() {
+        if (cart.length > 0) {
+            return "ඔබ බිල්පතක් සකසමින් සිටී. ඔබට ඉවත් වීමට අවශ්‍ය බව සහතිකද?";
+        }
+    };
 </script>
 </body>
 </html>
-
-
