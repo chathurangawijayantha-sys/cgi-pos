@@ -132,6 +132,32 @@
         renderShortage();
         renderSales();
     }
+    function sendShortageToWhatsApp() {
+    // තොග අඩු භාණ්ඩ පෙරීම
+    const lowStock = inventory.filter(i => {
+        const stockVal = parseFloat(i.stock);
+        if (i.unit === "Kg") return stockVal < 0.5;
+        return stockVal < 2;
+    });
+
+    if (lowStock.length === 0) {
+        return alert("ගේන්න ඕනෑ බඩු ලැයිස්තුව හිස්ව පවතී!");
+    }
+
+    // WhatsApp පණිවිඩය සකස් කිරීම
+    let message = "*CGI Shortage List - ගේන්න ඕනෑ බඩු*\n";
+    message += `දිනය: ${new Date().toLocaleDateString('si-LK')}\n\n`;
+
+    lowStock.forEach((item, index) => {
+        message += `${index + 1}. ${item.name} - (තිබෙන ප්‍රමාණය: ${item.stock} ${item.unit})\n`;
+    });
+
+    message += "\n_කරුණාකර මෙම භාණ්ඩ ඉක්මනින් ලබා දෙන්න._";
+
+    // WhatsApp විවෘත කිරීම
+    const phone = "94706920007"; // ඔබගේ දුරකථන අංකය මෙතැනට ඇතුළත් කරන්න
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+}
 
     function showTab(id) {
         document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
@@ -273,4 +299,5 @@
     fetchData();
 </script>
 </body>
+
 </html>
