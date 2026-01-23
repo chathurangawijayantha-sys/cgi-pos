@@ -113,20 +113,27 @@
         render();
     }
 
-    function render() {
-        document.getElementById('grid').innerHTML = inventory.map(p => {
-            const isOut = parseFloat(p.stock) <= 0;
-            return `
-            <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
-                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
-                <h4>${p.name}</h4>
-                <div class="price-tag">Rs. ${p.sell}</div>
-                <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-            </div>`;
-        }).join('');
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
-    }
+function render() {
+    // තොග ප්‍රමාණය අනුව භාණ්ඩ පෙළගැස්වීම (තොග ඇති ඒවා මුලට, නැති ඒවා අගට)
+    const sortedInventory = [...inventory].sort((a, b) => {
+        const stockA = parseFloat(a.stock) <= 0;
+        const stockB = parseFloat(b.stock) <= 0;
+        return stockA - stockB; 
+    });
+
+    document.getElementById('grid').innerHTML = sortedInventory.map(p => {
+        const isOut = parseFloat(p.stock) <= 0;
+        return `
+        <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
+            <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
+            <h4>${p.name}</h4>
+            <div class="price-tag">Rs. ${p.sell}</div>
+            <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+            ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+        </div>`;
+    }).join('');
+    document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
+}
     
     function openM(id) {
         cur = inventory.find(x => x.id === id);
@@ -207,4 +214,5 @@ window.onbeforeunload = function() {
 </script>
 </body>
 </html>
+
 
