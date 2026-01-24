@@ -106,7 +106,6 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
-    // තෝරාගත් භාණ්ඩයේ තොරතුරු තබා ගන්නා Global Variables
     let curItem = null;
     let curDispName = ""; 
     let curPrice = 0;
@@ -124,16 +123,17 @@
         
         sortedInventory.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
+            // බඩඉරිඟු සඳහා විශේෂ ටැබ් දෙක හැදීම
             if(p.name === "බඩඉරිඟු") {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"අමු බඩඉරිඟු\", 100)'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
                     <h4>අමු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 100</div>
                     <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120)'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
                     <h4>තම්බපු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 120</div>
@@ -142,7 +142,7 @@
                 </div>`;
             } else {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
                     <h4>${p.name}</h4>
                     <div class="price-tag">Rs. ${p.sell}</div>
@@ -152,13 +152,17 @@
             }
         });
 
+        // වෙනත් ගාස්තු බොත්තම
         html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
     function openM(id, dispName, customPrice) {
-        curItem = inventory.find(x => x.id === id);
+        // ID එක string එකක් ලෙස ලැබෙන නිසා එය අංකයකට හරවා සෙවීම සිදු කරයි
+        curItem = inventory.find(x => String(x.id) === String(id));
+        if(!curItem) return;
+
         curDispName = dispName || curItem.name;
         curPrice = customPrice || curItem.sell;
 
@@ -169,17 +173,17 @@
 
         if(curDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "කරල් ගණන ඇතුළත් කරන්න";
+            qtyInput.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
             document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${curPrice}</b>`;
         } else if(curItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
-            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන ඇතුළත් කරන්න";
+            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
             document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(curPrice/10).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "ප්‍රමාණය ඇතුළත් කරන්න";
+            qtyInput.placeholder = "ප්‍රමාණය";
             document.getElementById('uDisp').innerText = "ඒකකය: " + curItem.unit;
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${curPrice}</b>`;
         }
@@ -187,7 +191,7 @@
         qtyInput.value = ""; 
         document.getElementById('unitModal').style.display = 'block'; 
         document.getElementById('overlay').style.display = 'block'; 
-        qtyInput.focus();
+        setTimeout(() => qtyInput.focus(), 100);
     }
 
     function openOtherModal() {
@@ -195,7 +199,7 @@
         curDispName = "වෙනත් ගාස්තු";
         curPrice = 0;
         document.getElementById('mTitle').innerText = curDispName;
-        document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
+        document.getElementById('pricePreview').innerHTML = "මුදල ඇත්ළත් කරන්න";
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
         const qtyInput = document.getElementById('qty');
@@ -203,7 +207,7 @@
         qtyInput.value = "";
         document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
-        qtyInput.focus();
+        setTimeout(() => qtyInput.focus(), 100);
     }
 
     function confirmAdd() {
