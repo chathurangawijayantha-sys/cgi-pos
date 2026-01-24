@@ -106,9 +106,9 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
-    let curItem = null;
-    let curDispName = ""; 
-    let curPrice = 0;
+    let selectedItem = null;
+    let selectedDispName = ""; 
+    let selectedPrice = 0;
 
     async function fetchInventory() {
         const res = await fetch(`${DB_URL}inventory.json`);
@@ -123,17 +123,16 @@
         
         sortedInventory.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            // බඩඉරිඟු සඳහා විශේෂ ටැබ් දෙක හැදීම
             if(p.name === "බඩඉරිඟු") {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"අමු බඩඉරිඟු\", 100)'}">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
                     <h4>අමු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 100</div>
                     <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120)'}">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
                     <h4>තම්බපු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 120</div>
@@ -142,7 +141,7 @@
                 </div>`;
             } else {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
                     <h4>${p.name}</h4>
                     <div class="price-tag">Rs. ${p.sell}</div>
@@ -152,40 +151,39 @@
             }
         });
 
-        // වෙනත් ගාස්තු බොත්තම
         html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
     function openM(id, dispName, customPrice) {
-        // ID එක string එකක් ලෙස ලැබෙන නිසා එය අංකයකට හරවා සෙවීම සිදු කරයි
-        curItem = inventory.find(x => String(x.id) === String(id));
-        if(!curItem) return;
+        selectedItem = inventory.find(x => String(x.id) === String(id));
+        if(!selectedItem) return;
 
-        curDispName = dispName || curItem.name;
-        curPrice = customPrice || curItem.sell;
+        selectedDispName = dispName || selectedItem.name;
+        selectedPrice = customPrice || selectedItem.sell;
 
-        document.getElementById('mTitle').innerText = curDispName;
+        document.getElementById('mTitle').innerText = selectedDispName;
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
 
-        if(curDispName.includes("බඩඉරිඟු")) {
+        if(selectedDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${curPrice}</b>`;
-        } else if(curItem.unit === "Kg") {
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${selectedPrice}</b>`;
+        } else if(selectedItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(curPrice/10).toFixed(2)}</b>`;
+            // ග්‍රෑම් 100 සහ ග්‍රෑම් 250 මිල පෙන්වන කොටස නිවැරදි කළා
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(selectedPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(selectedPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "ප්‍රමාණය";
-            document.getElementById('uDisp').innerText = "ඒකකය: " + curItem.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${curPrice}</b>`;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + selectedItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${selectedPrice}</b>`;
         }
         
         qtyInput.value = ""; 
@@ -195,10 +193,10 @@
     }
 
     function openOtherModal() {
-        curItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
-        curDispName = "වෙනත් ගාස්තු";
-        curPrice = 0;
-        document.getElementById('mTitle').innerText = curDispName;
+        selectedItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        selectedDispName = "වෙනත් ගාස්තු";
+        selectedPrice = 0;
+        document.getElementById('mTitle').innerText = selectedDispName;
         document.getElementById('pricePreview').innerHTML = "මුදල ඇත්ළත් කරන්න";
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
@@ -215,16 +213,16 @@
         if(!qVal || parseFloat(qVal) <= 0) return;
         let q = parseFloat(qVal);
 
-        if(curItem.id === 9999) { 
+        if(selectedItem.id === 9999) { 
             cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
         } else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
-            if(d > parseFloat(curItem.stock)) return alert("තොග මදි!");
+            if(d > parseFloat(selectedItem.stock)) return alert("තොග මදි!");
             
-            let t = (u==='g') ? (curPrice/1000)*q : curPrice*q;
-            let unitText = (curDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : curItem.unit);
-            cart.push({ id: curItem.id, n: curDispName, up: curPrice, buy: curItem.buy, dq: q + " " + unitText, t: t, d: d });
+            let t = (u==='g') ? (selectedPrice/1000)*q : selectedPrice*q;
+            let unitText = (selectedDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : selectedItem.unit);
+            cart.push({ id: selectedItem.id, n: selectedDispName, up: selectedPrice, buy: selectedItem.buy, dq: q + " " + unitText, t: t, d: d });
         }
         
         updateUI(); 
