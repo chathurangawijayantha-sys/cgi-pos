@@ -11,14 +11,40 @@
         .tab-btn.active { background: #27ae60; color: white; }
         .content { display: none; }
         .content.active { display: block; }
-        .add-form { background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: flex-end; }
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; }
+        
+        /* ඇලයිමන්ට් නිවැරදි කළ නව add-form කොටස */
+        .add-form { 
+            background: #e8f5e9; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 25px; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            gap: 15px; 
+            align-items: flex-end; 
+        }
+
+        /* බොත්තම් දෙක පිළිවෙළට තබා ගන්නා btn-group */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-group button {
+            flex: 1;
+            height: 40px;
+            font-size: 11px !important;
+            margin: 0 !important;
+            padding: 5px !important;
+        }
+
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
         label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #34495e; color: white; }
         .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
-        .shortage-row { background: #ffebee; color: #c62828; font-weight: bold; }
         .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-print-short { background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
@@ -68,9 +94,10 @@
             <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
             <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
             <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-            <div style="display: flex; gap: 5px;">
+            
+            <div class="btn-group">
                 <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
-                <button class="tab-btn" style="background:#1D6F42; color:white; font-size: 11px;" onclick="downloadTodayStockExcel()">Download Today Stock 📊</button>
+                <button class="tab-btn" style="background:#1D6F42; color:white;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
             </div>
         </div>
         
@@ -90,14 +117,14 @@
     </div>
 
     <div id="shortage" class="content">
-        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ (Kg < 0.5 | මිටි/පැකට් < 2)</h3>
+        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ</h3>
         <table>
             <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th><th>ඒකකය</th></tr></thead>
             <tbody id="shortageBody"></tbody>
         </table>
         <div class="no-print">
             <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">Shortage List එක WhatsApp කරන්න 🟢</button>
-            <button class="btn-print-short" onclick="window.print()">ලැයිස්තුව මුද්‍රණය කරන්න (Print List) 🖨️</button>
+            <button class="btn-print-short" onclick="window.print()">Print List 🖨️</button>
         </div>
     </div>
 
@@ -130,14 +157,14 @@
         
         <div class="no-print" style="display: flex; gap: 10px;">
             <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
-            <button class="btn-excel" onclick="downloadExcel()">වාර්තාව Excel ලෙස බාගත කරන්න 📊</button>
+            <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
         </div>
 
         <table>
             <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
-        <button class="btn-reset no-print" onclick="clearSales()">සියලු වාර්තා මකන්න (Reset All Data)</button>
+        <button class="btn-reset no-print" onclick="clearSales()">Reset All Data</button>
     </div>
 </div>
 
@@ -158,15 +185,9 @@
         renderSales();
     }
 
-    // අද දින ඇතුළත් කරන ලද භාණ්ඩ පමණක් Excel ලෙස ලබා ගැනීම
     function downloadTodayStockExcel() {
         if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-        
-        const dataForExcel = addedToday.map(item => ({
-            "භාණ්ඩයේ නම": item.name,
-            "විකුණුම් මිල (Rs)": item.sell
-        }));
-
+        const dataForExcel = addedToday.map(item => ({ "භාණ්ඩයේ නම": item.name, "විකුණුම් මිල (Rs)": item.sell }));
         const ws = XLSX.utils.json_to_sheet(dataForExcel);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Today Items");
@@ -181,29 +202,21 @@
         let st = parseFloat(document.getElementById('addStock').value) || 0;
         let img = document.getElementById('itemImg').value;
         if(!n) return;
-
         let existing = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         let item = existing ? { ...existing, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
                             : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-        
         await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
-        
-        // අද ඇතුළත් කළ භාණ්ඩ ලැයිස්තුවට එක් කිරීම (Excel සඳහා)
         addedToday.push({ name: n, sell: s });
-
         clearForm(); fetchData();
     }
 
-    // අනෙකුත් ශ්‍රිතයන් (fetchData, renderSales, etc.) එලෙසම පවතී...
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
         const customDateInput = document.getElementById('customDate').value;
         const now = new Date();
         const todayStr = now.toLocaleDateString('en-GB');
-
         document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
-
         const filteredSales = salesData.filter(s => {
             if (filter === 'all') return true;
             const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -212,7 +225,6 @@
             else if (sDateParts[0].length > 2) { sDateObj = new Date(sDateParts[0], sDateParts[1]-1, sDateParts[2]); }
             else if (parseInt(sDateParts[0]) > 12) { sDateObj = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]); }
             else { sDateObj = new Date(sDateParts[2], sDateParts[0]-1, sDateParts[1]); }
-            
             const sDateISO = sDateObj.toLocaleDateString('en-GB');
             if (filter === 'today') return sDateISO === todayStr;
             if (filter === 'month') return sDateObj.getMonth() === now.getMonth() && sDateObj.getFullYear() === now.getFullYear();
@@ -222,27 +234,22 @@
             }
             return true;
         });
-
         const itemCountMap = {};
         filteredSales.forEach(s => { if(s.bNo !== "WASTAGE") itemCountMap[s.name] = (itemCountMap[s.name] || 0) + 1; });
         const topItems = Object.entries(itemCountMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
         document.getElementById('topItemsList').innerHTML = topItems.length > 0 ? topItems.map(item => `<span class="top-selling-item">${item[0]} (${item[1]} වතාවක්)</span>`).join('') : "වාර්තා නැත.";
-
         document.getElementById('salesBody').innerHTML = filteredSales.map(s => {
             totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
             let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-weight: bold; background: #fff8e1;" : "";
             return `<tr style="${rowStyle}"><td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td></tr>`;
         }).sort((a, b) => new Date(b.date) - new Date(a.date)).join('');
-
         document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
         document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
         document.getElementById('totalBills').innerText = [...new Set(filteredSales.filter(s => s.bNo !== "WASTAGE").map(s => s.bNo))].filter(n => n).length;
     }
 
     function downloadExcel() {
-        const filter = document.getElementById('reportFilter').value;
-        const filteredData = salesData; // මෙහිදී renderSales හි ඇති logic එකම භාවිතා කළ හැක
-        const dataForExcel = filteredData.map(s => ({ "බිල් අංකය": s.bNo, "දිනය": s.date, "භාණ්ඩය": s.name, "ප්‍රමාණය": s.qty, "මුදල (Rs)": s.total, "ලාභය (Rs)": s.profit }));
+        const dataForExcel = salesData.map(s => ({ "බිල් අංකය": s.bNo, "දිනය": s.date, "භාණ්ඩය": s.name, "ප්‍රමාණය": s.qty, "මුදල (Rs)": s.total, "ලාභය (Rs)": s.profit }));
         const ws = XLSX.utils.json_to_sheet(dataForExcel);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Sales Report");
@@ -265,9 +272,9 @@
         }
     }
 
-    async function clearSales() { if(confirm("සියලු විකුණුම් වාර්තා මකා දැමීමට අවශ්‍යද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); fetchData(); } }
-    function sendShortageToWhatsApp() { /* Existing ... */ }
-    function sendSalesReportToWhatsApp() { /* Existing ... */ }
+    async function clearSales() { if(confirm("සියලු වාර්තා මකන්නද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); fetchData(); } }
+    function sendShortageToWhatsApp() { /* Logic */ }
+    function sendSalesReportToWhatsApp() { /* Logic */ }
     function showTab(id) { document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
     function renderInventory() { document.getElementById('inventoryBody').innerHTML = inventory.map(item => `<tr><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td><td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td><td class="no-print"><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`).join(''); document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join(''); }
     function renderShortage() { const lowStock = inventory.filter(i => { const v = parseFloat(i.stock); return i.unit === "Kg" ? v < 0.5 : v < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(item => `<tr class="shortage-row"><td>${item.name}</td><td>${item.stock}</td><td>${item.unit}</td></tr>`).join(''); }
