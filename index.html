@@ -169,7 +169,8 @@
         const qtyInput = document.getElementById('qty');
         const addBtn = document.getElementById('addBtn');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        addBtn.onclick = confirmAdd;
+        
+        addBtn.onclick = function() { confirmAdd(); };
 
         if(cur.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
@@ -195,7 +196,8 @@
         const qtyInput = document.getElementById('qty');
         const addBtn = document.getElementById('addBtn');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        addBtn.onclick = confirmAdd;
+        
+        addBtn.onclick = function() { confirmAdd(); };
 
         uSel.value = "main"; uSel.disabled = true;
         qtyInput.placeholder = "කරල් ගණන";
@@ -213,7 +215,9 @@
         const addBtn = document.getElementById('addBtn');
         qtyInput.placeholder = "මුදල (Rs.) ඇතුළත් කරන්න";
         qtyInput.value = "";
-        addBtn.onclick = addOtherAmount;
+        
+        addBtn.onclick = function() { addOtherAmount(); };
+        
         document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
         qtyInput.focus();
