@@ -66,7 +66,7 @@
         </select>
     </div>
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
-    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <button id="addBtn" onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -116,7 +116,7 @@
 
     function render() {
         const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
-        document.getElementById('grid').innerHTML = sortedInventory.map(p => {
+        let html = sortedInventory.map(p => {
             const isOut = parseFloat(p.stock) <= 0;
             return `
             <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
@@ -127,6 +127,16 @@
                 ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
             </div>`;
         }).join('');
+
+        // "වෙනත්" ටැබ් එක අවසානයට එක් කිරීම
+        html += `
+        <div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;">
+            <div style="font-size: 30px; margin-top: 10px;">➕</div>
+            <h4 style="color: #27ae60;">වෙනත්</h4>
+            <div class="price-tag">මුදල පමණි</div>
+        </div>`;
+
+        document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
@@ -136,6 +146,9 @@
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
+        document.getElementById('unitSelectorDiv').style.display = 'block';
+        document.getElementById('addBtn').setAttribute('onclick', 'confirmAdd()');
+
         if(cur.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
@@ -146,6 +159,28 @@
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${cur.sell}</b>`;
         }
         qtyInput.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; qtyInput.focus();
+    }
+
+    // වෙනත් මුදලක් ඇතුළත් කිරීමේ Modal එක
+    function openOtherModal() {
+        document.getElementById('mTitle').innerText = "වෙනත් ගාස්තු";
+        document.getElementById('pricePreview').innerHTML = "අමතර ගාස්තු බිලට එක් කිරීම";
+        document.getElementById('uDisp').innerText = "";
+        document.getElementById('unitSelectorDiv').style.display = 'none';
+        const qtyInput = document.getElementById('qty');
+        qtyInput.placeholder = "මුදල (Rs.) ඇතුළත් කරන්න";
+        qtyInput.value = "";
+        document.getElementById('addBtn').setAttribute('onclick', 'addOtherAmount()');
+        document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        qtyInput.focus();
+    }
+
+    function addOtherAmount() {
+        let amount = parseFloat(document.getElementById('qty').value);
+        if(!amount || amount <= 0) return;
+        cart.push({ id: 9999, n: "වෙනත්", up: amount, buy: amount, dq: "1 සේවාව", t: amount, d: 0 });
+        updateUI(); closeModal();
     }
 
     function confirmAdd() {
@@ -183,19 +218,18 @@
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText; 
         for (let c of cart) {
-            let itm = inventory.find(i => i.id === c.id);
-            if(itm) {
-                let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
-                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-                let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * c.d };
-                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
+            if(c.id !== 9999) { // වෙනත් ගාස්තු සඳහා තොග අඩු නොකරයි
+                let itm = inventory.find(i => i.id === c.id);
+                if(itm) {
+                    let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
+                    await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
+                }
             }
+            let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * (c.d || 1) };
+            await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
         }
-        // පිටුවෙන් ඉවත් වීමට පෙර පණිවිඩ පෙන්වීම වැළැක්වීමට
         window.onbeforeunload = null;
-        if(shouldPrint) {
-            window.print();
-        }
+        if(shouldPrint) window.print();
         location.reload();
     }
 
