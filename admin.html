@@ -185,14 +185,44 @@
         renderSales();
     }
 
-    function downloadTodayStockExcel() {
-        if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-        const dataForExcel = addedToday.map(item => ({ "භාණ්ඩයේ නම": item.name, "විකුණුම් මිල (Rs)": item.sell }));
-        const ws = XLSX.utils.json_to_sheet(dataForExcel);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Today Items");
-        XLSX.writeFile(wb, `Today_Added_Items_${new Date().toLocaleDateString()}.xlsx`);
+function downloadTodayStockExcel() {
+    if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
+    
+    const dataForExcel = addedToday.map(item => ({
+        "භාණ්ඩයේ නම": item.name,
+        "විකුණුම් මිල (Rs)": item.sell
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataForExcel);
+
+    // අකුරු වර්ගය සහ ප්‍රමාණය සැකසීම (Styling)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_address = {c: C, r: R};
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            if (!ws[cell_ref]) continue;
+            if (!ws[cell_ref].s) ws[cell_ref].s = {};
+            
+            // FMGanganee අකුරු සහ 36 ප්‍රමාණය ලබා දීම
+            ws[cell_ref].s = {
+                font: {
+                    name: "FMGanganee",
+                    sz: 36,
+                    bold: true
+                },
+                alignment: {
+                    vertical: "center",
+                    horizontal: "center"
+                }
+            };
+        }
     }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Today Items");
+    XLSX.writeFile(wb, `Today_Added_Items_${new Date().toLocaleDateString()}.xlsx`);
+}
 
     async function handleUpdate() {
         let n = document.getElementById('itemName').value;
@@ -285,3 +315,4 @@
 </script>
 </body>
 </html>
+
