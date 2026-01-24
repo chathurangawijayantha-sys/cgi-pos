@@ -106,6 +106,7 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; let cur = null;
+    let selectedDispName = ""; 
 
     async function fetchInventory() {
         const res = await fetch(`${DB_URL}inventory.json`);
@@ -116,19 +117,38 @@
 
     function render() {
         const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
-        let html = sortedInventory.map(p => {
+        let html = "";
+        
+        sortedInventory.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            return `
-            <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
-                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
-                <h4>${p.name}</h4>
-                <div class="price-tag">Rs. ${p.sell}</div>
-                <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-            </div>`;
-        }).join('');
+            if(p.name === "බඩඉරිඟු") {
+                html += `
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"අමු බඩඉරිඟු\", 100, \"amu-corn.jpg\")'}">
+                    <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
+                    <h4>අමු බඩඉරිඟු</h4>
+                    <div class="price-tag">Rs. 100</div>
+                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120, \"thambapu-corn.jpg\")'}">
+                    <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
+                    <h4>තම්බපු බඩඉරිඟු</h4>
+                    <div class="price-tag">Rs. 120</div>
+                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            } else {
+                html += `
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
+                    <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
+                    <h4>${p.name}</h4>
+                    <div class="price-tag">Rs. ${p.sell}</div>
+                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            }
+        });
 
-        // "වෙනත්" ටැබ් එක අවසානයට එක් කිරීම
         html += `
         <div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;">
             <div style="font-size: 30px; margin-top: 10px;">➕</div>
@@ -140,9 +160,10 @@
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
     
-    function openM(id) {
+    function openM(id, dispName) {
         cur = inventory.find(x => x.id === id);
-        document.getElementById('mTitle').innerText = cur.name;
+        selectedDispName = dispName || cur.name;
+        document.getElementById('mTitle').innerText = selectedDispName;
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
@@ -161,7 +182,25 @@
         qtyInput.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; qtyInput.focus();
     }
 
-    // වෙනත් මුදලක් ඇතුළත් කිරීමේ Modal එක
+    function openCustomM(id, dispName, customPrice, customImg) {
+        cur = JSON.parse(JSON.stringify(inventory.find(x => x.id === id)));
+        cur.sell = customPrice;
+        selectedDispName = dispName;
+        
+        document.getElementById('mTitle').innerText = selectedDispName;
+        document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
+        const uSel = document.getElementById('uSel');
+        const qtyInput = document.getElementById('qty');
+        document.getElementById('unitSelectorDiv').style.display = 'block';
+        document.getElementById('addBtn').setAttribute('onclick', 'confirmAdd()');
+
+        uSel.value = "main"; uSel.disabled = true;
+        qtyInput.placeholder = "කරල් ගණන";
+        document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${cur.sell}</b>`;
+        
+        qtyInput.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; qtyInput.focus();
+    }
+
     function openOtherModal() {
         document.getElementById('mTitle').innerText = "වෙනත් ගාස්තු";
         document.getElementById('pricePreview').innerHTML = "අමතර ගාස්තු බිලට එක් කිරීම";
@@ -190,7 +229,7 @@
         if(d > parseFloat(cur.stock)) return alert("තොග මදි!");
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
         let displayQty = (u==='g') ? q + "g" : q + " " + cur.unit;
-        cart.push({ id: cur.id, n: cur.name, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
+        cart.push({ id: cur.id, n: selectedDispName, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
         updateUI(); closeModal();
     }
 
@@ -218,7 +257,7 @@
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText; 
         for (let c of cart) {
-            if(c.id !== 9999) { // වෙනත් ගාස්තු සඳහා තොග අඩු නොකරයි
+            if(c.id !== 9999) {
                 let itm = inventory.find(i => i.id === c.id);
                 if(itm) {
                     let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
