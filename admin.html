@@ -12,7 +12,6 @@
         .content { display: none; }
         .content.active { display: block; }
         
-        /* ඇලයිමන්ට් නිවැරදි කළ නව add-form කොටස */
         .add-form { 
             background: #e8f5e9; 
             padding: 20px; 
@@ -24,7 +23,6 @@
             align-items: flex-end; 
         }
 
-        /* බොත්තම් දෙක පිළිවෙළට තබා ගන්නා btn-group */
         .btn-group {
             display: flex;
             gap: 8px;
@@ -185,44 +183,53 @@
         renderSales();
     }
 
-function downloadTodayStockExcel() {
-    if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-    
-    const dataForExcel = addedToday.map(item => ({
-        "භාණ්ඩයේ නම": item.name,
-        "විකුණුම් මිල (Rs)": item.sell
-    }));
+    // FMGanganee 36pt සහිතව Excel බාගත කිරීමේ නව ශ්‍රිතය
+    function downloadTodayStockExcel() {
+        if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
 
-    const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        let tableHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    td, th { 
+                        font-family: 'FMGanganee', sans-serif; 
+                        font-size: 36pt; 
+                        border: 0.5pt solid #000;
+                        text-align: center;
+                        vertical-align: middle;
+                    }
+                    th { background-color: #27ae60; color: #ffffff; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 300px;">භාණ්ඩයේ නම</th>
+                            <th style="width: 200px;">විකුණුම් මිල (Rs)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${addedToday.map(item => `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.sell}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </body>
+            </html>`;
 
-    // අකුරු වර්ගය සහ ප්‍රමාණය සැකසීම (Styling)
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell_address = {c: C, r: R};
-            const cell_ref = XLSX.utils.encode_cell(cell_address);
-            if (!ws[cell_ref]) continue;
-            if (!ws[cell_ref].s) ws[cell_ref].s = {};
-            
-            // FMGanganee අකුරු සහ 36 ප්‍රමාණය ලබා දීම
-            ws[cell_ref].s = {
-                font: {
-                    name: "FMGanganee",
-                    sz: 36,
-                    bold: true
-                },
-                alignment: {
-                    vertical: "center",
-                    horizontal: "center"
-                }
-            };
-        }
+        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Stock_List_${new Date().toLocaleDateString()}.xls`;
+        link.click();
+        URL.revokeObjectURL(url);
     }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Today Items");
-    XLSX.writeFile(wb, `Today_Added_Items_${new Date().toLocaleDateString()}.xlsx`);
-}
 
     async function handleUpdate() {
         let n = document.getElementById('itemName').value;
@@ -303,8 +310,21 @@ function downloadTodayStockExcel() {
     }
 
     async function clearSales() { if(confirm("සියලු වාර්තා මකන්නද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); fetchData(); } }
-    function sendShortageToWhatsApp() { /* Logic */ }
-    function sendSalesReportToWhatsApp() { /* Logic */ }
+    function sendShortageToWhatsApp() {
+        const lowStock = inventory.filter(i => {
+            const v = parseFloat(i.stock);
+            return i.unit === "Kg" ? v < 0.5 : v < 2;
+        });
+        if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!");
+        let message = "*ගේන්න ඕනෑ බඩු*\n";
+        lowStock.forEach(i => message += `- ${i.name} (${i.stock} ${i.unit})\n`);
+        window.open(`https://wa.me/94706920007?text=${encodeURIComponent(message)}`);
+    }
+    function sendSalesReportToWhatsApp() {
+        const filter = document.getElementById('reportFilter').value;
+        let msg = `*විකුණුම් වාර්තාව (${filter})*\nආදායම: ${document.getElementById('totalSales').innerText}\nලාභය: ${document.getElementById('totalProfit').innerText}`;
+        window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
+    }
     function showTab(id) { document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
     function renderInventory() { document.getElementById('inventoryBody').innerHTML = inventory.map(item => `<tr><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td><td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td><td class="no-print"><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`).join(''); document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join(''); }
     function renderShortage() { const lowStock = inventory.filter(i => { const v = parseFloat(i.stock); return i.unit === "Kg" ? v < 0.5 : v < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(item => `<tr class="shortage-row"><td>${item.name}</td><td>${item.stock}</td><td>${item.unit}</td></tr>`).join(''); }
@@ -315,4 +335,3 @@ function downloadTodayStockExcel() {
 </script>
 </body>
 </html>
-
