@@ -66,7 +66,7 @@
         </select>
     </div>
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
-    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <button id="mainAddBtn" onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -107,6 +107,7 @@
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; let cur = null;
     let selectedDispName = ""; 
+    let selectedPrice = 0;
 
     async function fetchInventory() {
         const res = await fetch(`${DB_URL}inventory.json`);
@@ -161,15 +162,9 @@
     }
     
     function openM(id, dispName, customPrice) {
-        let originalItem = inventory.find(x => x.id === id);
-        if(!originalItem && id !== 9999) return;
-
-        // "වෙනත්" නොවන සාමාන්‍ය භාණ්ඩ සඳහා
-        if(id !== 9999) {
-            cur = JSON.parse(JSON.stringify(originalItem));
-            if(customPrice) cur.sell = customPrice; // බඩඉරිඟු වලට පමණක් මිල වෙනස් කරයි
-            selectedDispName = dispName || cur.name;
-        }
+        cur = inventory.find(x => x.id === id);
+        selectedDispName = dispName || cur.name;
+        selectedPrice = customPrice || cur.sell;
 
         document.getElementById('mTitle').innerText = selectedDispName;
         const uSel = document.getElementById('uSel');
@@ -180,17 +175,17 @@
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${cur.sell}</b>`;
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${selectedPrice}</b>`;
         } else if(cur.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(cur.sell/10).toFixed(2)}</b> | 250g: <b>Rs. ${(cur.sell/4).toFixed(2)}</b>`;
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(selectedPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(selectedPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "ප්‍රමාණය";
             document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${cur.sell}</b>`;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${selectedPrice}</b>`;
         }
         
         qtyInput.value = ""; 
@@ -200,8 +195,9 @@
     }
 
     function openOtherModal() {
-        cur = { id: 9999, n: "වෙනත්", up: 0, buy: 0, d: 0 };
+        cur = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
         selectedDispName = "වෙනත් ගාස්තු";
+        selectedPrice = 0;
         document.getElementById('mTitle').innerText = selectedDispName;
         document.getElementById('pricePreview').innerHTML = "අමතර ගාස්තු බිලට එක් කිරීම";
         document.getElementById('uDisp').innerText = "";
@@ -219,15 +215,16 @@
         if(!qVal || parseFloat(qVal) <= 0) return;
         let q = parseFloat(qVal);
 
-        if(cur.id === 9999) { // වෙනත් ගාස්තු සඳහා
+        if(cur.id === 9999) { 
             cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
-        } else { // සාමාන්‍ය භාණ්ඩ සඳහා
+        } else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
             if(d > parseFloat(cur.stock)) return alert("තොග මදි!");
-            let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
+            
+            let t = (u==='g') ? (selectedPrice/1000)*q : selectedPrice*q;
             let unitText = (selectedDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : cur.unit);
-            cart.push({ id: cur.id, n: selectedDispName, up: cur.sell, buy: cur.buy, dq: q + " " + unitText, t: t, d: d });
+            cart.push({ id: cur.id, n: selectedDispName, up: selectedPrice, buy: cur.buy, dq: q + " " + unitText, t: t, d: d });
         }
         
         updateUI(); 
