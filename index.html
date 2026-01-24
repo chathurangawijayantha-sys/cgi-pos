@@ -66,7 +66,7 @@
         </select>
     </div>
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
-    <button id="addBtn" onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <button id="addBtn" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -123,14 +123,14 @@
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"අමු බඩඉරිඟු\", 100, \"amu-corn.jpg\")'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"අමු බඩඉරිඟු\", 100)'}">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
                     <h4>අමු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 100</div>
                     <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120, \"thambapu-corn.jpg\")'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openCustomM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120)'}">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
                     <h4>තම්බපු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 120</div>
@@ -167,8 +167,9 @@
         document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
+        const addBtn = document.getElementById('addBtn');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        document.getElementById('addBtn').setAttribute('onclick', 'confirmAdd()');
+        addBtn.onclick = confirmAdd;
 
         if(cur.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
@@ -182,17 +183,19 @@
         qtyInput.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block'; qtyInput.focus();
     }
 
-    function openCustomM(id, dispName, customPrice, customImg) {
-        cur = JSON.parse(JSON.stringify(inventory.find(x => x.id === id)));
+    function openCustomM(id, dispName, customPrice) {
+        let originalItem = inventory.find(x => x.id === id);
+        cur = JSON.parse(JSON.stringify(originalItem));
         cur.sell = customPrice;
         selectedDispName = dispName;
         
         document.getElementById('mTitle').innerText = selectedDispName;
-        document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
+        document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
+        const addBtn = document.getElementById('addBtn');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        document.getElementById('addBtn').setAttribute('onclick', 'confirmAdd()');
+        addBtn.onclick = confirmAdd;
 
         uSel.value = "main"; uSel.disabled = true;
         qtyInput.placeholder = "කරල් ගණන";
@@ -207,9 +210,10 @@
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
         const qtyInput = document.getElementById('qty');
+        const addBtn = document.getElementById('addBtn');
         qtyInput.placeholder = "මුදල (Rs.) ඇතුළත් කරන්න";
         qtyInput.value = "";
-        document.getElementById('addBtn').setAttribute('onclick', 'addOtherAmount()');
+        addBtn.onclick = addOtherAmount;
         document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
         qtyInput.focus();
@@ -228,7 +232,7 @@
         let d = (u==='g') ? q/1000 : q;
         if(d > parseFloat(cur.stock)) return alert("තොග මදි!");
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        let displayQty = (u==='g') ? q + "g" : q + " " + cur.unit;
+        let displayQty = (u==='g') ? q + "g" : q + " " + (selectedDispName.includes("බඩඉරිඟු") ? "කරල්" : cur.unit);
         cart.push({ id: cur.id, n: selectedDispName, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
         updateUI(); closeModal();
     }
