@@ -52,7 +52,14 @@
     <div id="stock" class="content active">
         <div class="add-form no-print">
             <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
-            <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option></select></div>
+            <div>
+    <label>ඒකකය</label>
+    <select id="itemUnit">
+        <option value="Kg">Kg</option>
+        <option value="මිටි">මිටි</option>
+        <option value="පැකට්">පැකට්</option>
+        <option value="කරල්">කරල්</option> </select>
+</div>
             <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
             <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
             <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
@@ -291,4 +298,5 @@ let message = "*ගැමි එළවළු - ගේන්න ඕනෑ බඩ�
 </script>
 </body>
 </html>
+
 
