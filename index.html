@@ -66,7 +66,7 @@
         </select>
     </div>
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
-    <button id="mainAddBtn" onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+    <button id="addBtnToCart" onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div class="main-container">
@@ -173,17 +173,17 @@
 
         if(selectedDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "කරල් ගණන";
+            qtyInput.placeholder = "කරල් ගණන ඇතුළත් කරන්න";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
             document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${selectedPrice}</b>`;
         } else if(cur.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
-            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
+            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන ඇතුළත් කරන්න";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(selectedPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(selectedPrice/4).toFixed(2)}</b>`;
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(selectedPrice/10).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "ප්‍රමාණය";
+            qtyInput.placeholder = "ප්‍රමාණය ඇතුළත් කරන්න";
             document.getElementById('uDisp').innerText = "ඒකකය: " + cur.unit;
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${selectedPrice}</b>`;
         }
@@ -199,11 +199,11 @@
         selectedDispName = "වෙනත් ගාස්තු";
         selectedPrice = 0;
         document.getElementById('mTitle').innerText = selectedDispName;
-        document.getElementById('pricePreview').innerHTML = "අමතර ගාස්තු බිලට එක් කිරීම";
+        document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
         const qtyInput = document.getElementById('qty');
-        qtyInput.placeholder = "මුදල (Rs.) ඇතුළත් කරන්න";
+        qtyInput.placeholder = "මුදල (Rs.)";
         qtyInput.value = "";
         document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
