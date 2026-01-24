@@ -231,14 +231,21 @@
     }
 
     function confirmAdd() {
-        let qVal = document.getElementById('qty').value; if(!qVal) return;
-        let q = parseFloat(qVal); let u = document.getElementById('uSel').value;
+        let qVal = document.getElementById('qty').value; 
+        if(!qVal) return;
+        let q = parseFloat(qVal); 
+        let u = document.getElementById('uSel').value;
         let d = (u==='g') ? q/1000 : q;
+        
         if(d > parseFloat(cur.stock)) return alert("තොග මදි!");
+        
         let t = (u==='g') ? (cur.sell/1000)*q : cur.sell*q;
-        let displayQty = (u==='g') ? q + "g" : q + " " + (selectedDispName.includes("බඩඉරිඟු") ? "කරල්" : cur.unit);
+        let unitText = (selectedDispName.includes("බඩඉරිඟු")) ? "කරල්" : cur.unit;
+        let displayQty = (u==='g') ? q + "g" : q + " " + unitText;
+        
         cart.push({ id: cur.id, n: selectedDispName, up: cur.sell, buy: cur.buy, dq: displayQty, t: t, d: d });
-        updateUI(); closeModal();
+        updateUI(); 
+        closeModal();
     }
 
     function updateUI() {
@@ -247,7 +254,8 @@
                 <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-        document.getElementById('itemCount').innerText = cart.length; calc();
+        document.getElementById('itemCount').innerText = cart.length; 
+        calc();
     }
 
     function removeItem(index) {
@@ -280,7 +288,11 @@
         location.reload();
     }
 
-    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
+    function closeModal() { 
+        document.getElementById('unitModal').style.display='none'; 
+        document.getElementById('overlay').style.display='none'; 
+    }
+    
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     fetchInventory();
