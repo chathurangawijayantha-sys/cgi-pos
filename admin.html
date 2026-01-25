@@ -101,9 +101,13 @@
         
         <div class="wastage-form no-print">
             <h4 style="margin-top:0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:10px;">
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px;">
                 <input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම">
                 <input type="number" id="wasteQty" placeholder="ප්‍රමාණය">
+                <select id="wasteUnit">
+                    <option value="Kg">Kg</option>
+                    <option value="g">ග්‍රෑම් (g)</option>
+                </select>
                 <button class="tab-btn" style="background:#ef6c00; color:white; padding:8px;" onclick="addWastage()">ඉවත් කරන්න</button>
             </div>
         </div>
@@ -175,7 +179,6 @@
         const invRes = await fetch(`${BASE_URL}inventory.json`);
         const invData = await invRes.json();
         inventory = invData ? Object.values(invData) : [];
-        
         const salesRes = await fetch(`${BASE_URL}sales.json`);
         salesDataRaw = await salesRes.json();
         salesList = [];
@@ -184,10 +187,7 @@
                 salesList.push({ ...salesDataRaw[key], firebaseKey: key });
             });
         }
-        
-        renderInventory();
-        renderShortage();
-        renderSales();
+        renderInventory(); renderShortage(); renderSales();
     }
 
     function downloadTodayStockExcel() {
@@ -280,16 +280,27 @@
 
     async function addWastage() {
         let n = document.getElementById('wasteItemName').value;
-        let q = parseFloat(document.getElementById('wasteQty').value);
-        if(!n || !q) return alert("නම සහ ප්‍රමාණය ඇතුළත් කරන්න!");
+        let qVal = parseFloat(document.getElementById('wasteQty').value);
+        let u = document.getElementById('wasteUnit').value;
+
+        if(!n || !qVal) return alert("නම සහ ප්‍රමාණය ඇතුළත් කරන්න!");
         let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-        if(confirm(`${n} වලින් ${q} ${item.unit} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
-            let newStock = (parseFloat(item.stock) - q).toFixed(2);
+
+        // ග්‍රෑම් වලින් ඇතුළත් කළහොත් Kg වලට හැරවීම
+        let qtyInKg = (u === 'g') ? qVal / 1000 : qVal;
+        let displayQty = (u === 'g') ? qVal + " g" : qVal + " Kg";
+
+        if(confirm(`${n} වලින් ${displayQty} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
+            let newStock = (parseFloat(item.stock) - qtyInKg).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-            let loss = -(parseFloat(item.buy) * q);
-            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
+            
+            // ලාභය ගණනය කිරීමේදී Kg ප්‍රමාණය භාවිතා කරයි
+            let loss = -(parseFloat(item.buy) * qtyInKg);
+            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: displayQty, total: 0, profit: loss };
+            
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
+            
             document.getElementById('wasteItemName').value = "";
             document.getElementById('wasteQty').value = "";
             alert("සාර්ථකව ඉවත් කළා!");
