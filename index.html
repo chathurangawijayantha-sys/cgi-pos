@@ -207,17 +207,15 @@
         setTimeout(() => qtyInput.focus(), 100);
     }
 
-    // බිලට එක් කළ සැණින් තොගය සජීවීව (Live) යාවත්කාලීන කරයි
     async function updateLiveStock(itemId, amount, mode) {
         if(itemId === 9999) return;
         let itm = inventory.find(i => String(i.id) === String(itemId));
         if(itm) {
             let currentStock = parseFloat(itm.stock);
-            // mode 'sub' නම් අඩු කරයි, 'add' නම් වැඩි කරයි
             let newStock = (mode === 'sub') ? (currentStock - amount) : (currentStock + amount);
             itm.stock = newStock.toFixed(2);
             await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
-            render(); // Grid එක නැවත සකසයි
+            render();
         }
     }
 
@@ -233,7 +231,6 @@
             let d = (u==='g') ? q/1000 : q;
             if(d > parseFloat(selectedItem.stock)) return alert("තොග මදි!");
             
-            // සජීවීව ස්ටොක් එක අඩු කිරීම
             await updateLiveStock(selectedItem.id, d, 'sub');
 
             let t = (u==='g') ? (selectedPrice/1000)*q : selectedPrice*q;
@@ -258,7 +255,6 @@
     async function removeItem(index) {
         if(confirm("ඉවත් කරනවාද?")) { 
             let item = cart[index];
-            // බිලෙන් ඉවත් කරන විට නැවත තොගයට එක් කිරීම
             if(item.id !== 9999) {
                 await updateLiveStock(item.id, item.d, 'add');
             }
@@ -277,13 +273,10 @@
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText; 
-        
-        // තොගය දැනටමත් ලයිව් අප්ඩේට් වී ඇති නිසා මෙහිදී සිදු කරන්නේ සේල්ස් රෙකෝඩ් එක දැමීම පමණි
         for (let c of cart) {
             let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * (c.d || 1) };
             await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
         }
-        
         window.onbeforeunload = null;
         if(shouldPrint) window.print();
         location.reload();
