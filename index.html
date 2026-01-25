@@ -22,32 +22,18 @@
         .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
         .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
         .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
-        .bill-table tr:hover { background-color: #ffebee; }
         .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
-
-        @media screen and (max-width: 800px) {
-            .main-container { flex-direction: column; }
-            #product-section { width: auto; border-right: none; }
-            #bill-section { width: auto; }
-        }
-
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
-
         @media print {
             @page { size: 58mm auto; margin: 0; }
-            body { width: 58mm; margin: 0; padding: 0; }
-            #product-section, .modal-overlay, #unitModal, .no-print, button, input { display: none !important; }
+            #product-section, .modal-overlay, #unitModal, .no-print, button, input, .no-print-icon { display: none !important; }
             #bill-section { width: 100% !important; display: block !important; padding: 2mm !important; }
-            .bill-header h3 { font-size: 14px !important; }
-            .bill-header p { font-size: 9px !important; }
             .bill-table { font-size: 10px !important; }
-            .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
     </style>
@@ -70,10 +56,7 @@
 </div>
 
 <div class="main-container">
-    <div id="product-section">
-        <div class="grid" id="grid"></div>
-    </div>
-
+    <div id="product-section"><div class="grid" id="grid"></div></div>
     <div id="bill-section">
         <div class="bill-header">
             <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
@@ -106,9 +89,7 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
-    let currentSelectedItem = null;
-    let currentDispName = ""; 
-    let currentPrice = 0;
+    let tempItem = null; let tempDispName = ""; let tempPrice = 0;
 
     async function fetchInventory() {
         const res = await fetch(`${DB_URL}inventory.json`);
@@ -118,138 +99,110 @@
     }
 
     function render() {
-        const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
+        const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
         let html = "";
-        
-        sortedInventory.forEach(p => {
+        sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"අමු බඩඉරිඟු\", 100)'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
-                    <h4>අමු බඩඉරිඟු</h4>
-                    <div class="price-tag">Rs. 100</div>
-                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120)'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
-                    <h4>තම්බපු බඩඉරිඟු</h4>
-                    <div class="price-tag">Rs. 120</div>
-                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
-                    <h4>${p.name}</h4>
-                    <div class="price-tag">Rs. ${p.sell}</div>
-                    <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             }
         });
-
         html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
-    
+
     function openM(id, dispName, customPrice) {
-        currentSelectedItem = inventory.find(x => String(x.id) === String(id));
-        if(!currentSelectedItem) return;
+        tempItem = inventory.find(x => String(x.id) === String(id));
+        if(!tempItem) return;
+        tempDispName = dispName || tempItem.name;
+        tempPrice = customPrice || parseFloat(tempItem.sell);
 
-        currentDispName = dispName || currentSelectedItem.name;
-        currentPrice = customPrice || parseFloat(currentSelectedItem.sell);
-
-        document.getElementById('mTitle').innerText = currentDispName;
+        document.getElementById('mTitle').innerText = tempDispName;
         const uSel = document.getElementById('uSel');
-        const qtyInput = document.getElementById('qty');
+        const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
 
-        if(currentDispName.includes("බඩඉරිඟු")) {
+        if(tempDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "කරල් ගණන";
+            qtyInp.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${currentPrice}</b>`;
-        } else if(currentSelectedItem.unit === "Kg") {
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
+        } else if(tempItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
-            qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
+            qtyInp.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(currentPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(currentPrice/4).toFixed(2)}</b>`;
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInput.placeholder = "ප්‍රමාණය";
-            document.getElementById('uDisp').innerText = "ඒකකය: " + currentSelectedItem.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${currentPrice}</b>`;
+            qtyInp.placeholder = "ප්‍රමාණය";
+            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
         }
-        
-        qtyInput.value = ""; 
-        document.getElementById('unitModal').style.display = 'block'; 
-        document.getElementById('overlay').style.display = 'block'; 
-        setTimeout(() => qtyInput.focus(), 100);
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
     }
 
     function openOtherModal() {
-        currentSelectedItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
-        currentDispName = "වෙනත් ගාස්තු";
-        currentPrice = 0;
-        document.getElementById('mTitle').innerText = currentDispName;
+        tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
+        document.getElementById('mTitle').innerText = tempDispName;
         document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
-        const qtyInput = document.getElementById('qty');
-        qtyInput.placeholder = "මුදල (Rs.)";
-        qtyInput.value = "";
+        const qtyInp = document.getElementById('qty');
+        qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
         document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
-        setTimeout(() => qtyInput.focus(), 100);
+        setTimeout(() => qtyInp.focus(), 100);
     }
 
-    async function updateLiveStock(itemId, amount, mode) {
-        if(itemId === 9999) return;
-        let itm = inventory.find(i => String(i.id) === String(itemId));
+    async function updateStock(id, qty, mode) {
+        if(id === 9999) return;
+        let itm = inventory.find(i => String(i.id) === String(id));
         if(itm) {
-            let currentStock = parseFloat(itm.stock);
-            let newStock = (mode === 'sub') ? (currentStock - amount) : (currentStock + amount);
-            itm.stock = newStock.toFixed(2);
+            let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
+            itm.stock = ns.toFixed(2);
             await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
             render();
         }
     }
 
     async function confirmAdd() {
-        let qVal = document.getElementById('qty').value;
-        if(!qVal || parseFloat(qVal) <= 0) return;
-        let q = parseFloat(qVal);
+        let qv = document.getElementById('qty').value;
+        if(!qv || parseFloat(qv) <= 0) return;
+        let q = parseFloat(qv);
 
-        if(currentSelectedItem.id === 9999) { 
+        if(tempItem.id === 9999) {
             cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
         } else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
-            if(d > parseFloat(currentSelectedItem.stock)) return alert("තොග මදි!");
-            
-            await updateLiveStock(currentSelectedItem.id, d, 'sub');
-
-            let t = (u==='g') ? (currentPrice/1000)*q : currentPrice*q;
-            let unitLabel = (currentDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : currentSelectedItem.unit);
-            
-            // වැදගත්: මෙහිදී currentPrice සහ currentDispName වෙනම මතක තබා ගනී
-            cart.push({ 
-                id: currentSelectedItem.id, 
-                n: currentDispName, 
-                up: currentPrice, 
-                buy: currentSelectedItem.buy, 
-                dq: q + " " + unitLabel, 
-                t: t, 
-                d: d 
-            });
+            if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+            await updateStock(tempItem.id, d, 'sub');
+            let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
         }
-        
-        updateUI(); 
-        closeModal();
+        updateUI(); closeModal();
     }
 
     function updateUI() {
@@ -258,18 +211,14 @@
                 <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-        document.getElementById('itemCount').innerText = cart.length; 
-        calc();
+        document.getElementById('itemCount').innerText = cart.length; calc();
     }
 
-    async function removeItem(index) {
-        if(confirm("ඉවත් කරනවාද?")) { 
-            let item = cart[index];
-            if(item.id !== 9999) {
-                await updateLiveStock(item.id, item.d, 'add');
-            }
-            cart.splice(index, 1); 
-            updateUI(); 
+    async function removeItem(idx) {
+        if(confirm("ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1); updateUI();
         }
     }
 
@@ -282,35 +231,19 @@
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
-        const bNo = document.getElementById('bNoDisplay').innerText; 
+        const bNo = document.getElementById('bNoDisplay').innerText;
         for (let c of cart) {
-            let saleEntry = { 
-                bNo: bNo, 
-                date: new Date().toLocaleString(), 
-                name: c.n, 
-                qty: c.dq, 
-                total: c.t, 
-                profit: (c.up - c.buy) * (c.d || 1) 
-            };
-            await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
+            let entry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * (c.d || 1) };
+            await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
         }
         window.onbeforeunload = null;
         if(shouldPrint) window.print();
         location.reload();
     }
 
-    function closeModal() { 
-        document.getElementById('unitModal').style.display='none'; 
-        document.getElementById('overlay').style.display='none'; 
-    }
-    
+    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     fetchInventory();
-
-    window.onbeforeunload = function() {
-        if (cart.length > 0) return "බිල අවසන් කර නැත. ඉවත් වීමට අවශ්‍යද?";
-    };
 </script>
 </body>
 </html>
