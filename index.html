@@ -125,14 +125,14 @@
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"අමු බඩඉරිඟු\", 100)'}">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Raw+Corn'">
                     <h4>අමු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 100</div>
                     <div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ', \"තම්බපු බඩඉරිඟු\", 120)'}">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100?text=Boiled+Corn'">
                     <h4>තම්බපු බඩඉරිඟු</h4>
                     <div class="price-tag">Rs. 120</div>
@@ -141,7 +141,7 @@
                 </div>`;
             } else {
                 html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : 'openM(' + p.id + ')'}">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100?text=${p.name}'">
                     <h4>${p.name}</h4>
                     <div class="price-tag">Rs. ${p.sell}</div>
@@ -207,7 +207,21 @@
         setTimeout(() => qtyInput.focus(), 100);
     }
 
-    function confirmAdd() {
+    // බිලට එක් කළ සැණින් තොගය සජීවීව (Live) යාවත්කාලීන කරයි
+    async function updateLiveStock(itemId, amount, mode) {
+        if(itemId === 9999) return;
+        let itm = inventory.find(i => String(i.id) === String(itemId));
+        if(itm) {
+            let currentStock = parseFloat(itm.stock);
+            // mode 'sub' නම් අඩු කරයි, 'add' නම් වැඩි කරයි
+            let newStock = (mode === 'sub') ? (currentStock - amount) : (currentStock + amount);
+            itm.stock = newStock.toFixed(2);
+            await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
+            render(); // Grid එක නැවත සකසයි
+        }
+    }
+
+    async function confirmAdd() {
         let qVal = document.getElementById('qty').value;
         if(!qVal || parseFloat(qVal) <= 0) return;
         let q = parseFloat(qVal);
@@ -219,6 +233,9 @@
             let d = (u==='g') ? q/1000 : q;
             if(d > parseFloat(selectedItem.stock)) return alert("තොග මදි!");
             
+            // සජීවීව ස්ටොක් එක අඩු කිරීම
+            await updateLiveStock(selectedItem.id, d, 'sub');
+
             let t = (u==='g') ? (selectedPrice/1000)*q : selectedPrice*q;
             let unitLabel = (selectedDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : selectedItem.unit);
             cart.push({ id: selectedItem.id, n: selectedDispName, up: selectedPrice, buy: selectedItem.buy, dq: q + " " + unitLabel, t: t, d: d });
@@ -238,8 +255,16 @@
         calc();
     }
 
-    function removeItem(index) {
-        if(confirm("ඉවත් කරනවාද?")) { cart.splice(index, 1); updateUI(); }
+    async function removeItem(index) {
+        if(confirm("ඉවත් කරනවාද?")) { 
+            let item = cart[index];
+            // බිලෙන් ඉවත් කරන විට නැවත තොගයට එක් කිරීම
+            if(item.id !== 9999) {
+                await updateLiveStock(item.id, item.d, 'add');
+            }
+            cart.splice(index, 1); 
+            updateUI(); 
+        }
     }
 
     function calc() {
@@ -252,17 +277,13 @@
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText; 
+        
+        // තොගය දැනටමත් ලයිව් අප්ඩේට් වී ඇති නිසා මෙහිදී සිදු කරන්නේ සේල්ස් රෙකෝඩ් එක දැමීම පමණි
         for (let c of cart) {
-            if(c.id !== 9999) {
-                let itm = inventory.find(i => String(i.id) === String(c.id));
-                if(itm) {
-                    let newStock = (parseFloat(itm.stock) - c.d).toFixed(2);
-                    await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-                }
-            }
             let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * (c.d || 1) };
             await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
         }
+        
         window.onbeforeunload = null;
         if(shouldPrint) window.print();
         location.reload();
@@ -278,7 +299,7 @@
     fetchInventory();
 
     window.onbeforeunload = function() {
-        if (cart.length > 0) return "ඉවත් වීමට අවශ්‍යද?";
+        if (cart.length > 0) return "බිල අවසන් කර නැත. ඉවත් වීමට අවශ්‍යද?";
     };
 </script>
 </body>
