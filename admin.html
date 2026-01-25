@@ -183,45 +183,26 @@
         renderSales();
     }
 
-    // FMGanganee 36pt සහිතව Excel බාගත කිරීමේ නව ශ්‍රිතය
     function downloadTodayStockExcel() {
         if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-
         let tableHtml = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta charset="UTF-8">
                 <style>
-                    td, th { 
-                        font-family: 'FMGanganee', sans-serif; 
-                        font-size: 36pt; 
-                        border: 0.5pt solid #000;
-                        text-align: center;
-                        vertical-align: middle;
-                    }
+                    td, th { font-family: 'FMGanganee', sans-serif; font-size: 36pt; border: 0.5pt solid #000; text-align: center; vertical-align: middle; }
                     th { background-color: #27ae60; color: #ffffff; font-weight: bold; }
                 </style>
             </head>
             <body>
                 <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 300px;">භාණ්ඩයේ නම</th>
-                            <th style="width: 200px;">විකුණුම් මිල (Rs)</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th style="width: 300px;">භාණ්ඩයේ නම</th><th style="width: 200px;">විකුණුම් මිල (Rs)</th></tr></thead>
                     <tbody>
-                        ${addedToday.map(item => `
-                            <tr>
-                                <td>${item.name}</td>
-                                <td>${item.sell}</td>
-                            </tr>
-                        `).join('')}
+                        ${addedToday.map(item => `<tr><td>${item.name}</td><td>${item.sell}</td></tr>`).join('')}
                     </tbody>
                 </table>
             </body>
             </html>`;
-
         const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -305,16 +286,19 @@
             let loss = -(parseFloat(item.buy) * q);
             let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
+            
+            // Wastage ඇතුළත් කළ පසු කොටු හිස් කරන නව කොටස
+            document.getElementById('wasteItemName').value = "";
+            document.getElementById('wasteQty').value = "";
+            
+            alert("සාර්ථකව ඉවත් කළා!");
             fetchData();
         }
     }
 
     async function clearSales() { if(confirm("සියලු වාර්තා මකන්නද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); fetchData(); } }
     function sendShortageToWhatsApp() {
-        const lowStock = inventory.filter(i => {
-            const v = parseFloat(i.stock);
-            return i.unit === "Kg" ? v < 0.5 : v < 2;
-        });
+        const lowStock = inventory.filter(i => { const v = parseFloat(i.stock); return i.unit === "Kg" ? v < 0.5 : v < 2; });
         if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!");
         let message = "*ගේන්න ඕනෑ බඩු*\n";
         lowStock.forEach(i => message += `- ${i.name} (${i.stock} ${i.unit})\n`);
