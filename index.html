@@ -106,9 +106,9 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
-    let selectedItem = null;
-    let selectedDispName = ""; 
-    let selectedPrice = 0;
+    let currentSelectedItem = null;
+    let currentDispName = ""; 
+    let currentPrice = 0;
 
     async function fetchInventory() {
         const res = await fetch(`${DB_URL}inventory.json`);
@@ -157,32 +157,32 @@
     }
     
     function openM(id, dispName, customPrice) {
-        selectedItem = inventory.find(x => String(x.id) === String(id));
-        if(!selectedItem) return;
+        currentSelectedItem = inventory.find(x => String(x.id) === String(id));
+        if(!currentSelectedItem) return;
 
-        selectedDispName = dispName || selectedItem.name;
-        selectedPrice = customPrice || parseFloat(selectedItem.sell);
+        currentDispName = dispName || currentSelectedItem.name;
+        currentPrice = customPrice || parseFloat(currentSelectedItem.sell);
 
-        document.getElementById('mTitle').innerText = selectedDispName;
+        document.getElementById('mTitle').innerText = currentDispName;
         const uSel = document.getElementById('uSel');
         const qtyInput = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
 
-        if(selectedDispName.includes("බඩඉරිඟු")) {
+        if(currentDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${selectedPrice}</b>`;
-        } else if(selectedItem.unit === "Kg") {
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${currentPrice}</b>`;
+        } else if(currentSelectedItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             qtyInput.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(selectedPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(selectedPrice/4).toFixed(2)}</b>`;
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(currentPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(currentPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
             qtyInput.placeholder = "ප්‍රමාණය";
-            document.getElementById('uDisp').innerText = "ඒකකය: " + selectedItem.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${selectedPrice}</b>`;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + currentSelectedItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${currentPrice}</b>`;
         }
         
         qtyInput.value = ""; 
@@ -192,10 +192,10 @@
     }
 
     function openOtherModal() {
-        selectedItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
-        selectedDispName = "වෙනත් ගාස්තු";
-        selectedPrice = 0;
-        document.getElementById('mTitle').innerText = selectedDispName;
+        currentSelectedItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        currentDispName = "වෙනත් ගාස්තු";
+        currentPrice = 0;
+        document.getElementById('mTitle').innerText = currentDispName;
         document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
         document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
@@ -224,18 +224,28 @@
         if(!qVal || parseFloat(qVal) <= 0) return;
         let q = parseFloat(qVal);
 
-        if(selectedItem.id === 9999) { 
+        if(currentSelectedItem.id === 9999) { 
             cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
         } else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
-            if(d > parseFloat(selectedItem.stock)) return alert("තොග මදි!");
+            if(d > parseFloat(currentSelectedItem.stock)) return alert("තොග මදි!");
             
-            await updateLiveStock(selectedItem.id, d, 'sub');
+            await updateLiveStock(currentSelectedItem.id, d, 'sub');
 
-            let t = (u==='g') ? (selectedPrice/1000)*q : selectedPrice*q;
-            let unitLabel = (selectedDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : selectedItem.unit);
-            cart.push({ id: selectedItem.id, n: selectedDispName, up: selectedPrice, buy: selectedItem.buy, dq: q + " " + unitLabel, t: t, d: d });
+            let t = (u==='g') ? (currentPrice/1000)*q : currentPrice*q;
+            let unitLabel = (currentDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : currentSelectedItem.unit);
+            
+            // වැදගත්: මෙහිදී currentPrice සහ currentDispName වෙනම මතක තබා ගනී
+            cart.push({ 
+                id: currentSelectedItem.id, 
+                n: currentDispName, 
+                up: currentPrice, 
+                buy: currentSelectedItem.buy, 
+                dq: q + " " + unitLabel, 
+                t: t, 
+                d: d 
+            });
         }
         
         updateUI(); 
@@ -274,7 +284,14 @@
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText; 
         for (let c of cart) {
-            let saleEntry = { bNo: bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - c.buy) * (c.d || 1) };
+            let saleEntry = { 
+                bNo: bNo, 
+                date: new Date().toLocaleString(), 
+                name: c.n, 
+                qty: c.dq, 
+                total: c.t, 
+                profit: (c.up - c.buy) * (c.d || 1) 
+            };
             await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(saleEntry) });
         }
         window.onbeforeunload = null;
