@@ -183,33 +183,17 @@
         renderSales();
     }
 
+    // සාමාන්‍ය විදියට (Standard Unicode) බාගත වන ශ්‍රිතය
     function downloadTodayStockExcel() {
         if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-        let tableHtml = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    td, th { font-family: 'FMGanganee', sans-serif; font-size: 36pt; border: 0.5pt solid #000; text-align: center; vertical-align: middle; }
-                    th { background-color: #27ae60; color: #ffffff; font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <table>
-                    <thead><tr><th style="width: 300px;">භාණ්ඩයේ නම</th><th style="width: 200px;">විකුණුම් මිල (Rs)</th></tr></thead>
-                    <tbody>
-                        ${addedToday.map(item => `<tr><td>${item.name}</td><td>${item.sell}</td></tr>`).join('')}
-                    </tbody>
-                </table>
-            </body>
-            </html>`;
-        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `Stock_List_${new Date().toLocaleDateString()}.xls`;
-        link.click();
-        URL.revokeObjectURL(url);
+        const dataForExcel = addedToday.map(item => ({ 
+            "භාණ්ඩයේ නම": item.name, 
+            "විකුණුම් මිල (Rs)": item.sell 
+        }));
+        const ws = XLSX.utils.json_to_sheet(dataForExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Today Items");
+        XLSX.writeFile(wb, `Stock_List_${new Date().toLocaleDateString()}.xlsx`);
     }
 
     async function handleUpdate() {
@@ -286,11 +270,8 @@
             let loss = -(parseFloat(item.buy) * q);
             let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + item.unit, total: 0, profit: loss };
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
-            
-            // Wastage ඇතුළත් කළ පසු කොටු හිස් කරන නව කොටස
             document.getElementById('wasteItemName').value = "";
             document.getElementById('wasteQty').value = "";
-            
             alert("සාර්ථකව ඉවත් කළා!");
             fetchData();
         }
