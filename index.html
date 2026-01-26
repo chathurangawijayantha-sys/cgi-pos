@@ -105,7 +105,6 @@
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
-    // පිටුව Refresh වීම වැළැක්වීමේ ස්ථිර ශ්‍රිතය
     function handleReload(e) {
         if (cart.length > 0 && !isCompletingBill) {
             return "බිලක් සකස් වෙමින් පවතී. පිටුව Refresh කළහොත් දත්ත නැතිවිය හැක!";
@@ -114,9 +113,7 @@
 
     async function initializeApp() {
         const savedCart = localStorage.getItem('active_cart');
-        if (savedCart) {
-            cart = JSON.parse(savedCart);
-        }
+        if (savedCart) cart = JSON.parse(savedCart);
         
         inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         render();
@@ -291,6 +288,16 @@
         document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
     }
 
+    // Refresh නොකර පද්ධතිය reset කිරීමේ ශ්‍රිතය
+    function resetSystemAfterBill() {
+        cart = [];
+        localStorage.removeItem('active_cart');
+        document.getElementById('cashInput').value = "";
+        document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
+        updateUI();
+        isCompletingBill = false;
+    }
+
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         isCompletingBill = true;
@@ -302,13 +309,13 @@
             localStorage.setItem('offline_sales', JSON.stringify(offSales));
             try { fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
         }
-        localStorage.removeItem('active_cart');
         
         if(shouldPrint) {
             window.print();
-            setTimeout(() => { location.reload(); }, 500);
+            // මුද්‍රණයෙන් පසු Refresh නොකර reset කරයි
+            setTimeout(resetSystemAfterBill, 1000);
         } else {
-            location.reload();
+            resetSystemAfterBill();
         }
     }
 
