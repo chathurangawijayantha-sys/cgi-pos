@@ -275,19 +275,32 @@
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText;
+        
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             try {
-                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
+                // මෙහිදී await ඉවත් කර, fetch ක්‍රියාවලිය පසුබිමේ සිදුවීමට ඉඩ දුන්නා (Error එකක් ආවත් පහළ කේත ක්‍රියා කරයි)
+                fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
+                    let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                    offSales.push(entry);
+                    localStorage.setItem('offline_sales', JSON.stringify(offSales));
+                });
             } catch (e) {
                 let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
                 offSales.push(entry);
                 localStorage.setItem('offline_sales', JSON.stringify(offSales));
             }
         }
+
+        // මුද්‍රණය සහ පිටුව Reload කිරීම fetch එකෙන් පිටතට ගෙනාවා (සෑමවිටම ක්‍රියා කිරීමට)
         window.onbeforeunload = null;
-        if(shouldPrint) window.print();
-        location.reload();
+        if(shouldPrint) {
+            window.print();
+            // මුද්‍රණ කවුළුව වැසූ පසු හෝ මුද්‍රණය වූ පසු Reload වීමට
+            setTimeout(() => { location.reload(); }, 500);
+        } else {
+            location.reload();
+        }
     }
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
