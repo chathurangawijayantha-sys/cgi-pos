@@ -46,14 +46,13 @@
             .bill-table { font-size: 10px !important; }
             .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
     </style>
 </head>
 <body>
 
-<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. සියල්ල සාමාන්‍ය පරිදි සිදුවේ.</div>
+<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. දත්ත පසුව යාවත්කාලීන වේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
@@ -140,105 +139,61 @@
 
     function render() {
         const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
-        let html = "";
-        sorted.forEach(p => {
+        let html = sorted.map(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            if(p.name === "බඩඉරිඟු") {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
-                    <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-                </div>
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
-                    <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-                </div>`;
-            } else {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
-                    <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-                </div>`;
-            }
-        });
-        html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
+            const cardName = (p.name === "බඩඉරිඟු") ? "අමු / තම්බපු බඩඉරිඟු" : p.name;
+            return `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
+                <h4>${cardName}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+            </div>`;
+        }).join('');
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
 
-    function openM(id, dispName, customPrice) {
+    function openM(id) {
         tempItem = inventory.find(x => String(x.id) === String(id));
         if(!tempItem) return;
-        tempDispName = dispName || tempItem.name;
-        tempPrice = customPrice || parseFloat(tempItem.sell);
+        tempDispName = tempItem.name;
+        tempPrice = parseFloat(tempItem.sell);
         
         document.getElementById('mTitle').innerText = tempDispName;
         const uSel = document.getElementById('uSel');
         const qtyInp = document.getElementById('qty');
-        document.getElementById('unitSelectorDiv').style.display = 'block';
-
-        if(tempDispName.includes("බඩඉරිඟු")) {
-            uSel.value = "main"; uSel.disabled = true;
-            qtyInp.placeholder = "කරල් ගණන";
-            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
-        } else if(tempItem.unit === "Kg") {
+        
+        if(tempItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             qtyInp.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInp.placeholder = "ප්‍රමාණය";
+            qtyInp.placeholder = "ප්‍රමාණය (" + tempItem.unit + ")";
             document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
         }
         qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
         setTimeout(() => qtyInp.focus(), 100);
     }
 
-    function openOtherModal() {
-        tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
-        tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
-        document.getElementById('mTitle').innerText = tempDispName;
-        document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
-        document.getElementById('uDisp').innerText = "";
-        document.getElementById('unitSelectorDiv').style.display = 'none';
-        const qtyInp = document.getElementById('qty');
-        qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
-        document.getElementById('unitModal').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-        setTimeout(() => qtyInp.focus(), 100);
-    }
-
-    async function updateStock(id, qty, mode) {
-        if(id === 9999) return;
+    // ස්ථිර තොග අඩු කිරීම (Offline/Online දෙකේම ක්‍රියා කරයි)
+    function updateStockLocally(id, qtyReduced) {
         let itm = inventory.find(i => String(i.id) === String(id));
         if(itm) {
-            let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
-            itm.stock = ns.toFixed(2);
+            let newStock = (parseFloat(itm.stock) - qtyReduced).toFixed(2);
+            itm.stock = newStock;
             
-            // 1. LocalStorage යාවත්කාලීන කිරීම (අනිවාර්යයි)
+            // LocalStorage එකට වහාම ඇතුළත් කරයි (පිටුව reload වුවත් දත්ත පවතී)
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
             
-            // 2. Offline Stocks සඳහා තාවකාලිකව සුරැකීම
-            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-            offStocks[itm.id] = itm.stock;
-            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-
-            try {
-                // 3. Online ඇති විට වහාම Firebase යාවත්කාලීන කිරීම
-                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
-                // සාර්ථක නම් Offline ලැයිස්තුවෙන් ඉවත් කිරීම
-                delete offStocks[itm.id];
+            // අන්තර්ජාලය ඇති විට Cloud එකට යවයි
+            fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) })
+            .catch(e => {
+                // Offline නම් පසුව යැවීමට සුරැකේ
+                let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+                offStocks[id] = newStock;
                 localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-            } catch (e) {}
-            
-            render();
+            });
         }
     }
 
@@ -246,33 +201,34 @@
         let qv = document.getElementById('qty').value;
         if(!qv || parseFloat(qv) <= 0) return;
         let q = parseFloat(qv);
-        if(tempItem.id === 9999) {
-            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
-        } else {
-            let u = document.getElementById('uSel').value;
-            let d = (u==='g') ? q/1000 : q;
-            if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
-            await updateStock(tempItem.id, d, 'sub');
-            let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
-            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
-            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
-        }
+        let u = document.getElementById('uSel').value;
+        let d = (u==='g') ? q/1000 : q;
+        
+        if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+        
+        // තොගය වහාම අඩු කරයි
+        updateStockLocally(tempItem.id, d);
+        
+        let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, dq: q + (u==='g'?'g':tempItem.unit), t: t, d: d, buy: tempItem.buy });
+        
         updateUI(); closeModal();
     }
 
     function updateUI() {
         document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
             <tr onclick="removeItem(${idx})" style="cursor:pointer;">
-                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+                <td>${i.n} ❌</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
         document.getElementById('itemCount').innerText = cart.length; calc();
     }
 
-    async function removeItem(idx) {
+    function removeItem(idx) {
         if(confirm("ඉවත් කරනවාද?")) {
             let item = cart[idx];
-            if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
+            // ඉවත් කරන විට තොගයට නැවත එකතු කරයි
+            updateStockLocally(item.id, -item.d);
             cart.splice(idx, 1); updateUI();
         }
     }
@@ -291,36 +247,26 @@
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             
-            // Offline Sales සුරැකීම
+            // Offline විකුණුම් වාර්තාවට එක් කරයි
             let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
             offSales.push(entry);
             localStorage.setItem('offline_sales', JSON.stringify(offSales));
 
             try {
-                // Online ඇති විට වහාම Firebase යැවීම
+                // Online ඇති විට Cloud එකට යවයි
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
-                // සාර්ථක නම් Offline ලැයිස්තුවෙන් ඉවත් කිරීම
                 offSales.pop(); 
                 localStorage.setItem('offline_sales', JSON.stringify(offSales));
             } catch (e) {}
         }
 
-        window.onbeforeunload = null;
-        if(shouldPrint) {
-            window.print();
-            setTimeout(() => { location.reload(); }, 500);
-        } else {
-            location.reload();
-        }
+        if(shouldPrint) window.print();
+        location.reload();
     }
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     fetchInventory();
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
 </script>
 </body>
 </html>
