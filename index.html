@@ -29,13 +29,6 @@
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
-
-        @media screen and (max-width: 800px) {
-            .main-container { flex-direction: column; }
-            #product-section { width: auto; border-right: none; padding-bottom: 100px; }
-            #bill-section { width: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        }
-
         @media print {
             @page { size: 58mm auto; margin: 0; }
             body { width: 58mm; margin: 0; padding: 0; }
@@ -53,7 +46,7 @@
 </head>
 <body>
 
-<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. දත්ත පද්ධතිය තුල සුරැකේ.</div>
+<div id="offline-status">Offline මාදිලිය: දත්ත බ්‍රවුසරයේ සුරැකේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
@@ -104,20 +97,22 @@
     let inventory = []; let cart = []; 
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
 
+    // --- පද්ධතිය ආරම්භයේදී ක්‍රියාත්මක වන කොටස ---
     async function initializeApp() {
-        // බිල රිකවර් කිරීම (Restore Cart)
+        // 1. කලින් ඉතිරි වූ බිලක් ඇත්නම් එය ලබාගැනීම
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) {
             cart = JSON.parse(savedCart);
-            updateUI();
         }
 
+        // 2. අන්තර්ජාලය පරීක්ෂා කර දත්ත Sync කිරීම හෝ මතකයෙන් ලබාගැනීම
         if (navigator.onLine) {
             await syncOfflineData();
         } else {
             inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
             document.getElementById('offline-status').style.display = 'block';
             render();
+            updateUI(); // බිල පෙන්වීමට
         }
     }
 
@@ -129,9 +124,9 @@
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
         } catch (error) {
             inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
-            document.getElementById('offline-status').style.display = 'block';
         }
         render();
+        updateUI(); // මෙහිදී බිල නැවත පෙන්වීම තහවුරු කරයි
     }
 
     async function syncOfflineData() {
@@ -139,16 +134,14 @@
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         if (Object.keys(offStocks).length > 0) {
             for (let id in offStocks) {
-                try {
-                    await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) });
-                } catch(e) { return; }
+                try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) { break; }
             }
             localStorage.removeItem('offline_stocks');
         }
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         if (offSales.length > 0) {
             for (let sale of offSales) {
-                try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
+                try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { break; }
             }
             localStorage.removeItem('offline_sales');
         }
@@ -161,7 +154,8 @@
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
-                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                html += `
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -172,7 +166,8 @@
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
-                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                html += `
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -212,8 +207,6 @@
         tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
         tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
         document.getElementById('mTitle').innerText = tempDispName;
-        document.getElementById('pricePreview').innerHTML = "මුදල ඇතුළත් කරන්න";
-        document.getElementById('uDisp').innerText = "";
         document.getElementById('unitSelectorDiv').style.display = 'none';
         const qtyInp = document.getElementById('qty');
         qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
@@ -229,8 +222,7 @@
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            try {
-                await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
+            try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
             } catch (e) {
                 let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
                 offStocks[itm.id] = itm.stock;
@@ -255,7 +247,7 @@
             let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
             cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
         }
-        localStorage.setItem('active_cart', JSON.stringify(cart)); // බිල ස්වයංක්‍රීයව සුරැකීම
+        localStorage.setItem('active_cart', JSON.stringify(cart)); // බිල Auto-save කිරීම
         updateUI(); closeModal();
     }
 
@@ -265,7 +257,8 @@
                 <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
         document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
-        document.getElementById('itemCount').innerText = cart.length; calc();
+        document.getElementById('itemCount').innerText = cart.length; 
+        calc();
     }
 
     async function removeItem(idx) {
@@ -273,7 +266,7 @@
             let item = cart[idx];
             if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
             cart.splice(idx, 1);
-            localStorage.setItem('active_cart', JSON.stringify(cart)); // ඉවත් කළ පසුත් සුරැකීම
+            localStorage.setItem('active_cart', JSON.stringify(cart)); // ඉවත් කළ පසුත් Save කිරීම
             updateUI();
         }
     }
@@ -293,16 +286,14 @@
             try {
                 fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
                     let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                    offSales.push(entry);
-                    localStorage.setItem('offline_sales', JSON.stringify(offSales));
+                    offSales.push(entry); localStorage.setItem('offline_sales', JSON.stringify(offSales));
                 });
             } catch (e) {
                 let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                offSales.push(entry);
-                localStorage.setItem('offline_sales', JSON.stringify(offSales));
+                offSales.push(entry); localStorage.setItem('offline_sales', JSON.stringify(offSales));
             }
         }
-        localStorage.removeItem('active_cart'); // බිල අවසන් වූ පසු මතකය මකා දැමීම
+        localStorage.removeItem('active_cart'); // බිල අවසන් වූ නිසා මතකය මකා දැමීම
         if(shouldPrint) {
             window.print();
             setTimeout(() => { location.reload(); }, 500);
@@ -314,13 +305,12 @@
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     
+    // ආරම්භක ක්‍රියාවලිය
     window.onload = initializeApp;
     window.addEventListener('online', syncOfflineData);
     window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-    }
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 </script>
 </body>
 </html>
