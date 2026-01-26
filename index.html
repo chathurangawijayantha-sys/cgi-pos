@@ -53,7 +53,7 @@
 </head>
 <body>
 
-<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. දත්ත පසුව යාවත්කාලීන වේ.</div>
+<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. දත්ත පද්ධතිය තුල සුරැකේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
@@ -104,8 +104,14 @@
     let inventory = []; let cart = []; 
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
 
-    // --- ආරම්භක ශ්‍රිතය (Initialize Function) ---
     async function initializeApp() {
+        // බිල රිකවර් කිරීම (Restore Cart)
+        const savedCart = localStorage.getItem('active_cart');
+        if (savedCart) {
+            cart = JSON.parse(savedCart);
+            updateUI();
+        }
+
         if (navigator.onLine) {
             await syncOfflineData();
         } else {
@@ -130,35 +136,22 @@
 
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
-        
-        // 1. මුලින්ම Offline තොග වෙනස්වීම් (Stocks) Cloud එකට යැවීම
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-        const stockKeys = Object.keys(offStocks);
-        
-        if (stockKeys.length > 0) {
+        if (Object.keys(offStocks).length > 0) {
             for (let id in offStocks) {
                 try {
-                    await fetch(`${DB_URL}inventory/${id}/stock.json`, { 
-                        method: 'PUT', 
-                        body: JSON.stringify(offStocks[id]) 
-                    });
-                } catch(e) { console.log("Stock Sync Error", e); return; }
+                    await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) });
+                } catch(e) { return; }
             }
             localStorage.removeItem('offline_stocks');
         }
-        
-        // 2. Offline විකුණුම් වාර්තා (Sales) Cloud එකට යැවීම
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         if (offSales.length > 0) {
             for (let sale of offSales) {
-                try {
-                    await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) });
-                } catch(e) { console.log("Sales Sync Error", e); return; }
+                try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
             }
             localStorage.removeItem('offline_sales');
         }
-
-        // 3. Sync අවසන් වූ පසු පමණක් අලුත්ම තොගය Fetch කිරීම
         await fetchInventory(); 
     }
 
@@ -168,20 +161,18 @@
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
                 <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -198,27 +189,19 @@
         if(!tempItem) return;
         tempDispName = dispName || tempItem.name;
         tempPrice = customPrice || parseFloat(tempItem.sell);
-        
         document.getElementById('mTitle').innerText = tempDispName;
         const uSel = document.getElementById('uSel');
         const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-
         if(tempDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInp.placeholder = "කරල් ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
         } else if(tempItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
-            qtyInp.placeholder = "ග්‍රෑම් (g) ගණන";
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            qtyInp.placeholder = "ප්‍රමාණය";
             document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
-            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
         }
         qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
@@ -245,17 +228,14 @@
         if(itm) {
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
-            
-            // LocalStorage එක වහාම යාවත්කාලීන කිරීම
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            
-            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-            offStocks[itm.id] = itm.stock;
-            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-
             try {
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
-            } catch (e) {}
+            } catch (e) {
+                let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+                offStocks[itm.id] = itm.stock;
+                localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+            }
             render();
         }
     }
@@ -275,6 +255,7 @@
             let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
             cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
         }
+        localStorage.setItem('active_cart', JSON.stringify(cart)); // බිල ස්වයංක්‍රීයව සුරැකීම
         updateUI(); closeModal();
     }
 
@@ -291,7 +272,9 @@
         if(confirm("ඉවත් කරනවාද?")) {
             let item = cart[idx];
             if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
-            cart.splice(idx, 1); updateUI();
+            cart.splice(idx, 1);
+            localStorage.setItem('active_cart', JSON.stringify(cart)); // ඉවත් කළ පසුත් සුරැකීම
+            updateUI();
         }
     }
 
@@ -305,20 +288,21 @@
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         const bNo = document.getElementById('bNoDisplay').innerText;
-        
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
-            
-            let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-            offSales.push(entry);
-            localStorage.setItem('offline_sales', JSON.stringify(offSales));
-
             try {
-                fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
-            } catch (e) {}
+                fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
+                    let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                    offSales.push(entry);
+                    localStorage.setItem('offline_sales', JSON.stringify(offSales));
+                });
+            } catch (e) {
+                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                offSales.push(entry);
+                localStorage.setItem('offline_sales', JSON.stringify(offSales));
+            }
         }
-
-        window.onbeforeunload = null;
+        localStorage.removeItem('active_cart'); // බිල අවසන් වූ පසු මතකය මකා දැමීම
         if(shouldPrint) {
             window.print();
             setTimeout(() => { location.reload(); }, 500);
@@ -330,7 +314,6 @@
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     
-    // --- පද්ධතිය පූරණය කිරීම (Execute App) ---
     window.onload = initializeApp;
     window.addEventListener('online', syncOfflineData);
     window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
