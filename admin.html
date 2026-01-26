@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Final Fix</title>
+    <title>CGI Admin - Offline Sales Fix</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -13,11 +13,13 @@
         .content.active { display: block; }
         .add-form { background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #34495e; color: white; }
         .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
         .no-print { display: block; }
+        #sync-notice { display: none; background: #f39c12; color: white; text-align: center; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
@@ -26,6 +28,8 @@
 <div class="container">
     <h2>ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
     
+    <div id="sync-notice">සටහන: Offline විකුණුම් වාර්තා කිහිපයක් පද්ධතියට එක්වීමට ඇත. අන්තර්ජාලය ලැබුණු විට මේවා Cloud එකට යාවත්කාලීන වේ.</div>
+
     <div class="tabs no-print">
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
         <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
@@ -73,6 +77,7 @@
     let inventory = []; let salesList = [];
 
     async function fetchData() {
+        // Firebase දත්ත ලබාගැනීම
         try {
             const invRes = await fetch(`${BASE_URL}inventory.json`);
             const invData = await invRes.json();
@@ -91,7 +96,21 @@
                     salesList.push({ ...salesDataRaw[key], firebaseKey: key });
                 });
             }
-        } catch (e) {}
+            localStorage.setItem('cached_sales', JSON.stringify(salesList));
+        } catch (e) {
+            salesList = JSON.parse(localStorage.getItem('cached_sales')) || [];
+        }
+
+        // Offline විකුණුම් තිබේදැයි පරීක්ෂා කර ඒවා ලැයිස්තුවට එක් කිරීම
+        const offlineSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+        if(offlineSales.length > 0) {
+            document.getElementById('sync-notice').style.display = 'block';
+            // Cloud එකට තවම නොගිය බිල්පත් පෙන්වීම සඳහා මුලට එක් කරයි
+            salesList = [...offlineSales, ...salesList];
+        } else {
+            document.getElementById('sync-notice').style.display = 'none';
+        }
+
         renderUI();
     }
 
@@ -104,8 +123,6 @@
         if(!n) return;
 
         let existing = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-        
-        // මෙහිදී පවතින තොගයට අලුත් ප්‍රමාණය එකතු වේ (තොග ඇතුළත් කිරීමේදී පමණි)
         let newStockCount = existing ? (parseFloat(existing.stock) + st).toFixed(2) : st.toFixed(2);
         
         let item = { 
@@ -115,7 +132,13 @@
             img: existing ? existing.img : 'none.jpg'
         };
         
-        await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        try {
+            await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        } catch (e) {
+            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+            offStocks[item.id] = item;
+            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+        }
         fetchData();
         alert("තොගය යාවත්කාලීන විය!");
     }
@@ -133,8 +156,10 @@
         let rev = 0, prof = 0;
         document.getElementById('salesBody').innerHTML = salesList.map(s => {
             rev += parseFloat(s.total); prof += parseFloat(s.profit);
-            return `<tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.total}</td><td>${s.profit}</td>
-            <td class="no-print"><button onclick="delSale('${s.firebaseKey}')">❌</button></td></tr>`;
+            // Offline දත්ත නම් ඒවායේ firebaseKey එකක් නැත, ඒ අනුව හඳුනාගත හැක
+            let rowStyle = s.firebaseKey ? "" : "background: #fff3e0; font-weight: bold;";
+            return `<tr style="${rowStyle}"><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.total}</td><td>${s.profit}</td>
+            <td class="no-print">${s.firebaseKey ? `<button onclick="delSale('${s.firebaseKey}')">❌</button>` : 'Syncing..'}</td></tr>`;
         }).join('');
         
         document.getElementById('totalSales').innerText = rev.toFixed(2);
@@ -151,10 +176,11 @@
     }
 
     async function delSale(key) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${key}.json`, { method: 'DELETE' }); fetchData(); } }
-    async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+    async function delCloud(id) { if(confirm("භාණ්ඩය මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; } }
 
     fetchData();
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 </script>
 </body>
 </html>
