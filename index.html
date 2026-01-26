@@ -51,7 +51,7 @@
         .footer-msg { display: none; }
     </style>
 </head>
-<body>
+<body onbeforeunload="return handleReload()">
 
 <div id="offline-status">Offline මාදිලිය: දත්ත බ්‍රවුසරයේ සුරැකේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
@@ -103,17 +103,20 @@
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
+    let isCompletingBill = false;
 
-    // පිටුව Refresh කිරීම වැළැක්වීමේ ශ්‍රිතය
-    window.onbeforeunload = function() {
-        if (cart.length > 0) {
-            return "බිලක් සකස් කරමින් පවතී. ඔබ පිටුවෙන් ඉවත් වීමට කැමතිද?";
+    // පිටුව Refresh වීම වැළැක්වීමේ ස්ථිර ශ්‍රිතය
+    function handleReload(e) {
+        if (cart.length > 0 && !isCompletingBill) {
+            return "බිලක් සකස් වෙමින් පවතී. පිටුව Refresh කළහොත් දත්ත නැතිවිය හැක!";
         }
-    };
+    }
 
     async function initializeApp() {
         const savedCart = localStorage.getItem('active_cart');
-        if (savedCart) cart = JSON.parse(savedCart);
+        if (savedCart) {
+            cart = JSON.parse(savedCart);
+        }
         
         inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         render();
@@ -168,8 +171,7 @@
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
             if(p.name === "බඩඉරිඟු") {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -180,8 +182,7 @@
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
-                html += `
-                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -292,6 +293,7 @@
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
+        isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
@@ -302,8 +304,6 @@
         }
         localStorage.removeItem('active_cart');
         
-        // පණිවිඩය අක්‍රිය කර පිටුව reload කිරීම
-        window.onbeforeunload = null;
         if(shouldPrint) {
             window.print();
             setTimeout(() => { location.reload(); }, 500);
