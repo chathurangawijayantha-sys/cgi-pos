@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Final Report Fix</title>
+    <title>CGI Admin - Final Fix</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -11,61 +11,14 @@
         .tab-btn.active { background: #27ae60; color: white; }
         .content { display: none; }
         .content.active { display: block; }
-        
-        .add-form { 
-            background: #e8f5e9; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 25px; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
-            gap: 15px; 
-            align-items: flex-end; 
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-        }
-
-        .btn-group button {
-            flex: 1;
-            height: 40px;
-            font-size: 11px !important;
-            margin: 0 !important;
-            padding: 5px !important;
-        }
-
+        .add-form { background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
-        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #34495e; color: white; }
         .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
-        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-print-short { background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        .btn-reset { background: #e74c3c; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
-        .filter-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; display: flex; gap: 15px; align-items: center; }
-        .wastage-form { background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ffe0b2; }
-        .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
-        .top-selling-item { display: inline-block; background: #27ae60; color: white; padding: 5px 12px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; }
-        
-        .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
-        .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
-
-        @media print {
-            body { margin: 0; padding: 0; background: white; }
-            .container { box-shadow: none; max-width: 100%; padding: 0; }
-            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-excel, .btn-print-short, .btn-reset, .no-print, .filter-section, .wastage-form, .top-selling-section, .search-box, th:last-child, td:last-child { display: none !important; }
-            .content { display: none; }
-            .content.active { display: block; }
-            h2 { font-size: 16px; text-align: center; border-bottom: 1px solid black; padding-bottom: 5px; }
-            table { font-size: 12px; width: 100%; }
-            th { background: #eee !important; color: black !important; border: 1px solid black; }
-            td { border: 1px solid black; }
-        }
+        .no-print { display: block; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
@@ -82,71 +35,39 @@
     <div id="stock" class="content active">
         <div class="add-form no-print">
             <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
-            <div>
-                <label>ඒකකය</label>
-                <select id="itemUnit">
-                    <option value="Kg">Kg</option>
-                    <option value="මිටි">මිටි</option>
-                    <option value="පැකට්">පැකට්</option>
-                    <option value="කරල්">කරල්</option>
-                </select>
-            </div>
+            <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select></div>
             <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
             <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
             <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
-            <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-            
-            <div class="btn-group">
-                <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
-                <button class="tab-btn" style="background:#1D6F42; color:white;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
-            </div>
+            <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">තොග යාවත්කාලීන කරන්න</button>
         </div>
-
-        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 සොයන්න..." onkeyup="searchInventory()">
-        
-        <table id="inventoryTable">
-            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
+        <table>
+            <thead><tr><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
 
     <div id="shortage" class="content">
-        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ</h3>
+        <h3>ගේන්න ඕනෑ බඩු ලැයිස්තුව</h3>
         <table>
-            <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th><th>ඒකකය</th></tr></thead>
+            <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th></tr></thead>
             <tbody id="shortageBody"></tbody>
         </table>
-        <div class="no-print">
-            <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">WhatsApp කරන්න 🟢</button>
-            <button class="btn-print-short" onclick="window.print()">Print List 🖨️</button>
-        </div>
     </div>
 
     <div id="sales" class="content">
-        <div class="filter-section no-print">
-            <div><label>වාර්තාව තෝරන්න:</label>
-                <select id="reportFilter" onchange="renderSales()">
-                    <option value="all">සියලුම වාර්තා</option>
-                    <option value="today">අද දින</option>
-                </select>
-            </div>
-        </div>
-
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;" class="no-print">
             <div class="card" style="background:#2980b9;"><h3>මුළු ආදායම</h3><h2 id="totalSales">0.00</h2></div>
             <div class="card" style="background:#27ae60;"><h3>ශුද්ධ ලාභය</h3><h2 id="totalProfit">0.00</h2></div>
             <div class="card" style="background:#f39c12;"><h3>බිල්පත්</h3><h2 id="totalBills">0</h2></div>
         </div>
-
         <table>
-            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>මුදල</th><th>ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
+            <thead><tr><th>බිල් #</th><th>දිනය</th><th>භාණ්ඩය</th><th>මුදල</th><th>ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
-        <button class="btn-reset no-print" onclick="clearSales()">Reset Data</button>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let salesList = [];
@@ -170,12 +91,8 @@
                     salesList.push({ ...salesDataRaw[key], firebaseKey: key });
                 });
             }
-            localStorage.setItem('cached_sales', JSON.stringify(salesList));
-        } catch (e) {
-            salesList = JSON.parse(localStorage.getItem('cached_sales')) || [];
-        }
-        
-        renderInventory(); renderShortage(); renderSales();
+        } catch (e) {}
+        renderUI();
     }
 
     async function handleUpdate() {
@@ -185,49 +102,45 @@
         let s = parseFloat(document.getElementById('sellPrice').value) || 0;
         let st = parseFloat(document.getElementById('addStock').value) || 0;
         if(!n) return;
+
         let existing = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-        let item = existing ? { ...existing, buy: b, sell: s, unit: u, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
-                            : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2) };
         
-        try {
-            await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
-        } catch (e) {
-            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-            offStocks[item.id] = item;
-            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-        }
+        // මෙහිදී පවතින තොගයට අලුත් ප්‍රමාණය එකතු වේ (තොග ඇතුළත් කිරීමේදී පමණි)
+        let newStockCount = existing ? (parseFloat(existing.stock) + st).toFixed(2) : st.toFixed(2);
+        
+        let item = { 
+            id: existing ? existing.id : Date.now(), 
+            name: n, unit: u, buy: b, sell: s, 
+            stock: newStockCount,
+            img: existing ? existing.img : 'none.jpg'
+        };
+        
+        await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
         fetchData();
+        alert("තොගය යාවත්කාලීන විය!");
     }
 
-    function renderInventory() {
-        document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
-            let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
-            return `<tr>
-                <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover;" onerror="this.src='https://via.placeholder.com/40'"></td>
-                <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td>
-                <td>${profitPct}%</td><td>${item.stock}</td>
-                <td class="no-print"><button onclick="editItem('${item.name}')">✎</button> <button onclick="delCloud('${item.id}')">X</button></td>
-            </tr>`;
-        }).join('');
-        document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
-    }
+    function renderUI() {
+        document.getElementById('inventoryBody').innerHTML = inventory.map(item => `
+            <tr>
+                <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td>
+                <td class="no-print"><button onclick="delCloud('${item.id}')">X</button></td>
+            </tr>`).join('');
 
-    function renderSales() {
+        const low = inventory.filter(i => parseFloat(i.stock) < 2);
+        document.getElementById('shortageBody').innerHTML = low.map(i => `<tr><td>${i.name}</td><td>${i.stock} ${i.unit}</td></tr>`).join('');
+
         let rev = 0, prof = 0;
-        const filter = document.getElementById('reportFilter').value;
-        const today = new Date().toLocaleDateString('en-GB');
-
-        const filtered = salesList.filter(s => filter === 'all' || new Date(s.date).toLocaleDateString('en-GB') === today);
-
-        document.getElementById('salesBody').innerHTML = filtered.map(s => {
+        document.getElementById('salesBody').innerHTML = salesList.map(s => {
             rev += parseFloat(s.total); prof += parseFloat(s.profit);
             return `<tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.total}</td><td>${s.profit}</td>
-            <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')">❌</button></td></tr>`;
+            <td class="no-print"><button onclick="delSale('${s.firebaseKey}')">❌</button></td></tr>`;
         }).join('');
-
+        
         document.getElementById('totalSales').innerText = rev.toFixed(2);
         document.getElementById('totalProfit').innerText = prof.toFixed(2);
-        document.getElementById('totalBills').innerText = [...new Set(filtered.map(s => s.bNo))].length;
+        document.getElementById('totalBills').innerText = [...new Set(salesList.map(s => s.bNo))].length;
+        document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
     }
 
     function showTab(id) {
@@ -237,21 +150,11 @@
         event.currentTarget.classList.add('active');
     }
 
-    async function deleteSingleSale(key) {
-        if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${key}.json`, { method: 'DELETE' }); fetchData(); }
-    }
-
-    async function delCloud(id) {
-        if(confirm("භාණ්ඩය මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); }
-    }
-
-    function checkEx(n) {
-        let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-        if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; }
-    }
+    async function delSale(key) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${key}.json`, { method: 'DELETE' }); fetchData(); } }
+    async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; } }
 
     fetchData();
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 </script>
 </body>
 </html>
