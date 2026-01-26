@@ -53,7 +53,7 @@
 </head>
 <body>
 
-<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. බිල්පත් පසුව යාවත්කාලීන වේ.</div>
+<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. සියල්ල සාමාන්‍ය පරිදි සිදුවේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
@@ -123,14 +123,12 @@
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
         
-        // 1. Offline බිල්පත් Sync කිරීම
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         for (let sale of offSales) {
             try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e){}
         }
         localStorage.removeItem('offline_sales');
         
-        // 2. Offline තොග වෙනස්වීම් Sync කිරීම
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
             try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e){}
@@ -224,18 +222,22 @@
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
             
-            // Local Memory Update
+            // 1. LocalStorage යාවත්කාලීන කිරීම (අනිවාර්යයි)
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
             
+            // 2. Offline Stocks සඳහා තාවකාලිකව සුරැකීම
+            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+            offStocks[itm.id] = itm.stock;
+            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+
             try {
-                // Online Update
+                // 3. Online ඇති විට වහාම Firebase යාවත්කාලීන කිරීම
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
-            } catch (e) {
-                // Offline Storage Update
-                let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-                offStocks[itm.id] = itm.stock;
+                // සාර්ථක නම් Offline ලැයිස්තුවෙන් ඉවත් කිරීම
+                delete offStocks[itm.id];
                 localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-            }
+            } catch (e) {}
+            
             render();
         }
     }
@@ -288,17 +290,19 @@
         
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
+            
+            // Offline Sales සුරැකීම
+            let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+            offSales.push(entry);
+            localStorage.setItem('offline_sales', JSON.stringify(offSales));
+
             try {
-                fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
-                    let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                    offSales.push(entry);
-                    localStorage.setItem('offline_sales', JSON.stringify(offSales));
-                });
-            } catch (e) {
-                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                offSales.push(entry);
+                // Online ඇති විට වහාම Firebase යැවීම
+                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
+                // සාර්ථක නම් Offline ලැයිස්තුවෙන් ඉවත් කිරීම
+                offSales.pop(); 
                 localStorage.setItem('offline_sales', JSON.stringify(offSales));
-            }
+            } catch (e) {}
         }
 
         window.onbeforeunload = null;
