@@ -15,7 +15,7 @@
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
         .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
-        .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
+        .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50% , -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
         .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
         .stock-tag { font-size: 11px; color: #7f8c8d; }
         .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
@@ -200,16 +200,22 @@
         const uSel = document.getElementById('uSel');
         const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
+        
+        // --- මෙතැන් සිට මිල පෙරදසුන (Price Preview) ඇතුළත් කර ඇත ---
         if(tempDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
         } else if(tempItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
             document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
         }
+        
         qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
         setTimeout(() => qtyInp.focus(), 100);
@@ -288,7 +294,6 @@
         document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
     }
 
-    // Refresh නොකර පද්ධතිය reset කිරීමේ ශ්‍රිතය
     function resetSystemAfterBill() {
         cart = [];
         localStorage.removeItem('active_cart');
@@ -312,7 +317,6 @@
         
         if(shouldPrint) {
             window.print();
-            // මුද්‍රණයෙන් පසු Refresh නොකර reset කරයි
             setTimeout(resetSystemAfterBill, 1000);
         } else {
             resetSystemAfterBill();
