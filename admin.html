@@ -181,19 +181,33 @@
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let salesDataRaw = {}; let salesList = []; let addedToday = [];
 
+    // fetchData වෙනස් කර Offline Support එක් කරන ලදී
     async function fetchData() {
-        const invRes = await fetch(`${BASE_URL}inventory.json`);
-        const invData = await invRes.json();
-        inventory = invData ? Object.values(invData) : [];
-        
-        const salesRes = await fetch(`${BASE_URL}sales.json`);
-        salesDataRaw = await salesRes.json();
-        salesList = [];
-        if(salesDataRaw) {
-            Object.keys(salesDataRaw).forEach(key => {
-                salesList.push({ ...salesDataRaw[key], firebaseKey: key });
-            });
+        try {
+            const invRes = await fetch(`${BASE_URL}inventory.json`);
+            const invData = await invRes.json();
+            inventory = invData ? Object.values(invData) : [];
+            // දත්ත සාර්ථකව ලැබුණු පසු බ්‍රවුසරයේ සුරැකීම
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+        } catch (e) {
+            // අන්තර්ජාලය නැතිනම් බ්‍රවුසරයෙන් ලබා ගැනීම
+            inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         }
+        
+        try {
+            const salesRes = await fetch(`${BASE_URL}sales.json`);
+            salesDataRaw = await salesRes.json();
+            salesList = [];
+            if(salesDataRaw) {
+                Object.keys(salesDataRaw).forEach(key => {
+                    salesList.push({ ...salesDataRaw[key], firebaseKey: key });
+                });
+            }
+            localStorage.setItem('cached_sales', JSON.stringify(salesList));
+        } catch (e) {
+            salesList = JSON.parse(localStorage.getItem('cached_sales')) || [];
+        }
+        
         renderInventory(); renderShortage(); renderSales();
     }
 
@@ -269,7 +283,6 @@
         document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
     }
 
-    // අනෙකුත් සියලුම ශ්‍රිත (Sales, Wastage, Delete ආදිය) එලෙසම පවතී
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
@@ -373,7 +386,15 @@
     async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
     function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
+    
     fetchData();
+
+    // Service Worker Registration (නියමිත පරිදි එක් කරන ලදී)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker Registered"))
+        .catch((err) => console.log("Service Worker Failed", err));
+    }
 </script>
 </body>
 </html>
