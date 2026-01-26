@@ -122,17 +122,21 @@
 
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
+        
+        // 1. Offline බිල්පත් Sync කිරීම
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         for (let sale of offSales) {
             try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e){}
         }
         localStorage.removeItem('offline_sales');
         
+        // 2. Offline තොග වෙනස්වීම් Sync කිරීම
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
             try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e){}
         }
         localStorage.removeItem('offline_stocks');
+        
         fetchInventory();
     }
 
@@ -219,9 +223,15 @@
         if(itm) {
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
+            
+            // Local Memory Update
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+            
             try {
+                // Online Update
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
             } catch (e) {
+                // Offline Storage Update
                 let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
                 offStocks[itm.id] = itm.stock;
                 localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
@@ -279,7 +289,6 @@
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             try {
-                // මෙහිදී await ඉවත් කර, fetch ක්‍රියාවලිය පසුබිමේ සිදුවීමට ඉඩ දුන්නා (Error එකක් ආවත් පහළ කේත ක්‍රියා කරයි)
                 fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
                     let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
                     offSales.push(entry);
@@ -292,11 +301,9 @@
             }
         }
 
-        // මුද්‍රණය සහ පිටුව Reload කිරීම fetch එකෙන් පිටතට ගෙනාවා (සෑමවිටම ක්‍රියා කිරීමට)
         window.onbeforeunload = null;
         if(shouldPrint) {
             window.print();
-            // මුද්‍රණ කවුළුව වැසූ පසු හෝ මුද්‍රණය වූ පසු Reload වීමට
             setTimeout(() => { location.reload(); }, 500);
         } else {
             location.reload();
