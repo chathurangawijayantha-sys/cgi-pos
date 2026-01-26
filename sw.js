@@ -1,4 +1,26 @@
-// Service Worker for CGI POS
+const CACHE_NAME = 'gami-pos-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './admin.html',
+  './manifest.json',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+];
+
+// Install Event - ගොනු Cache කිරීම
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+});
+
+// Fetch Event - Offline ඇති විට මතකයෙන් ලබා දීම
 self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    }).catch(() => {
+      return caches.match('./index.html');
+    })
+  );
 });
