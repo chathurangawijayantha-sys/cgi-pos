@@ -52,7 +52,6 @@
         .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
         .top-selling-item { display: inline-block; background: #27ae60; color: white; padding: 5px 12px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; }
         
-        /* නව සෙවුම් කොටු සඳහා ස්ටයිල් */
         .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
         .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
 
@@ -182,22 +181,38 @@
     let inventory = []; let salesDataRaw = {}; let salesList = []; let addedToday = [];
 
     async function fetchData() {
-        const invRes = await fetch(`${BASE_URL}inventory.json`);
-        const invData = await invRes.json();
-        inventory = invData ? Object.values(invData) : [];
-        
-        const salesRes = await fetch(`${BASE_URL}sales.json`);
-        salesDataRaw = await salesRes.json();
-        salesList = [];
-        if(salesDataRaw) {
-            Object.keys(salesDataRaw).forEach(key => {
-                salesList.push({ ...salesDataRaw[key], firebaseKey: key });
-            });
+        // අන්තර්ජාලය ඇති විට සහ නැති විට වැඩ කිරීම සඳහා try-catch භාවිත කර ඇත
+        try {
+            const invRes = await fetch(`${BASE_URL}inventory.json`);
+            const invData = await invRes.json();
+            inventory = invData ? Object.values(invData) : [];
+            // Cache සඳහා LocalStorage භාවිතය
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+        } catch (e) {
+            // Offline නම් බ්‍රවුසරයෙන් දත්ත කියවයි
+            inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         }
+        
+        try {
+            const salesRes = await fetch(`${BASE_URL}sales.json`);
+            salesDataRaw = await salesRes.json();
+            salesList = [];
+            if(salesDataRaw) {
+                Object.keys(salesDataRaw).forEach(key => {
+                    salesList.push({ ...salesDataRaw[key], firebaseKey: key });
+                });
+            }
+            localStorage.setItem('cached_sales', JSON.stringify(salesList));
+        } catch (e) {
+            salesList = JSON.parse(localStorage.getItem('cached_sales')) || [];
+            // POS එකෙන් දැමූ Offline වාර්තා තිබේදැයි බලයි
+            const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+            salesList = [...offSales, ...salesList];
+        }
+        
         renderInventory(); renderShortage(); renderSales();
     }
 
-    // සෙවුම් පහසුකම (Search Function)
     function searchInventory() {
         let input = document.getElementById("inventorySearch").value.toLowerCase();
         let rows = document.getElementById("inventoryBody").getElementsByTagName("tr");
@@ -227,12 +242,16 @@
         let existing = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         let item = existing ? { ...existing, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
                             : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-        await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        
+        try {
+            await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        } catch (e) {
+            alert("Offline බැවින් Cloud එකට සුරැකිය නොහැක!");
+        }
         addedToday.push({ name: n, sell: s });
         clearForm(); fetchData();
     }
 
-    // භාණ්ඩ සංස්කරණය කිරීමේ පහසුකම (Edit Function)
     function editItem(name) {
         let item = inventory.find(i => i.name === name);
         if(item) {
@@ -269,7 +288,6 @@
         document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
     }
 
-    // අනෙකුත් සියලුම ශ්‍රිත (Sales, Wastage, Delete ආදිය) එලෙසම පවතී
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
@@ -374,6 +392,13 @@
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
     function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
     fetchData();
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker Registered"))
+        .catch((err) => console.log("Service Worker Failed", err));
+    }
 </script>
 </body>
 </html>
