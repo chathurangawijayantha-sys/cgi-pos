@@ -120,21 +120,28 @@
         render();
     }
 
-    async function syncOfflineData() {
-        document.getElementById('offline-status').style.display = 'none';
-        const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-        for (let sale of offSales) {
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e){}
-        }
-        localStorage.removeItem('offline_sales');
-        
-        const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-        for (let id in offStocks) {
-            try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e){}
-        }
-        localStorage.removeItem('offline_stocks');
-        fetchInventory();
+async function syncOfflineData() {
+    document.getElementById('offline-status').style.display = 'none';
+    
+    // 1. Offline බිල්පත් වාර්තා (Sales) Sync කිරීම
+    const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+    for (let sale of offSales) {
+        try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e){}
     }
+    localStorage.removeItem('offline_sales');
+    
+    // 2. Offline තොග වෙනස්වීම් (Stock Updates) Sync කිරීම - මෙයයි ප්‍රධාන තොගය අඩු කරන්නේ
+    const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+    for (let id in offStocks) {
+        try { 
+            // මෙහිදී Cloud එකේ ඇති අගය කෙලින්ම වෙනස් කරයි
+            await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); 
+        } catch(e){}
+    }
+    localStorage.removeItem('offline_stocks');
+    
+    fetchInventory(); // අවසානයේ Cloud එකෙන් අලුත්ම තොගය කියවයි
+}
 
     function render() {
         const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
@@ -315,3 +322,4 @@
 </script>
 </body>
 </html>
+
