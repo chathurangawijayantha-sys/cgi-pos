@@ -51,11 +51,15 @@
         .wastage-form { background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ffe0b2; }
         .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
         .top-selling-item { display: inline-block; background: #27ae60; color: white; padding: 5px 12px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; }
+        
+        /* නව සෙවුම් කොටු සඳහා ස්ටයිල් */
+        .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
+        .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
 
         @media print {
             body { margin: 0; padding: 0; background: white; }
             .container { box-shadow: none; max-width: 100%; padding: 0; }
-            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-excel, .btn-print-short, .btn-reset, .no-print, .filter-section, .wastage-form, .top-selling-section, th:last-child, td:last-child { display: none !important; }
+            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-excel, .btn-print-short, .btn-reset, .no-print, .filter-section, .wastage-form, .top-selling-section, .search-box, th:last-child, td:last-child { display: none !important; }
             .content { display: none; }
             .content.active { display: block; }
             h2 { font-size: 16px; text-align: center; border-bottom: 1px solid black; padding-bottom: 5px; }
@@ -98,6 +102,8 @@
                 <button class="tab-btn" style="background:#1D6F42; color:white;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
             </div>
         </div>
+
+        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම ටයිප් කර සොයන්න..." onkeyup="searchInventory()">
         
         <div class="wastage-form no-print">
             <h4 style="margin-top:0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
@@ -112,8 +118,8 @@
             </div>
         </div>
 
-        <table>
-            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th class="no-print">මකන්න</th></tr></thead>
+        <table id="inventoryTable">
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
@@ -179,6 +185,7 @@
         const invRes = await fetch(`${BASE_URL}inventory.json`);
         const invData = await invRes.json();
         inventory = invData ? Object.values(invData) : [];
+        
         const salesRes = await fetch(`${BASE_URL}sales.json`);
         salesDataRaw = await salesRes.json();
         salesList = [];
@@ -188,6 +195,16 @@
             });
         }
         renderInventory(); renderShortage(); renderSales();
+    }
+
+    // සෙවුම් පහසුකම (Search Function)
+    function searchInventory() {
+        let input = document.getElementById("inventorySearch").value.toLowerCase();
+        let rows = document.getElementById("inventoryBody").getElementsByTagName("tr");
+        for (let row of rows) {
+            let name = row.getElementsByTagName("td")[1].textContent.toLowerCase();
+            row.style.display = name.includes(input) ? "" : "none";
+        }
     }
 
     function downloadTodayStockExcel() {
@@ -215,6 +232,44 @@
         clearForm(); fetchData();
     }
 
+    // භාණ්ඩ සංස්කරණය කිරීමේ පහසුකම (Edit Function)
+    function editItem(name) {
+        let item = inventory.find(i => i.name === name);
+        if(item) {
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('buyPrice').value = item.buy;
+            document.getElementById('sellPrice').value = item.sell;
+            document.getElementById('addStock').value = 0;
+            document.getElementById('itemImg').value = item.img || '';
+            window.scrollTo(0,0);
+        }
+    }
+
+    function renderInventory() {
+        document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
+            let profitPct = ((item.sell - item.buy) / item.buy * 100).toFixed(0);
+            if(isNaN(profitPct) || !isFinite(profitPct)) profitPct = 0;
+            let rowClass = parseFloat(item.stock) <= 0 ? 'low-stock-row' : '';
+            return `
+            <tr class="${rowClass}">
+                <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.unit}</td>
+                <td>${item.buy}</td>
+                <td>${item.sell}</td>
+                <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
+                <td>${item.stock}</td>
+                <td class="no-print">
+                    <button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">✎</button>
+                    <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button>
+                </td>
+            </tr>`;
+        }).join('');
+        document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
+    }
+
+    // අනෙකුත් සියලුම ශ්‍රිත (Sales, Wastage, Delete ආදිය) එලෙසම පවතී
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
@@ -282,25 +337,17 @@
         let n = document.getElementById('wasteItemName').value;
         let qVal = parseFloat(document.getElementById('wasteQty').value);
         let u = document.getElementById('wasteUnit').value;
-
         if(!n || !qVal) return alert("නම සහ ප්‍රමාණය ඇතුළත් කරන්න!");
         let item = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(!item) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-
-        // ග්‍රෑම් වලින් ඇතුළත් කළහොත් Kg වලට හැරවීම
         let qtyInKg = (u === 'g') ? qVal / 1000 : qVal;
         let displayQty = (u === 'g') ? qVal + " g" : qVal + " Kg";
-
         if(confirm(`${n} වලින් ${displayQty} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
             let newStock = (parseFloat(item.stock) - qtyInKg).toFixed(2);
             await fetch(`${BASE_URL}inventory/${item.id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) });
-            
-            // ලාභය ගණනය කිරීමේදී Kg ප්‍රමාණය භාවිතා කරයි
             let loss = -(parseFloat(item.buy) * qtyInKg);
             let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: displayQty, total: 0, profit: loss };
-            
             await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
-            
             document.getElementById('wasteItemName').value = "";
             document.getElementById('wasteQty').value = "";
             alert("සාර්ථකව ඉවත් කළා!");
@@ -322,7 +369,6 @@
         window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
     }
     function showTab(id) { document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
-    function renderInventory() { document.getElementById('inventoryBody').innerHTML = inventory.map(item => `<tr><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td><td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td><td>${item.stock}</td><td class="no-print"><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`).join(''); document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join(''); }
     function renderShortage() { const lowStock = inventory.filter(i => { const v = parseFloat(i.stock); return i.unit === "Kg" ? v < 0.5 : v < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(item => `<tr class="shortage-row"><td>${item.name}</td><td>${item.stock}</td><td>${item.unit}</td></tr>`).join(''); }
     async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
