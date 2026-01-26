@@ -128,7 +128,7 @@
         let html = "";
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            if(p.name === "බඩඉරිඟු") {
+            if(p.name && p.name.trim() === "බඩඉරිඟු") {
                 html += `
                 <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
@@ -173,18 +173,15 @@
         if(!qv || parseFloat(qv) <= 0) return;
         let q = parseFloat(qv); let u = document.getElementById('uSel').value; let d = (u==='g') ? q/1000 : q;
         if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
-        
-        // තොගය වහාම LocalStorage එකේ අඩු කිරීම (Fix)
         tempItem.stock = (parseFloat(tempItem.stock) - d).toFixed(2);
         localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-        
         let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         offStocks[tempItem.id] = tempItem.stock;
         localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
         fetch(`${DB_URL}inventory/${tempItem.id}/stock.json`, { method: 'PUT', body: JSON.stringify(tempItem.stock) }).catch(e=>{});
-
         let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
-        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, dq: q + (u==='g'?'g':tempItem.unit), t: t, d: d, buy: tempItem.buy });
+        let unitLabel = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, dq: q + " " + unitLabel, t: t, d: d, buy: tempItem.buy });
         updateUI(); closeModal();
     }
 
