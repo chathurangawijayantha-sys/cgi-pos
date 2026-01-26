@@ -6,44 +6,94 @@
     <link rel="manifest" href="manifest.json">
     <title>ගැමි එළවළු - POS</title>
     <style>
-        /* ඔයාගේ පරණ ස්ටයිල් ටික මෙතන තියෙනවා */
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
         #product-section { width: 60%; padding: 15px; border-right: 1px solid #ddd; background: #fff; overflow-y: auto; }
         #bill-section { width: 40%; background: #fff; padding: 15px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
-        .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; }
+        .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
+        .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
+        .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
         .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
-        .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .stock-tag { font-size: 11px; color: #7f8c8d; }
+        .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .bill-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+        .bill-table th { border-bottom: 1px solid black; padding: 5px; text-align: left; }
+        .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
         .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
-        .sinhala-words { font-size: 12px; color: #555; font-style: italic; display: block; text-align: right; margin-bottom: 10px; }
-        .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
-        #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; position: fixed; top: 0; width: 100%; z-index: 1000; }
-        @media screen and (max-width: 800px) { .main-container { flex-direction: column; } #product-section, #bill-section { width: auto; } }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
+        .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
+        #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
+        .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
+        #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
+
+        @media screen and (max-width: 800px) {
+            .main-container { flex-direction: column; }
+            #product-section { width: auto; border-right: none; padding-bottom: 20px; }
+            #bill-section { width: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+        }
+
+        @media print {
+            @page { size: 58mm auto; margin: 0; }
+            body { width: 58mm; margin: 0; padding: 0; }
+            #product-section, .modal-overlay, #unitModal, .no-print, button, input, #offline-status { display: none !important; }
+            #bill-section { width: 100% !important; display: block !important; padding: 2mm !important; }
+            .bill-header h3 { font-size: 14px !important; margin: 0 !important; }
+            .bill-header p { font-size: 9px !important; margin: 1px 0 !important; }
+            .bill-table { font-size: 10px !important; }
+            .summary-row { font-size: 10px !important; }
+            .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            .no-print-icon { display: none !important; }
+        }
+        .footer-msg { display: none; }
     </style>
 </head>
 <body onbeforeunload="return handleReload()">
 
-<div id="offline-status">Offline මාදිලිය: දත්ත පද්ධතිය තුල සුරැකේ.</div>
+<div id="offline-status">Offline මාදිලිය: දත්ත බ්‍රවුසරයේ සුරැකේ.</div>
+<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
+<div id="unitModal">
+    <h3 id="mTitle" style="margin:0;"></h3>
+    <div class="price-info" id="pricePreview"></div>
+    <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
+    <div id="unitSelectorDiv">
+        <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
+            <option value="main">ප්‍රධාන ඒකකය</option>
+            <option value="g">ග්‍රෑම් (g)</option>
+        </select>
+    </div>
+    <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
+    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
+</div>
 
 <div class="main-container">
     <div id="product-section"><div class="grid" id="grid"></div></div>
     <div id="bill-section">
         <div class="bill-header">
-            <h3 style="margin:0; color: #2e7d32;">ගැමි එළවළු කොළ කඩේ</h3>
-            <p style="margin:2px 0; font-size:12px;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+            <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
+            <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
+                <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
+                <span id="dtDisplay"></span>
+            </div>
         </div>
         <table class="bill-table">
-            <thead><tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණ</th><th style="text-align:right;">මුදල</th></tr></thead>
+            <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
             <tbody id="bBody"></tbody>
         </table>
         <div class="total-area">
-            <div class="summary-row"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
-            <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
-            <div style="display: flex; gap: 5px;" class="no-print">
-                <button class="btn-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
+            <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+            <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+            <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
+            <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+            <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+            <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
+            <div style="display: flex; gap: 5px;">
+                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
+                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
             </div>
         </div>
     </div>
@@ -52,22 +102,15 @@
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let cart = []; 
+    let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
-    // මුදල සිංහලට හැරවීමේ ශ්‍රිතය (Words)
-    function priceToSinhalaWords(amount) {
-        if (amount == 0) return "රුපියල් බින්දුවයි";
-        const units = ["", "එක", "දෙක", "තුන", "හතර", "පහ", "හය", "හත", "අට", "නව"];
-        const tens = ["", "දහ", "විසි", "තිස්", "හතළිස්", "පනස්", "හැට", "හැත්තෑ", "අසූ", "අනූ"];
-        let num = Math.floor(amount);
-        let words = "රුපියල් ";
-        if (num >= 100) { words += units[Math.floor(num/100)] + "සිය "; num %= 100; }
-        if (num >= 10) { words += tens[Math.floor(num/10)] + " "; num %= 10; }
-        if (num > 0) words += units[num];
-        return words.trim() + "යි";
+    function handleReload(e) {
+        if (cart.length > 0 && !isCompletingBill) {
+            return "බිලක් සකස් වෙමින් පවතී. පිටුව Refresh කළහොත් දත්ත නැතිවිය හැක!";
+        }
     }
 
-    // දත්ත පූරණය සහ Offline පාලනය
     async function initializeApp() {
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) cart = JSON.parse(savedCart);
@@ -77,7 +120,7 @@
         updateUI();
 
         if (navigator.onLine) {
-            fetchInventory();
+            await syncOfflineData();
         } else {
             document.getElementById('offline-status').style.display = 'block';
         }
@@ -92,41 +135,198 @@
                 localStorage.setItem('cached_inventory', JSON.stringify(inventory));
                 render();
             }
-        } catch (e) { document.getElementById('offline-status').style.display = 'block'; }
+        } catch (error) {
+            console.log("Fetch failed.");
+        }
+    }
+
+    async function syncOfflineData() {
+        document.getElementById('offline-status').style.display = 'none';
+        const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+        const ids = Object.keys(offStocks);
+        if (ids.length > 0) {
+            for (let id of ids) {
+                try {
+                    await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) });
+                } catch(e) { return; }
+            }
+            localStorage.removeItem('offline_stocks');
+        }
+        const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+        if (offSales.length > 0) {
+            for (let sale of offSales) {
+                try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
+            }
+            localStorage.removeItem('offline_sales');
+        }
+        await fetchInventory(); 
     }
 
     function render() {
+        const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
         let html = "";
-        inventory.forEach(p => {
-            html += `<div class="item-card" onclick="addToCart('${p.id}')">
-                <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div>
-            </div>`;
+        sorted.forEach(p => {
+            const isOut = parseFloat(p.stock) <= 0;
+            if(p.name === "බඩඉරිඟු") {
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                    <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
+                    <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            } else {
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                    <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            }
         });
+        html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
 
-    function addToCart(id) {
-        let p = inventory.find(x => x.id == id);
-        cart.push({ n: p.name, up: p.sell, t: parseFloat(p.sell) });
+    function openM(id, dispName, customPrice) {
+        tempItem = inventory.find(x => String(x.id) === String(id));
+        if(!tempItem) return;
+        tempDispName = dispName || tempItem.name;
+        tempPrice = customPrice || parseFloat(tempItem.sell);
+        document.getElementById('mTitle').innerText = tempDispName;
+        const uSel = document.getElementById('uSel');
+        const qtyInp = document.getElementById('qty');
+        document.getElementById('unitSelectorDiv').style.display = 'block';
+        if(tempDispName.includes("බඩඉරිඟු")) {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
+        } else if(tempItem.unit === "Kg") {
+            uSel.value = "g"; uSel.disabled = false;
+            document.getElementById('uDisp').innerText = "ඒකකය: Kg";
+        } else {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+        }
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
+    }
+
+    function openOtherModal() {
+        tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
+        document.getElementById('mTitle').innerText = tempDispName;
+        document.getElementById('unitSelectorDiv').style.display = 'none';
+        const qtyInp = document.getElementById('qty');
+        qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
+        document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
+    }
+
+    async function updateStock(id, qty, mode) {
+        if(id === 9999) return;
+        let itm = inventory.find(i => String(i.id) === String(id));
+        if(itm) {
+            let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
+            itm.stock = ns.toFixed(2);
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+            offStocks[itm.id] = itm.stock;
+            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+            try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
+            render();
+        }
+    }
+
+    async function confirmAdd() {
+        let qv = document.getElementById('qty').value;
+        if(!qv || parseFloat(qv) <= 0) return;
+        let q = parseFloat(qv);
+        if(tempItem.id === 9999) {
+            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
+        } else {
+            let u = document.getElementById('uSel').value;
+            let d = (u==='g') ? q/1000 : q;
+            if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+            await updateStock(tempItem.id, d, 'sub');
+            let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+        }
         localStorage.setItem('active_cart', JSON.stringify(cart));
-        updateUI();
+        updateUI(); closeModal();
     }
 
     function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map(i => `<tr><td>${i.n}</td><td>${i.up}</td><td>1</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
-        let total = cart.reduce((s, i) => s + i.t, 0);
-        document.getElementById('gTot').innerText = total.toFixed(2);
-        document.getElementById('gTotWords').innerText = priceToSinhalaWords(total);
+        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+            <tr onclick="removeItem(${idx})" style="cursor:pointer;">
+                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
+        document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
+        document.getElementById('itemCount').innerText = cart.length; 
+        calc();
     }
 
-    function finalizeBillAndPrint() {
+    async function removeItem(idx) {
+        if(confirm("ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1);
+            localStorage.setItem('active_cart', JSON.stringify(cart));
+            updateUI();
+        }
+    }
+
+    function calc() {
+        let t = parseFloat(document.getElementById('gTot').innerText);
+        let c = parseFloat(document.getElementById('cashInput').value) || 0;
+        document.getElementById('cashDisplay').innerText = c.toFixed(2);
+        document.getElementById('balDisplay').innerText = (c - t).toFixed(2);
+    }
+
+    // Refresh නොකර පද්ධතිය reset කිරීමේ ශ්‍රිතය
+    function resetSystemAfterBill() {
         cart = [];
         localStorage.removeItem('active_cart');
+        document.getElementById('cashInput').value = "";
+        document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
         updateUI();
-        window.print();
+        isCompletingBill = false;
     }
 
+    async function finalizeBillAndPrint(shouldPrint) {
+        if(cart.length === 0) return;
+        isCompletingBill = true;
+        const bNo = document.getElementById('bNoDisplay').innerText;
+        for (let c of cart) {
+            let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
+            let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+            offSales.push(entry);
+            localStorage.setItem('offline_sales', JSON.stringify(offSales));
+            try { fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
+        }
+        
+        if(shouldPrint) {
+            window.print();
+            // මුද්‍රණයෙන් පසු Refresh නොකර reset කරයි
+            setTimeout(resetSystemAfterBill, 1000);
+        } else {
+            resetSystemAfterBill();
+        }
+    }
+
+    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
+    document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
+    
     window.onload = initializeApp;
+    window.addEventListener('online', syncOfflineData);
+    window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
+
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
 </script>
 </body>
 </html>
