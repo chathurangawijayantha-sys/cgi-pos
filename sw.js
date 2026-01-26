@@ -1,5 +1,5 @@
-// Service Worker for CGI POS
-const CACHE_NAME = 'gami-pos-v2';
+// Service Worker for CGI POS v5
+const CACHE_NAME = 'gami-pos-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -42,3 +42,4 @@ self.addEventListener('activate', (event) => {
     })
   );
 });
+
