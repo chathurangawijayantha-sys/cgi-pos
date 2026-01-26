@@ -53,7 +53,7 @@
 </head>
 <body>
 
-<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. බිල්පත් පසුව යාවත්කාලීන වේ.</div>
+<div id="offline-status">අන්තර්ජාලය විසන්ධි වී ඇත. දත්ත පසුව යාවත්කාලීන වේ.</div>
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
@@ -219,6 +219,10 @@
         if(itm) {
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
+            
+            // --- Offline සඳහා තොග මතකයේ (LocalStorage) වහාම යාවත්කාලීන කිරීම ---
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+            
             try {
                 await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) });
             } catch (e) {
@@ -279,7 +283,7 @@
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             try {
-                // මෙහිදී await ඉවත් කර, fetch ක්‍රියාවලිය පසුබිමේ සිදුවීමට ඉඩ දුන්නා (Error එකක් ආවත් පහළ කේත ක්‍රියා කරයි)
+                // Fetch ක්‍රියාවලිය පසුබිමේ සිදුවීමට ඉඩ දුන්නා (Error එකක් ආවත් පහළ කේත ක්‍රියා කරයි)
                 fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }).catch(e => {
                     let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
                     offSales.push(entry);
@@ -292,11 +296,9 @@
             }
         }
 
-        // මුද්‍රණය සහ පිටුව Reload කිරීම fetch එකෙන් පිටතට ගෙනාවා (සෑමවිටම ක්‍රියා කිරීමට)
         window.onbeforeunload = null;
         if(shouldPrint) {
             window.print();
-            // මුද්‍රණ කවුළුව වැසූ පසු හෝ මුද්‍රණය වූ පසු Reload වීමට
             setTimeout(() => { location.reload(); }, 500);
         } else {
             location.reload();
