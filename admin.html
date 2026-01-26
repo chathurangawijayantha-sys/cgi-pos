@@ -52,7 +52,6 @@
         .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
         .top-selling-item { display: inline-block; background: #27ae60; color: white; padding: 5px 12px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; }
         
-        /* නව සෙවුම් කොටු සඳහා ස්ටයිල් */
         .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
         .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
 
@@ -197,7 +196,6 @@
         renderInventory(); renderShortage(); renderSales();
     }
 
-    // සෙවුම් පහසුකම (Search Function)
     function searchInventory() {
         let input = document.getElementById("inventorySearch").value.toLowerCase();
         let rows = document.getElementById("inventoryBody").getElementsByTagName("tr");
@@ -232,7 +230,6 @@
         clearForm(); fetchData();
     }
 
-    // භාණ්ඩ සංස්කරණය කිරීමේ පහසුකම (Edit Function)
     function editItem(name) {
         let item = inventory.find(i => i.name === name);
         if(item) {
@@ -269,7 +266,6 @@
         document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
     }
 
-    // අනෙකුත් සියලුම ශ්‍රිත (Sales, Wastage, Delete ආදිය) එලෙසම පවතී
     function renderSales() {
         let totalRev = 0, totalProf = 0;
         const filter = document.getElementById('reportFilter').value;
@@ -374,13 +370,12 @@
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
     function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
     fetchData();
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log("Service Worker Registered"))
-      .catch((err) => console.log("Service Worker Failed", err));
-  }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker Registered"))
+        .catch((err) => console.log("Service Worker Failed", err));
+    }
 </script>
 </body>
 </html>
-
