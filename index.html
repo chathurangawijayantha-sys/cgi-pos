@@ -46,6 +46,7 @@
             .bill-table { font-size: 10px !important; }
             .summary-row { font-size: 10px !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
     </style>
@@ -111,8 +112,10 @@
             const res = await fetch(`${DB_URL}inventory.json`);
             const data = await res.json();
             inventory = data ? Object.values(data) : [];
+            // Cloud එකෙන් ලැබෙන අලුත්ම දත්ත සුරැකීම
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
         } catch (error) {
+            // Offline නම් සුරැකි දත්ත ලබා ගැනීම
             inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
             document.getElementById('offline-status').style.display = 'block';
         }
@@ -183,17 +186,25 @@
             let newStock = (parseFloat(itm.stock) - qtyReduced).toFixed(2);
             itm.stock = newStock;
             
-            // LocalStorage එකට වහාම ඇතුළත් කරයි (පිටුව reload වුවත් දත්ත පවතී)
+            // 1. LocalStorage එකට වහාම ඇතුළත් කරයි (පිටුව reload වුවත් දත්ත පවතී)
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
             
-            // අන්තර්ජාලය ඇති විට Cloud එකට යවයි
+            // 2. Offline Stocks සඳහා පසුව යැවීමට සුරැකේ
+            let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+            offStocks[id] = newStock;
+            localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+
+            // 3. අන්තර්ජාලය ඇති විට Cloud එකට යවයි
             fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(newStock) })
-            .catch(e => {
-                // Offline නම් පසුව යැවීමට සුරැකේ
-                let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
-                offStocks[id] = newStock;
-                localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-            });
+            .then(() => {
+                // සාර්ථක නම් Offline ලිස්ට් එකෙන් ඉවත් කරයි
+                let currentOffStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+                delete currentOffStocks[id];
+                localStorage.setItem('offline_stocks', JSON.stringify(currentOffStocks));
+            })
+            .catch(e => {});
+            
+            render();
         }
     }
 
@@ -255,8 +266,10 @@
             try {
                 // Online ඇති විට Cloud එකට යවයි
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
-                offSales.pop(); 
-                localStorage.setItem('offline_sales', JSON.stringify(offSales));
+                // සාර්ථකව ගියහොත් Offline ලිස්ට් එකෙන් අවසන් අයිතමය ඉවත් කරයි
+                let currentOffSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                currentOffSales.pop();
+                localStorage.setItem('offline_sales', JSON.stringify(currentOffSales));
             } catch (e) {}
         }
 
