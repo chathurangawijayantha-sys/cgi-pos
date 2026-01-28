@@ -24,6 +24,7 @@
         .bill-table td { padding: 8px 2px; border-bottom: 1px dashed #eee; }
         .total-area { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
+        .sinhala-words { font-size: 11px; color: #333; font-weight: bold; display: block; text-align: right; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
@@ -45,6 +46,7 @@
             .bill-header p { font-size: 9px !important; margin: 1px 0 !important; }
             .bill-table { font-size: 10px !important; }
             .summary-row { font-size: 10px !important; }
+            .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
             .no-print-icon { display: none !important; }
         }
@@ -87,6 +89,9 @@
         <div class="total-area">
             <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
             <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+            
+            <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
+
             <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
             <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
             <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
@@ -104,6 +109,26 @@
     let inventory = []; let cart = []; 
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
+
+    // මුදල සිංහලට හැරවීමේ ශ්‍රිතය
+    function priceToSinhalaWords(amount) {
+        if (amount == 0) return "රුපියල් බින්දුවයි";
+        const units = ["", "එක", "දෙක", "තුන", "හතර", "පහ", "හය", "හත", "අට", "නව"];
+        const tens = ["", "දහ", "විසි", "තිස්", "හතළිස්", "පනස්", "හැට", "හැත්තෑ", "අසූ", "අනූ"];
+        let num = Math.floor(amount);
+        let words = "රුපියල් ";
+        
+        if (num >= 1000) { words += units[Math.floor(num/1000)] + "දාස් "; num %= 1000; }
+        if (num >= 100) { words += units[Math.floor(num/100)] + "සිය "; num %= 100; }
+        if (num >= 20) { words += tens[Math.floor(num/10)] + " "; num %= 10; }
+        else if (num >= 10) { 
+            const special = ["දහය", "එකොළහ", "දොළහ", "දහතුන", "දහහතර", "පහළොව", "දහසය", "දහහත", "දහඅට", "දහනව"];
+            words += special[num-10]; num = 0;
+        }
+        if (num > 0) words += units[num];
+        
+        return words.trim() + "යි";
+    }
 
     function handleReload(e) {
         if (cart.length > 0 && !isCompletingBill) {
@@ -201,7 +226,6 @@
         const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
         
-        // --- මෙතැන් සිට මිල පෙරදසුන (Price Preview) ඇතුළත් කර ඇත ---
         if(tempDispName.includes("බඩඉරිඟු")) {
             uSel.value = "main"; uSel.disabled = true;
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
@@ -272,8 +296,14 @@
             <tr onclick="removeItem(${idx})" style="cursor:pointer;">
                 <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
             </tr>`).join('');
-        document.getElementById('gTot').innerText = cart.reduce((s, i) => s + i.t, 0).toFixed(2);
+        
+        let total = cart.reduce((s, i) => s + i.t, 0);
+        document.getElementById('gTot').innerText = total.toFixed(2);
         document.getElementById('itemCount').innerText = cart.length; 
+        
+        // මුළු මුදල සිංහලෙන් යාවත්කාලීන කිරීම
+        document.getElementById('gTotWords').innerText = priceToSinhalaWords(total);
+        
         calc();
     }
 
