@@ -1,45 +1,31 @@
-// Service Worker for CGI POS v5
-const CACHE_NAME = 'gami-pos-v5';
-const ASSETS = [
-  './',
-  './index.html',
-  './admin.html',
-  './manifest.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-];
+const CACHE_NAME = 'gami-pos-v' + Date.now(); // සෑම විටම අලුත් වර්ෂන් එකක් සාදයි
 
-// Install Event - ගොනු Cache කිරීම
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Caching assets...');
-      return cache.addAll(ASSETS);
-    })
-  );
+    // අලුත් වෙනස්කම් තිබේ නම් පරණ ඒවා මතින් වහාම ක්‍රියාත්මක වීමට බල කරයි
+    self.skipWaiting();
 });
 
-// Fetch Event - Offline ඇති විට මතකයෙන් ලබා දීම
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // මතකයේ (Cache) ඇත්නම් එය ලබා දෙයි, නැතිනම් Network එකෙන් ගනී
-      return response || fetch(event.request);
-    }).catch(() => {
-      // සම්පූර්ණයෙන්ම Offline නම් index.html පෙන්වයි
-      return caches.match('./index.html');
-    })
-  );
-});
-
-// පැරණි Cache ඉවත් කිරීම (Activate Event)
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-      );
-    })
-  );
+    // පරණ Cache සියල්ල මකා දමයි
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    return caches.delete(cacheName);
+                })
+            );
+        }).then(() => {
+            // වහාම ඇප් එකේ පාලනය අතට ගනී
+            return self.clients.claim();
+        })
+    );
 });
 
+self.addEventListener('fetch', (event) => {
+    // ජාලය (Network) හරහා දත්ත ලබා ගැනීමට උත්සාහ කරයි, නැතිනම් පමණක් Cache පරීක්ෂා කරයි
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
+        })
+    );
+});
