@@ -410,11 +410,20 @@
     
     fetchData();
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("Service Worker Registered"))
-        .catch((err) => console.log("Service Worker Failed", err));
-    }
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // අලුත් Update එකක් ඇති විට පද්ධතිය ඉබේම Refresh වී අලුත් දත්ත පෙන්වයි
+                    window.location.reload();
+                }
+            };
+        };
+    });
+}
 </script>
 </body>
 </html>
+
