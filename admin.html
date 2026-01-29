@@ -54,6 +54,8 @@
         .charts-flex { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; }
         .chart-box { flex: 1; min-width: 300px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; height: 400px; position: relative; }
 
+        .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
+
         @media print {
             .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section { display: none !important; }
             .content { display: block !important; }
@@ -84,6 +86,7 @@
         <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
         <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
         <button class="tab-btn" onclick="showTab('loyalty')">දීමනා & Loyalty 🎁</button>
+        <button class="tab-btn" style="background:#2980b9; color:white;" onclick="showTab('cashier')">කැෂියර් බැලන්ස් 🧾</button>
         <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
@@ -201,6 +204,27 @@
         </table>
     </div>
 
+    <div id="cashier" class="content">
+        <h3 style="color:#2980b9;">ඩේලි කැෂියර් බැලන්ස් 🧾</h3>
+        <div class="cash-summary-box no-print">
+            <div class="grid-layout">
+                <div><label>ආරම්භක මුදල (Draw Balance)</label><input type="number" id="openingBalance" value="0" oninput="calculateCashBalance()"></div>
+                <div><label>අතේ ඇති මුදල (Cash in Hand)</label><input type="number" id="actualCash" placeholder="Rs." oninput="calculateCashBalance()"></div>
+            </div>
+            <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="padding:15px; background:white; border-radius:8px;">
+                    <p style="margin:0; font-size:12px; color:#666;">පද්ධතියේ එකතුව (System Expectation):</p>
+                    <h3 id="expectedCash" style="margin:5px 0 0 0; color:#2c3e50;">Rs. 0.00</h3>
+                </div>
+                <div style="padding:15px; background:white; border-radius:8px;">
+                    <p style="margin:0; font-size:12px; color:#666;">වෙනස (Difference):</p>
+                    <h3 id="cashDifference" style="margin:5px 0 0 0;">Rs. 0.00</h3>
+                </div>
+            </div>
+        </div>
+        <button class="btn-whatsapp no-print" style="background:#2980b9;" onclick="sendCashierReportToWhatsApp()">කැෂියර් වාර්තාව WhatsApp කරන්න 📲</button>
+    </div>
+
     <div id="analytics" class="content">
         <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
         <div class="filter-section no-print" style="background: #f3e5f5;">
@@ -250,10 +274,8 @@ async function fetchData() {
             fetch(`${BASE_URL}customers.json`),
             fetch(`${BASE_URL}loyalty.json`)
         ]);
-        
         const invData = await invRes.json();
         inventory = invData ? Object.values(invData) : [];
-        
         const salesData = await salesRes.json();
         salesList = [];
         if(salesData) {
@@ -261,23 +283,18 @@ async function fetchData() {
             Object.keys(salesData).forEach(key => {
                 const s = salesData[key];
                 const uniqueId = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
-                if (!uniqueMap.has(uniqueId)) {
-                    uniqueMap.set(uniqueId, {...s, firebaseKey: key});
-                }
+                if (!uniqueMap.has(uniqueId)) uniqueMap.set(uniqueId, {...s, firebaseKey: key});
             });
             salesList = Array.from(uniqueMap.values());
         }
-
         const expData = await expRes.json();
         expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
-
         const custData = await custRes.json();
         customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
-
         const loyData = await loyRes.json();
         loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
 
-        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty();
+        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance();
     } catch (e) { console.error("Error fetching data:", e); }
 }
 
@@ -297,6 +314,47 @@ function updateDashboard(rev, prof, currentSales) {
     document.getElementById('topItemsList').innerHTML = sorted.length > 0 
         ? sorted.map(i => `<span class="top-selling-item">${i[0]} (${i[1]})</span>`).join('') 
         : "තෝරාගත් කාලය තුල විකුණුම් වාර්තා නැත.";
+}
+
+function calculateCashBalance() {
+    const today = new Date().toLocaleDateString('en-GB');
+    const todaySales = salesList.filter(s => {
+        const sDate = s.date.split(',')[0].trim();
+        return sDate === today && s.bNo !== "WASTAGE";
+    });
+    const todayExpenses = expenses.filter(e => {
+        const eDate = new Date(e.date).toLocaleDateString('en-GB');
+        return eDate === today;
+    });
+
+    const income = todaySales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+    const cost = todayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const open = parseFloat(document.getElementById('openingBalance').value || 0);
+    const actual = parseFloat(document.getElementById('actualCash').value || 0);
+
+    const expected = (open + income) - cost;
+    const diff = actual - expected;
+
+    document.getElementById('expectedCash').innerText = "Rs. " + expected.toFixed(2);
+    const diffEl = document.getElementById('cashDifference');
+    diffEl.innerText = "Rs. " + diff.toFixed(2);
+    diffEl.style.color = diff < 0 ? "#e74c3c" : "#27ae60";
+}
+
+function sendCashierReportToWhatsApp() {
+    const open = document.getElementById('openingBalance').value;
+    const actual = document.getElementById('actualCash').value;
+    const expected = document.getElementById('expectedCash').innerText;
+    const diff = document.getElementById('cashDifference').innerText;
+    
+    let msg = `*කැෂියර් බැලන්ස් වාර්තාව - ${new Date().toLocaleDateString()}*\n\n`;
+    msg += `ආරම්භක මුදල: Rs. ${open}\n`;
+    msg += `බලාපොරොත්තු වූ මුදල: ${expected}\n`;
+    msg += `ලැබුණු (Hand) මුදල: Rs. ${actual}\n`;
+    msg += `වෙනස: ${diff}\n\n`;
+    msg += `_CGI Admin System_`;
+
+    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
 }
 
 function renderInventory() {
@@ -341,7 +399,6 @@ function renderSales() {
     updateDashboard(totalRev, totalProf, filtered);
 }
 
-// Loyalty Functions
 async function addLoyaltyRecord() {
     const cust = document.getElementById('loyaltyCustSelect').value, amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
     if(!cust || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
@@ -359,7 +416,6 @@ function renderLoyalty() {
 
 async function delLoyalty(id) { if(confirm("මෙම වාර්තාව මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
-// Customer Directory Functions
 async function addCustomer() {
     const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
     if(!name || !phone) return alert("නම සහ දුරකථන අංකය ඇතුළත් කරන්න!");
@@ -451,6 +507,7 @@ function showTab(id) {
     document.getElementById(id).classList.add('active');
     if (event && event.currentTarget) event.currentTarget.classList.add('active');
     if(id === 'analytics') renderAnalytics();
+    if(id === 'cashier') calculateCashBalance();
 }
 
 function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
