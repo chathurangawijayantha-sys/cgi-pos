@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
-    <title>ගැමි එළවළු - POS Loyalty Pro</title>
+    <title>ගැමි එළවළු - POS Pro Smart</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
@@ -34,8 +34,6 @@
         .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
         .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
         .discount-container { display: flex; gap: 5px; }
-
-        /* Loyalty Points Style on Receipt */
         .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
 
         @media screen and (max-width: 800px) {
@@ -167,7 +165,7 @@
             const res = await fetch(`${DB_URL}customers.json`);
             const data = await res.json();
             if(data) {
-                customers = data; // Keep as object for easy lookup by ID
+                customers = data;
                 document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join('');
             }
         } catch(e) {}
@@ -280,6 +278,25 @@
             localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
             try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
             render();
+            // තොගය අඩු වූ විට පරීක්ෂා කිරීම (Smart Alert Logic)
+            if(mode === 'sub') checkLowStockAlert(itm);
+        }
+    }
+
+    // තොග අවසන් වීමට පෙර අනතුරු ඇඟවීමේ ශ්‍රිතය
+    function checkLowStockAlert(item) {
+        const stockVal = parseFloat(item.stock);
+        let isLow = false;
+        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
+        else { if (stockVal < 2) isLow = true; }
+
+        if (isLow) {
+            const msg = `අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal} ${item.unit}`;
+            alert(msg);
+            // අවශ්‍ය නම් WhatsApp මගින් යැවීමට මගපෙන්වීම
+            if(confirm("මෙම තොගය ගැන WhatsApp මගින් දැනුම් දෙනවාද?")) {
+                window.open(`https://wa.me/94706920007?text=${encodeURIComponent("*Stock Alert!*\n" + msg)}`);
+            }
         }
     }
 
@@ -335,14 +352,12 @@
         if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); }
         else dr.style.display = 'none';
 
-        // Loyalty Logic (Rs 100 = 1 Point)
         const custVal = document.getElementById('custSearch').value;
         const ptsBox = document.getElementById('pointsPrint');
         if(custVal) {
             const earned = Math.floor(finalTotal / 100);
             const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
             const currentTotalPts = (customerKey && customers[customerKey].points) ? parseInt(customers[customerKey].points) : 0;
-            
             document.getElementById('earnedPoints').innerText = earned;
             document.getElementById('totalPoints').innerText = currentTotalPts + earned;
             ptsBox.style.display = 'block';
@@ -367,15 +382,13 @@
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
         updateUI();
         isCompletingBill = false;
-        fetchCustomers(); // Refresh point data for next bill
+        fetchCustomers();
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
-        
-        // 1. Discount/Loyalty Logic
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
@@ -386,27 +399,17 @@
         const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
 
         if(custVal) {
-            // Update Points in Firebase
             const earned = Math.floor(finalTotal / 100);
             if(customerKey) {
                 const newTotalPoints = (parseInt(customers[customerKey].points) || 0) + earned;
                 await fetch(`${DB_URL}customers/${customerKey}/points.json`, { method: 'PUT', body: JSON.stringify(newTotalPoints) });
             }
-
-            // Record Discount if any
             if(discAmount > 0) {
-                let loyEntry = { 
-                    cust: customers[customerKey].name, 
-                    phone: customers[customerKey].phone, 
-                    amount: discAmount, 
-                    reason: "Bill Discount #" + bNo, 
-                    date: new Date().toLocaleDateString('en-GB') 
-                };
+                let loyEntry = { cust: customers[customerKey].name, phone: customers[customerKey].phone, amount: discAmount, reason: "Bill Discount #" + bNo, date: new Date().toLocaleDateString('en-GB') };
                 try { fetch(`${DB_URL}loyalty.json`, { method: 'POST', body: JSON.stringify(loyEntry) }); } catch(e) {}
             }
         }
 
-        // 2. Sales Recording
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
