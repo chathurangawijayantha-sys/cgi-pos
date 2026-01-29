@@ -5,7 +5,6 @@
     <title>CGI Pro Admin - Ultimate System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Professional UI වර්ණ සහ හැඩතල */
         :root {
             --primary: #27ae60;
             --secondary: #8e44ad;
@@ -17,8 +16,8 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: var(--light); }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1150px; margin: auto; }
         
-        /* Dashboard Cards Style */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        /* Dashboard Cards Alignment */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #ddd; }
         .stat-card h3 { margin: 0; font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
         .stat-card h2 { margin: 10px 0 0; font-size: 22px; color: var(--dark); }
@@ -28,27 +27,41 @@
         .card-net { border-color: var(--secondary); }
 
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; overflow-x: auto; }
-        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 5px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
+        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
+        
         .content { display: none; }
         .content.active { display: block; }
         
+        /* Form & Input Alignment */
         .add-form, .wastage-form, .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
+        
+        /* Grid Alignment for inputs and buttons */
+        .grid-layout { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 15px; 
+            align-items: flex-end; 
+        }
 
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
-        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; font-size: 13px; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background: #34495e; color: white; }
+        th { background: #34495e; color: white; font-size: 14px; }
         
-        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        /* Button Styles */
+        .btn-group-action { display: flex; gap: 8px; height: 40px; }
+        .tab-btn-action { flex: 1; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; font-size: 13px; transition: 0.3s; }
+
+        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         
         .chart-container { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 15px; height: 400px; position: relative; }
 
         @media print {
-            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel { display: none !important; }
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid { display: none !important; }
             .content { display: block !important; }
         }
     </style>
@@ -56,7 +69,7 @@
 <body>
 
 <div class="container">
-    <h2 class="no-print">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
+    <h2 class="no-print" style="margin-bottom: 25px;">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
 
     <div class="dashboard-grid no-print">
         <div class="stat-card card-rev"><h3>තෝරාගත් කාලයේ ආදායම</h3><h2 id="dispRev">Rs. 0.00</h2></div>
@@ -82,9 +95,9 @@
                 <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
                 <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
                 <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-                <div style="display: flex; gap: 5px;">
-                    <button class="tab-btn" style="background:var(--primary); color:white; height:40px; flex: 1;" onclick="handleUpdate()">Update / Add</button>
-                    <button class="tab-btn" style="background:#1D6F42; color:white; height:40px; flex: 1;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
+                <div class="btn-group-action">
+                    <button class="tab-btn-action" style="background:var(--primary);" onclick="handleUpdate()">Update / Add</button>
+                    <button class="tab-btn-action" style="background:#1D6F42;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
                 </div>
             </div>
         </div>
@@ -94,9 +107,9 @@
         <div class="wastage-form no-print">
             <h4 style="margin:0 0 10px 0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
             <div class="grid-layout">
-                <input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)">
-                <input type="number" id="wasteQty" placeholder="ප්‍රමාණය">
-                <select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select>
+                <div><label>භාණ්ඩයේ නම</label><input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)"></div>
+                <div><label>ප්‍රමාණය</label><input type="number" id="wasteQty" placeholder="ප්‍රමාණය"></div>
+                <div><label>ඒකකය</label><select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select></div>
                 <button class="tab-btn" style="background:#ef6c00; color:white; height:40px;" onclick="addWastage()">ඉවත් කරන්න</button>
             </div>
         </div>
@@ -130,10 +143,10 @@
                     </select>
                 </div>
                 <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
-            </div>
+                <div style="visibility: hidden;"><label>Padding</label></div> </div>
         </div>
 
-        <div class="no-print" style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
             <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
             <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
         </div>
@@ -162,15 +175,19 @@
 
     <div id="analytics" class="content">
         <h3 style="color:var(--secondary);">විකුණුම් විශ්ලේෂණය 📊</h3>
-        <div class="filter-section no-print" style="justify-content: center; background: #f3e5f5;">
-            <label>කාල පරාසය:</label>
-            <select id="chartPeriod" onchange="renderAnalytics()" style="width: auto; min-width: 150px;">
-                <option value="daily">අද දින (Daily)</option>
-                <option value="weekly">මෙම සතිය (Weekly)</option>
-                <option value="monthly">මෙම මාසය (Monthly)</option>
-                <option value="yearly">මෙම වසර (Yearly)</option>
-                <option value="all" selected>සියලුම කාලය (All Time)</option>
-            </select>
+        <div class="filter-section no-print" style="background: #f3e5f5;">
+            <div class="grid-layout" style="grid-template-columns: 1fr;">
+                <div>
+                    <label>කාල පරාසය:</label>
+                    <select id="chartPeriod" onchange="renderAnalytics()" style="width: auto; min-width: 200px;">
+                        <option value="daily">අද දින (Daily)</option>
+                        <option value="weekly">මෙම සතිය (Weekly)</option>
+                        <option value="monthly">මෙම මාසය (Monthly)</option>
+                        <option value="yearly">මෙම වසර (Yearly)</option>
+                        <option value="all" selected>සියලුම කාලය (All Time)</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <div class="chart-container no-print"><canvas id="salesChart"></canvas></div>
         <h3 style="margin-top:30px;">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
@@ -185,7 +202,7 @@
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = [], salesList = [], expenses = [], myChart = null;
-    let addedToday = []; // අද ඇතුළත් කළ භාණ්ඩ Excel සඳහා
+    let addedToday = [];
 
 async function fetchData() {
     try {
