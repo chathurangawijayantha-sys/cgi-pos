@@ -16,7 +16,6 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: var(--light); }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1150px; margin: auto; }
         
-        /* Dashboard Cards Alignment */
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #ddd; }
         .stat-card h3 { margin: 0; font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
@@ -33,16 +32,8 @@
         .content { display: none; }
         .content.active { display: block; }
         
-        /* Form & Input Alignment */
         .add-form, .wastage-form, .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
-        
-        /* Grid Alignment for inputs and buttons */
-        .grid-layout { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 15px; 
-            align-items: flex-end; 
-        }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; align-items: flex-end; }
 
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; font-size: 13px; }
         label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
@@ -51,7 +42,6 @@
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background: #34495e; color: white; font-size: 14px; }
         
-        /* Button Styles */
         .btn-group-action { display: flex; gap: 8px; height: 40px; }
         .tab-btn-action { flex: 1; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; font-size: 13px; transition: 0.3s; }
 
@@ -143,7 +133,7 @@
                     </select>
                 </div>
                 <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
-                <div style="visibility: hidden;"><label>Padding</label></div> </div>
+            </div>
         </div>
 
         <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
@@ -378,8 +368,59 @@ function clearForm() { document.getElementById('itemName').value = ""; document.
 function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
 async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 async function deleteSingleSale(k) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json`, { method: 'DELETE' }); fetchData(); } }
-function renderShortage() { const low = inventory.filter(i => parseFloat(i.stock) < 2); document.getElementById('shortageBody').innerHTML = low.map(i => `<tr><td>${i.name}</td><td>${i.stock}</td><td>${i.unit}</td></tr>`).join(''); }
-function sendShortageToWhatsApp() { const low = inventory.filter(i => parseFloat(i.stock) < 2); let msg = "*ගේන්න ඕනෑ බඩු*\n"; low.forEach(i => msg += `- ${i.name} (${i.stock} ${i.unit})\n`); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+
+function renderShortage() {
+    const lowStock = inventory.filter(i => {
+        const stockVal = parseFloat(i.stock);
+        if (i.unit === "Kg") {
+            return stockVal < 0.5; // Kg භාණ්ඩ ග්‍රෑම් 500 ට අඩු විට
+        } else {
+            return stockVal < 2; // අනෙක් ඒවා 2 ට අඩු විට
+        }
+    });
+    document.getElementById('shortageBody').innerHTML = lowStock.map(i => {
+        const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock;
+        return `<tr><td>${i.name}</td><td>${displayStock}</td><td>${i.unit}</td></tr>`
+    }).join('');
+}
+
+function sendShortageToWhatsApp() {
+    const lowStock = inventory.filter(i => {
+        const stockVal = parseFloat(i.stock);
+        return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2;
+    });
+    if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!");
+    let msg = "*ගේන්න ඕනෑ බඩු*\n";
+    lowStock.forEach(i => {
+        const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock;
+        msg += `- ${i.name} (${displayStock} ${i.unit})\n`;
+    });
+    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
+}
+
+async function addWastage() {
+    let n = document.getElementById('wasteItemName').value;
+    let q = parseFloat(document.getElementById('wasteQty').value);
+    let u = document.getElementById('wasteUnit').value;
+    if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!");
+    let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+    if(!itm) return alert("භාණ්ඩය නැත!");
+    let qtyBase = (u === 'g') ? q / 1000 : q;
+    if(confirm("මකන්නද?")) {
+        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(2);
+        await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) });
+        let loss = -(parseFloat(itm.buy) * qtyBase);
+        let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + u, total: 0, profit: loss };
+        await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
+        
+        // Wastage input කොටස මැකීම (Clear)
+        document.getElementById('wasteItemName').value = "";
+        document.getElementById('wasteQty').value = "";
+        
+        fetchData();
+    }
+}
+
 function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
 function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales"); XLSX.writeFile(wb, "Sales_Report.xlsx"); }
 
