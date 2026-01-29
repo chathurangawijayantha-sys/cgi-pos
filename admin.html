@@ -183,29 +183,38 @@
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = [], salesList = [], expenses = [], myChart = null;
 
-    async function fetchData() {
-        try {
-            const [invRes, salesRes, expRes] = await Promise.all([
-                fetch(`${BASE_URL}inventory.json`),
-                fetch(`${BASE_URL}sales.json`),
-                fetch(`${BASE_URL}expenses.json`)
-            ]);
-            
-            const invData = await invRes.json();
-            inventory = invData ? Object.values(invData) : [];
-            
-            const salesData = await salesRes.json();
-            salesList = [];
-            if(salesData) {
-                Object.keys(salesData).forEach(k => salesList.push({...salesData[k], firebaseKey: k}));
-            }
+async function fetchData() {
+    try {
+        const [invRes, salesRes, expRes] = await Promise.all([
+            fetch(`${BASE_URL}inventory.json`),
+            fetch(`${BASE_URL}sales.json`),
+            fetch(`${BASE_URL}expenses.json`)
+        ]);
+        
+        const invData = await invRes.json();
+        inventory = invData ? Object.values(invData) : [];
+        
+        const salesData = await salesRes.json();
+        salesList = [];
+        if(salesData) {
+            const uniqueMap = new Map();
+            Object.keys(salesData).forEach(key => {
+                const s = salesData[key];
+                // බිල් අංකය, භාණ්ඩයේ නම සහ දිනය අනුව අද්විතීය යතුරක් (Unique Key) සෑදීම
+                const uniqueId = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
+                if (!uniqueMap.has(uniqueId)) {
+                    uniqueMap.set(uniqueId, {...s, firebaseKey: key});
+                }
+            });
+            salesList = Array.from(uniqueMap.values());
+        }
 
-            const expData = await expRes.json();
-            expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
+        const expData = await expRes.json();
+        expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
 
-            updateDashboard(); renderInventory(); renderShortage(); renderSales(); renderExpenses();
-        } catch (e) { console.error(e); }
-    }
+        updateDashboard(); renderInventory(); renderSales(); renderExpenses();
+    } catch (e) { console.error(e); }
+}
 
     function updateDashboard() {
         let rev = salesList.reduce((s, i) => s + parseFloat(i.total || 0), 0);
@@ -400,6 +409,7 @@ function renderSales() {
 </script>
 </body>
 </html>
+
 
 
 
