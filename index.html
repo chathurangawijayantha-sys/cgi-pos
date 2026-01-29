@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
-    <title>ගැමි එළවළු - POS Pro</title>
+    <title>ගැමි එළවළු - POS Loyalty Pro</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
@@ -34,6 +34,9 @@
         .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
         .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
         .discount-container { display: flex; gap: 5px; }
+
+        /* Loyalty Points Style on Receipt */
+        .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
 
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
@@ -88,7 +91,7 @@
         </div>
 
         <div class="loyalty-box no-print">
-            <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="calc()">
+            <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
             <datalist id="custList"></datalist>
             <div class="discount-container">
                 <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
@@ -108,6 +111,10 @@
             
             <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
 
+            <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
+                ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
+            </div>
+
             <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
             <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
             <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
@@ -122,7 +129,7 @@
 
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = []; let cart = []; let customers = [];
+    let inventory = []; let cart = []; let customers = {};
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
@@ -160,8 +167,8 @@
             const res = await fetch(`${DB_URL}customers.json`);
             const data = await res.json();
             if(data) {
-                customers = Object.values(data);
-                document.getElementById('custList').innerHTML = customers.map(c => `<option value="${c.name} (${c.phone})">`).join('');
+                customers = data; // Keep as object for easy lookup by ID
+                document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join('');
             }
         } catch(e) {}
     }
@@ -317,10 +324,7 @@
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
-        
-        // ප්‍රතිශතයක් ඇත්නම් රුපියල් ප්‍රමාණය ගණනය කිරීම, නැතහොත් කෙලින්ම රුපියල් අගය ගැනීම
         let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
-        
         let finalTotal = itemsTotal - disc;
         
         document.getElementById('gTot').innerText = finalTotal.toFixed(2);
@@ -331,10 +335,27 @@
         if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); }
         else dr.style.display = 'none';
 
+        // Loyalty Logic (Rs 100 = 1 Point)
+        const custVal = document.getElementById('custSearch').value;
+        const ptsBox = document.getElementById('pointsPrint');
+        if(custVal) {
+            const earned = Math.floor(finalTotal / 100);
+            const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
+            const currentTotalPts = (customerKey && customers[customerKey].points) ? parseInt(customers[customerKey].points) : 0;
+            
+            document.getElementById('earnedPoints').innerText = earned;
+            document.getElementById('totalPoints').innerText = currentTotalPts + earned;
+            ptsBox.style.display = 'block';
+        } else {
+            ptsBox.style.display = 'none';
+        }
+
         let c = parseFloat(document.getElementById('cashInput').value) || 0;
         document.getElementById('cashDisplay').innerText = c.toFixed(2);
         document.getElementById('balDisplay').innerText = (c - finalTotal).toFixed(2);
     }
+
+    function updateLoyaltyDisplay() { calc(); }
 
     function resetSystemAfterBill() {
         cart = [];
@@ -346,6 +367,7 @@
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
         updateUI();
         isCompletingBill = false;
+        fetchCustomers(); // Refresh point data for next bill
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
@@ -353,27 +375,44 @@
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
         
-        // වට්ටම ගණනය කිරීම
+        // 1. Discount/Loyalty Logic
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
         let discAmount = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
+        let finalTotal = itemsTotal - discAmount;
         
         const custVal = document.getElementById('custSearch').value;
+        const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
 
-        if(discAmount > 0) {
-            let name = custVal ? custVal.split(' (')[0] : "General";
-            let phone = custVal.includes('(') ? custVal.split('(')[1].replace(')', '') : "N/A";
-            let loyEntry = { cust: name, phone: phone, amount: discAmount, reason: "Bill Discount #" + bNo, date: new Date().toLocaleDateString('en-GB') };
-            try { fetch(`${DB_URL}loyalty.json`, { method: 'POST', body: JSON.stringify(loyEntry) }); } catch(e) {}
+        if(custVal) {
+            // Update Points in Firebase
+            const earned = Math.floor(finalTotal / 100);
+            if(customerKey) {
+                const newTotalPoints = (parseInt(customers[customerKey].points) || 0) + earned;
+                await fetch(`${DB_URL}customers/${customerKey}/points.json`, { method: 'PUT', body: JSON.stringify(newTotalPoints) });
+            }
+
+            // Record Discount if any
+            if(discAmount > 0) {
+                let loyEntry = { 
+                    cust: customers[customerKey].name, 
+                    phone: customers[customerKey].phone, 
+                    amount: discAmount, 
+                    reason: "Bill Discount #" + bNo, 
+                    date: new Date().toLocaleDateString('en-GB') 
+                };
+                try { fetch(`${DB_URL}loyalty.json`, { method: 'POST', body: JSON.stringify(loyEntry) }); } catch(e) {}
+            }
         }
 
+        // 2. Sales Recording
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
             offSales.push(entry);
             localStorage.setItem('offline_sales', JSON.stringify(offSales));
-            try { fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch(e) {}
+            try { fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
         }
         
         if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
