@@ -412,27 +412,104 @@ function sendShortageToWhatsApp() {
     window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
 }
 
+// 1. Wastage ඇතුළත් කර වාර්තාවට යැවීමේ ශ්‍රිතය
 async function addWastage() {
     let n = document.getElementById('wasteItemName').value;
     let q = parseFloat(document.getElementById('wasteQty').value);
     let u = document.getElementById('wasteUnit').value;
+
     if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!");
+
     let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-    if(!itm) return alert("භාණ්ඩය නැත!");
+    if(!itm) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
+
     let qtyBase = (u === 'g') ? q / 1000 : q;
-    if(confirm("මකන්නද?")) {
-        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(2);
+    
+    if(confirm(`${n} වලින් ${q}${u} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
+        // තොගය අඩු කිරීම
+        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3);
         await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) });
+
+        // අලාභය ගණනය කිරීම (Profit එක සෘණ අගයක් ලෙස වාර්තාවට යයි)
         let loss = -(parseFloat(itm.buy) * qtyBase);
-        let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + u, total: 0, profit: loss };
+        
+        // අද දිනය සහ වේලාව
+        let now = new Date();
+        let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB');
+
+        // වාර්තාවට ඇතුළත් කරන Entry එක
+        let wasteEntry = { 
+            bNo: "WASTAGE", 
+            date: formattedDate, 
+            name: n, 
+            qty: q + " " + u, 
+            total: 0, 
+            profit: loss 
+        };
+
+        // Firebase එකට යැවීම
         await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
         
-        // Wastage input කොටස මැකීම (Clear)
+        // Input කොටස් මැකීම
         document.getElementById('wasteItemName').value = "";
         document.getElementById('wasteQty').value = "";
         
-        fetchData();
+        alert("සාර්ථකව වාර්තාවට එක් කළා!");
+        fetchData(); // සියල්ල Refresh කිරීම
     }
+}
+
+// 2. වාර්තා පෙන්වීමේ ශ්‍රිතය (Wastage දර්ශනය වන ලෙස)
+function renderSales() {
+    const filter = document.getElementById('reportFilter').value;
+    const customDate = document.getElementById('customDate').value;
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-GB');
+    document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
+
+    const filtered = salesList.filter(s => {
+        if(filter === 'all') return true;
+        const sDateParts = s.date.split(',')[0].trim().split('/');
+        let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+        const sDateISO = sDate.toLocaleDateString('en-GB');
+        if(filter === 'today') return sDateISO === todayStr;
+        if(filter === 'month') return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        if(filter === 'custom' && customDate) return sDateISO === new Date(customDate).toLocaleDateString('en-GB');
+        return true;
+    });
+
+    let totalRev = 0;
+    let totalProf = 0;
+
+    document.getElementById('salesBody').innerHTML = filtered.map(s => {
+        let revVal = parseFloat(s.total || 0);
+        let profVal = parseFloat(s.profit || 0);
+        totalRev += revVal; 
+        totalProf += profVal;
+
+        // Wastage නම් පේළිය රතු පැහැයෙන් පෙන්වීමට
+        let isWaste = (s.bNo === "WASTAGE");
+        let rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
+
+        let rawQty = parseFloat(s.qty);
+        let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim();
+        let formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
+
+        return `<tr style="${rowStyle}">
+            <td><strong>${s.bNo}</strong></td>
+            <td>${s.date}</td>
+            <td>${s.name}</td>
+            <td>${formattedQty}</td>
+            <td>${revVal.toFixed(2)}</td>
+            <td>${profVal.toFixed(2)}</td>
+            <td class="no-print">
+                <button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button>
+            </td>
+        </tr>`;
+    }).reverse().join('');
+
+    updateDashboard(totalRev, totalProf);
+}
 }
 
 function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
@@ -442,4 +519,5 @@ fetchData();
 </script>
 </body>
 </html>
+
 
