@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>CGI Admin - Final Report Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
@@ -55,6 +56,9 @@
         .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
         .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
 
+        /* Analytics සඳහා අලුත් Style */
+        .chart-container { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 15px; height: 400px; position: relative; }
+
         @media print {
             body { margin: 0; padding: 0; background: white; }
             .container { box-shadow: none; max-width: 100%; padding: 0; }
@@ -77,6 +81,7 @@
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
         <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
         <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
     <div id="stock" class="content active">
@@ -176,12 +181,33 @@
         </table>
         <button class="btn-reset no-print" onclick="clearSales()">Reset All Data</button>
     </div>
+
+    <div id="analytics" class="content">
+        <h3 style="color:#8e44ad;">විකුණුම් විශ්ලේෂණය 📊</h3>
+        <div class="chart-container no-print">
+            <canvas id="salesChart"></canvas>
+        </div>
+        
+        <h3 style="margin-top:30px;">භාණ්ඩ අනුව මුළු විකුණුම් ප්‍රමාණයන්</h3>
+        <table id="itemSummaryTable">
+            <thead>
+                <tr>
+                    <th>භාණ්ඩයේ නම</th>
+                    <th>විකුණුම් වාර ගණන</th>
+                    <th>මුළු විකුණූ ප්‍රමාණය</th>
+                    <th>මුළු ආදායම (Rs.)</th>
+                </tr>
+            </thead>
+            <tbody id="itemSummaryBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = []; let salesDataRaw = {}; let salesList = []; let addedToday = [];
+    let myChart = null; // Chart එක පාලනය කිරීමට
 
     async function fetchData() {
         try {
@@ -214,6 +240,51 @@
         }
         
         renderInventory(); renderShortage(); renderSales();
+        // පවතින Tab එක analytics නම් එය Update කරන්න
+        if(document.getElementById('analytics').classList.contains('active')) renderAnalytics();
+    }
+
+    // Analytics පෙන්වීමේ අලුත් ශ්‍රිතය
+    function renderAnalytics() {
+        const stats = {};
+        salesList.forEach(s => {
+            if (s.bNo !== "WASTAGE") {
+                if (!stats[s.name]) stats[s.name] = { count: 0, totalQty: 0, totalRev: 0, unit: "" };
+                stats[s.name].count += 1;
+                stats[s.name].totalRev += parseFloat(s.total || 0);
+                
+                let qtyNum = parseFloat(s.qty) || 0;
+                stats[s.name].totalQty += qtyNum;
+                // ඒකකය වෙන් කර ගැනීම
+                if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
+            }
+        });
+
+        const tableBody = document.getElementById('itemSummaryBody');
+        tableBody.innerHTML = Object.keys(stats).map(name => `
+            <tr>
+                <td><strong>${name}</strong></td>
+                <td>${stats[name].count}</td>
+                <td>${stats[name].totalQty.toFixed(2)} ${stats[name].unit}</td>
+                <td>${stats[name].totalRev.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(stats),
+                datasets: [{
+                    label: 'මුළු ආදායම (Rs.)',
+                    data: Object.values(stats).map(x => x.totalRev),
+                    backgroundColor: '#8e44ad',
+                    borderRadius: 5
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
     }
 
     function searchInventory() {
@@ -230,7 +301,8 @@
         const dataForExcel = addedToday.map(item => ({ "භාණ්ඩයේ නම": item.name, "විකුණුම් මිල (Rs)": item.sell }));
         const ws = XLSX.utils.json_to_sheet(dataForExcel);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Today Items");
+        const ws_name = "Today Items";
+        XLSX.utils.book_append_sheet(wb, ws, ws_name);
         XLSX.writeFile(wb, `Stock_List_${new Date().toLocaleDateString()}.xlsx`);
     }
 
@@ -354,7 +426,6 @@
         XLSX.writeFile(wb, `Sales_Report_${new Date().toLocaleDateString()}.xlsx`);
     }
 
-    // wastage ඒකකය ස්වයංක්‍රීයව තෝරාගැනීම
     function checkWasteEx(n) {
         let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
         if(ex){
@@ -402,7 +473,14 @@
         window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
     }
     
-    function showTab(id) { document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); event.currentTarget.classList.add('active'); }
+    function showTab(id) { 
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); 
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+        document.getElementById(id).classList.add('active'); 
+        event.currentTarget.classList.add('active'); 
+        if(id === 'analytics') renderAnalytics(); // Tab එක මාරු කරන විට Chart එක අඳින්න
+    }
+
     function renderShortage() { const lowStock = inventory.filter(i => { const v = parseFloat(i.stock); return i.unit === "Kg" ? v < 0.5 : v < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(item => `<tr class="shortage-row"><td>${item.name}</td><td>${item.stock}</td><td>${item.unit}</td></tr>`).join(''); }
     async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
     function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
@@ -416,7 +494,6 @@ if ('serviceWorker' in navigator) {
             const installingWorker = reg.installing;
             installingWorker.onstatechange = () => {
                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // අලුත් Update එකක් ඇති විට පද්ධතිය ඉබේම Refresh වී අලුත් දත්ත පෙන්වයි
                     window.location.reload();
                 }
             };
