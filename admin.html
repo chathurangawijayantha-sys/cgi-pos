@@ -313,11 +313,32 @@ function downloadTodayStockExcel() {
 }
 
 async function addExpense() {
-    const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value;
+    const note = document.getElementById('expNote').value;
+    const amount = document.getElementById('expAmount').value;
     const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
-    if(!note || !amount) return alert("දත්ත ඇතුළත් කරන්න!");
-    await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
-    fetchData();
+
+    if(!note || !amount) return alert("විස්තරය සහ මුදල ඇතුළත් කරන්න!");
+
+    try {
+        await fetch(`${BASE_URL}expenses.json`, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                note: note, 
+                amount: parseFloat(amount), 
+                date: date 
+            }) 
+        });
+
+        // දත්ත ඇතුළත් කළ පසු Tab එක ක්ලියර් කිරීම
+        document.getElementById('expNote').value = "";
+        document.getElementById('expAmount').value = "";
+        document.getElementById('expDate').value = "";
+
+        alert("වියදම සාර්ථකව ඇතුළත් කළා!");
+        fetchData(); // Dashboard එක සහ Table එක අලුත් කිරීමට
+    } catch (e) {
+        alert("දත්ත ඇතුළත් කිරීමේදී ගැටලුවක් මතු විය!");
+    }
 }
 
 function renderExpenses() {
@@ -459,3 +480,4 @@ fetchData();
 </script>
 </body>
 </html>
+
