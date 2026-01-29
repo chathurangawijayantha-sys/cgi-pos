@@ -36,6 +36,10 @@
         .discount-container { display: flex; gap: 5px; }
         .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
 
+        /* Daily Closing Section on Receipt */
+        .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
+        .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
+
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
             #product-section { width: auto; border-right: none; padding-bottom: 20px; }
@@ -53,6 +57,7 @@
             .summary-row { font-size: 10px !important; }
             .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            .closing-receipt-box { display: block !important; }
             .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
@@ -93,7 +98,6 @@
             <datalist id="custList"></datalist>
             <div class="discount-container">
                 <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
-                <div style="font-size: 10px; padding-top: 10px; color: #666;">නැතහොත් රුපියල්:</div>
                 <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
             </div>
         </div>
@@ -116,10 +120,21 @@
             <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
             <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
             <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+            
+            <div id="dailyClosingPrint" class="closing-receipt-box">
+                <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
+                <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
+                <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
+                <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
+                <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
+            </div>
+
             <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
-            <div style="display: flex; gap: 5px;">
+            
+            <div style="display: flex; flex-direction: column; gap: 5px;">
                 <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
                 <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
+                <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
             </div>
         </div>
     </div>
@@ -127,7 +142,7 @@
 
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = []; let cart = []; let customers = {};
+    let inventory = []; let cart = []; let customers = {}; let allSalesToday = [];
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
@@ -158,6 +173,18 @@
         if (navigator.onLine) await syncOfflineData();
         else document.getElementById('offline-status').style.display = 'block';
         fetchCustomers();
+        fetchTodaySales(); // දවසේ සාරාංශය සඳහා
+    }
+
+    async function fetchTodaySales() {
+        try {
+            const res = await fetch(`${DB_URL}sales.json`);
+            const data = await res.json();
+            if(data) {
+                const today = new Date().toLocaleDateString();
+                allSalesToday = Object.values(data).filter(s => new Date(s.date).toLocaleDateString() === today);
+            }
+        } catch(e) {}
     }
 
     async function fetchCustomers() {
@@ -278,25 +305,18 @@
             localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
             try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
             render();
-            // තොගය අඩු වූ විට පරීක්ෂා කිරීම (Smart Alert Logic)
             if(mode === 'sub') checkLowStockAlert(itm);
         }
     }
 
-    // තොග අවසන් වීමට පෙර අනතුරු ඇඟවීමේ ශ්‍රිතය
     function checkLowStockAlert(item) {
         const stockVal = parseFloat(item.stock);
         let isLow = false;
         if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
         else { if (stockVal < 2) isLow = true; }
-
         if (isLow) {
             const msg = `අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal} ${item.unit}`;
             alert(msg);
-            // අවශ්‍ය නම් WhatsApp මගින් යැවීමට මගපෙන්වීම
-            if(confirm("මෙම තොගය ගැන WhatsApp මගින් දැනුම් දෙනවාද?")) {
-                window.open(`https://wa.me/94706920007?text=${encodeURIComponent("*Stock Alert!*\n" + msg)}`);
-            }
         }
     }
 
@@ -379,10 +399,38 @@
         document.getElementById('discountPercent').value = "";
         document.getElementById('discountCash').value = "";
         document.getElementById('custSearch').value = "";
+        document.getElementById('dailyClosingPrint').style.display = 'none';
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
         updateUI();
         isCompletingBill = false;
-        fetchCustomers();
+        fetchCustomers(); fetchTodaySales();
+    }
+
+    async function printDailyClosing() {
+        if(!confirm("අද දින විකුණුම් සාරාංශය මුද්‍රණය කරනවාද?")) return;
+        
+        // ගණනය කිරීම්
+        const uniqueBills = [...new Set(allSalesToday.filter(s => s.bNo !== "WASTAGE").map(s => s.bNo))].length;
+        const totalSales = allSalesToday.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+        
+        // වට්ටම් සාරාංශය Firebase එකෙන් ලබා ගැනීම
+        let totalDisc = 0;
+        try {
+            const loyRes = await fetch(`${DB_URL}loyalty.json`);
+            const loyData = await loyRes.json();
+            if(loyData) {
+                const today = new Date().toLocaleDateString('en-GB');
+                totalDisc = Object.values(loyData).filter(l => l.date === today).reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+            }
+        } catch(e) {}
+
+        document.getElementById('closeBillCount').innerText = uniqueBills;
+        document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
+        document.getElementById('closeTotalDisc').innerText = "Rs. " + totalDisc.toFixed(2);
+        
+        document.getElementById('dailyClosingPrint').style.display = 'block';
+        window.print();
+        setTimeout(() => { document.getElementById('dailyClosingPrint').style.display = 'none'; }, 1000);
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
@@ -412,10 +460,7 @@
 
         for (let c of cart) {
             let entry = { bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
-            let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-            offSales.push(entry);
-            localStorage.setItem('offline_sales', JSON.stringify(offSales));
-            try { fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
+            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
         }
         
         if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
