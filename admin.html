@@ -2,335 +2,259 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Admin - Final Report Fix</title>
+    <title>CGI Pro Admin - Ultimate POS Analytics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f0f2f5; }
-        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; overflow-x: auto; }
-        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 5px; font-weight: bold; white-space: nowrap; }
-        .tab-btn.active { background: #27ae60; color: white; }
-        .content { display: none; }
+        :root {
+            --primary: #27ae60;
+            --secondary: #8e44ad;
+            --dark: #2c3e50;
+            --light: #f4f7f6;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--light); color: var(--dark); }
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        
+        /* Header & Navigation */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: #eee; border-radius: 10px; font-weight: 600; transition: 0.3s; white-space: nowrap; }
+        .tab-btn.active { background: var(--primary); color: white; transform: translateY(-2px); }
+        .tab-btn:hover:not(.active) { background: #e0e0e0; }
+
+        /* Dashboard Cards */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; transition: 0.3s; border-bottom: 5px solid transparent; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card h3 { margin: 0; font-size: 14px; color: #7f8c8d; text-transform: uppercase; }
+        .stat-card h2 { margin: 10px 0 0; font-size: 28px; }
+        .card-revenue { border-color: #3498db; }
+        .card-profit { border-color: var(--primary); }
+        .card-expense { border-color: var(--danger); }
+
+        /* Forms & Content */
+        .content { display: none; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .content.active { display: block; }
+        .section-title { margin-top: 0; display: flex; align-items: center; gap: 10px; color: var(--dark); }
         
-        .add-form { 
-            background: #e8f5e9; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 25px; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
-            gap: 15px; 
-            align-items: flex-end; 
-        }
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #f9f9f9; padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        label { font-size: 12px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
 
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-        }
+        /* Buttons */
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: var(--secondary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
 
-        .btn-group button {
-            flex: 1;
-            height: 40px;
-            font-size: 11px !important;
-            margin: 0 !important;
-            padding: 5px !important;
-        }
+        /* Charts */
+        .chart-wrapper { position: relative; height: 400px; margin-top: 20px; }
 
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
-        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #34495e; color: white; }
-        .card { padding: 20px; border-radius: 10px; color: white; text-align: center; }
-        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 10px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-print-short { background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        .btn-reset { background: #e74c3c; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%; }
-        .filter-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; display: flex; gap: 15px; align-items: center; }
-        .wastage-form { background: #fff3e0; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ffe0b2; }
-        .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
-        .top-selling-item { display: inline-block; background: #27ae60; color: white; padding: 5px 12px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; }
-        
-        .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid #27ae60; width: 100%; border-radius: 8px; font-size: 14px; }
-        .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; border: 1px solid #eee; text-align: left; }
+        th { background: #f8f9fa; color: var(--dark); font-weight: 600; }
+        tr:hover { background: #fcfcfc; }
 
-        /* Chart පෙන්වන කොටසේ Style */
-        .chart-container { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 15px; height: 400px; position: relative; }
-
-        @media print {
-            body { margin: 0; padding: 0; background: white; }
-            .container { box-shadow: none; max-width: 100%; padding: 0; }
-            .tabs, .add-form, .tab-btn, .btn-whatsapp, .btn-excel, .btn-print-short, .btn-reset, .no-print, .filter-section, .wastage-form, .top-selling-section, .search-box, th:last-child, td:last-child { display: none !important; }
-            .content { display: none; }
-            .content.active { display: block; }
-            h2 { font-size: 16px; text-align: center; border-bottom: 1px solid black; padding-bottom: 5px; }
-            table { font-size: 12px; width: 100%; }
-            th { background: #eee !important; color: black !important; border: 1px solid black; }
-            td { border: 1px solid black; }
-        }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
-    
-    <div class="tabs no-print">
-        <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
-        <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
-        <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
-        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
+    <div class="header no-print">
+        <h2 style="margin:0; color: var(--primary);">CGI PRO ADMIN</h2>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('stock')">තොගය</button>
+            <button class="tab-btn" onclick="showTab('sales')">විකුණුම්</button>
+            <button class="tab-btn" onclick="showTab('expenses')">වියදම්</button>
+            <button class="tab-btn" style="background:var(--secondary); color:white;" onclick="showTab('analytics')">විශ්ලේෂණය 📊</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid no-print">
+        <div class="stat-card card-revenue"><h3>මුළු ආදායම</h3><h2 id="dispRev">Rs. 0</h2></div>
+        <div class="stat-card card-profit"><h3>භාණ්ඩ ලාභය</h3><h2 id="dispGProfit">Rs. 0</h2></div>
+        <div class="stat-card card-expense"><h3>මුළු වියදම්</h3><h2 id="dispExp">Rs. 0</h2></div>
+        <div class="stat-card" style="border-color: #2c3e50;"><h3>ශුද්ධ ලාභය (Net)</h3><h2 id="dispNetProfit" style="color:var(--primary);">Rs. 0</h2></div>
     </div>
 
     <div id="stock" class="content active">
-        <div class="add-form no-print">
-            <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
-            <div>
-                <label>ඒකකය</label>
-                <select id="itemUnit">
-                    <option value="Kg">Kg</option>
-                    <option value="මිටි">මිටි</option>
-                    <option value="පැකට්">පැකට්</option>
-                    <option value="කරල්">කරල්</option>
-                </select>
-            </div>
-            <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
-            <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
-            <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
-            <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-            
-            <div class="btn-group">
-                <button class="tab-btn" style="background:#27ae60; color:white;" onclick="handleUpdate()">Update / Add</button>
-                <button class="tab-btn" style="background:#1D6F42; color:white;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
-            </div>
+        <h3 class="section-title">📦 තොග පාලනය</h3>
+        <div class="grid-form no-print">
+            <div><label>භාණ්ඩයේ නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+            <div><label>ඒකකය</label><select id="itemUnit"><option>Kg</option><option>මිටි</option><option>පැකට්</option><option>කරල්</option></select></div>
+            <div><label>ගැනුම් මිල</label><input type="number" id="buyPrice"></div>
+            <div><label>විකුණුම් මිල</label><input type="number" id="sellPrice"></div>
+            <div><label>තොගය එකතු කරන්න</label><input type="number" id="addStock" value="0"></div>
+            <button class="btn btn-primary" onclick="handleUpdate()">Update</button>
         </div>
-
-        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම ටයිප් කර සොයන්න..." onkeyup="searchInventory()">
-        
-        <div class="wastage-form no-print">
-            <h4 style="margin-top:0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px;">
-                <input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)">
-                <input type="number" id="wasteQty" placeholder="ප්‍රමාණය">
-                <select id="wasteUnit">
-                    <option value="Kg">Kg</option>
-                    <option value="g">ග්‍රෑම් (g)</option>
-                    <option value="මිටි">මිටි</option>
-                    <option value="පැකට්">පැකට්</option>
-                    <option value="කරල්">කරල්</option>
-                </select>
-                <button class="tab-btn" style="background:#ef6c00; color:white; padding:8px;" onclick="addWastage()">ඉවත් කරන්න</button>
-            </div>
-        </div>
-
         <table id="inventoryTable">
-            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
+            <thead><tr><th>භාණ්ඩය</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th><th>ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
 
-    <div id="shortage" class="content">
-        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ</h3>
-        <table>
-            <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th><th>ඒකකය</th></tr></thead>
-            <tbody id="shortageBody"></tbody>
-        </table>
-        <div class="no-print">
-            <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">Shortage List එක WhatsApp කරන්න 🟢</button>
-            <button class="btn-print-short" onclick="window.print()">Print List 🖨️</button>
-        </div>
-    </div>
-
     <div id="sales" class="content">
-        <div class="filter-section no-print">
-            <div><label>වාර්තාව තෝරන්න:</label>
-                <select id="reportFilter" onchange="renderSales()">
-                    <option value="all">සියලුම වාර්තා (All)</option>
-                    <option value="today">අද දින (Today)</option>
-                    <option value="month">මෙම මාසය (This Month)</option>
-                    <option value="custom">වෙනත් දිනයක් (Custom Date)</option>
-                </select>
-            </div>
-            <div id="customDateDiv" style="display:none;">
-                <label>දිනය:</label>
-                <input type="date" id="customDate" onchange="renderSales()">
-            </div>
+        <h3 class="section-title">💰 විකුණුම් වාර්තාව</h3>
+        <div class="filter-section no-print" style="margin-bottom:20px;">
+            <select id="reportFilter" onchange="renderSales()" style="width:200px;">
+                <option value="all">සියලුම වාර්තා</option>
+                <option value="today">අද දින</option>
+                <option value="month">මෙම මාසය</option>
+            </select>
         </div>
-
-        <div class="top-selling-section no-print" id="topSellingItems">
-            <h4 style="margin-top:0; color:#2e7d32;">වැඩිපුරම විකුණුනු භාණ්ඩ:</h4>
-            <div id="topItemsList">වාර්තා නැත.</div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;" class="no-print">
-            <div class="card" style="background:#2980b9;"><h3>මුළු ආදායම</h3><h2 id="totalSales">0.00</h2></div>
-            <div class="card" style="background:#27ae60;"><h3>ශුද්ධ ලාභය</h3><h2 id="totalProfit">0.00</h2></div>
-            <div class="card" style="background:#f39c12;"><h3>බිල්පත්</h3><h2 id="totalBills">0</h2></div>
-        </div>
-        
-        <div class="no-print" style="display: flex; gap: 10px;">
-            <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
-            <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
-        </div>
-
         <table>
-            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
+            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
-        <button class="btn-reset no-print" onclick="clearSales()">Reset All Data</button>
+    </div>
+
+    <div id="expenses" class="content">
+        <h3 class="section-title">💸 වියදම් ඇතුළත් කිරීම</h3>
+        <div class="grid-form no-print">
+            <div><label>වියදම් වර්ගය</label><input type="text" id="expNote" placeholder="උදා: විදුලි බිල"></div>
+            <div><label>මුදල (Rs.)</label><input type="number" id="expAmount"></div>
+            <div><label>දිනය</label><input type="date" id="expDate"></div>
+            <button class="btn btn-danger" onclick="addExpense()">වියදම එක් කරන්න</button>
+        </div>
+        <table>
+            <thead><tr><th>දිනය</th><th>විස්තරය</th><th>මුදල (Rs.)</th><th>ක්‍රියා</th></tr></thead>
+            <tbody id="expenseBody"></tbody>
+        </table>
     </div>
 
     <div id="analytics" class="content">
-        <h3 style="color:#8e44ad;">විකුණුම් විශ්ලේෂණය 📊</h3>
-        
-        <div class="filter-section no-print" style="justify-content: center; background: #f3e5f5;">
-            <label>කාල පරාසය:</label>
-            <select id="chartPeriod" onchange="renderAnalytics()" style="width: auto; min-width: 150px;">
-                <option value="daily">අද දින (Daily)</option>
-                <option value="weekly">මෙම සතිය (Weekly)</option>
-                <option value="monthly">මෙම මාසය (Monthly)</option>
-                <option value="yearly">මෙම වසර (Yearly)</option>
-                <option value="all" selected>සියලුම කාලය (All Time)</option>
-            </select>
+        <h3 class="section-title">📈 ව්‍යාපාරික විශ්ලේෂණය</h3>
+        <div class="chart-wrapper">
+            <canvas id="proChart"></canvas>
         </div>
-
-        <div class="chart-container no-print">
-            <canvas id="salesChart"></canvas>
-        </div>
-        
-        <h3 style="margin-top:30px;">තෝරාගත් කාලය තුල විකුණුම් සාරාංශය</h3>
-        <table id="itemSummaryTable">
-            <thead>
-                <tr>
-                    <th>භාණ්ඩයේ නම</th>
-                    <th>විකුණුම් වාර</th>
-                    <th>මුළු විකුණූ ප්‍රමාණය</th>
-                    <th>මුළු ආදායම (Rs.)</th>
-                </tr>
-            </thead>
-            <tbody id="itemSummaryBody"></tbody>
+        <div style="margin-top:30px;">
+            <h4>භාණ්ඩ අනුව විකුණුම් කාර්යසාධනය</h4>
+            <tbody id="itemPerfBody"></tbody>
         </table>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = []; let salesList = []; let addedToday = [];
-    let myChart = null;
+    let inventory = [], salesList = [], expenses = [], myChart = null;
 
     async function fetchData() {
         try {
-            const invRes = await fetch(`${BASE_URL}inventory.json`);
+            const [invRes, salesRes, expRes] = await Promise.all([
+                fetch(`${BASE_URL}inventory.json`),
+                fetch(`${BASE_URL}sales.json`),
+                fetch(`${BASE_URL}expenses.json`)
+            ]);
+            
             const invData = await invRes.json();
             inventory = invData ? Object.values(invData) : [];
-            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-        } catch (e) {
-            inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
-        }
-        
-        try {
-            const salesRes = await fetch(`${BASE_URL}sales.json`);
-            const salesDataRaw = await salesRes.json();
-            salesList = [];
-            if(salesDataRaw) {
-                const uniqueSalesMap = new Map();
-                Object.keys(salesDataRaw).forEach(key => {
-                    const s = salesDataRaw[key];
-                    const uniqueKey = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
-                    if (!uniqueSalesMap.has(uniqueKey)) {
-                        uniqueSalesMap.set(uniqueKey, { ...s, firebaseKey: key });
-                    }
-                });
-                salesList = Array.from(uniqueSalesMap.values());
-            }
-            localStorage.setItem('cached_sales', JSON.stringify(salesList));
-        } catch (e) {
-            salesList = JSON.parse(localStorage.getItem('cached_sales')) || [];
-        }
-        
-        renderInventory(); renderShortage(); renderSales();
-        if(document.getElementById('analytics').classList.contains('active')) renderAnalytics();
+            
+            const salesData = await salesRes.json();
+            salesList = salesData ? Object.keys(salesData).map(k => ({...salesData[k], id: k})) : [];
+            
+            const expData = await expRes.json();
+            expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
+
+            updateDashboard();
+            renderInventory();
+            renderSales();
+            renderExpenses();
+        } catch (e) { console.error("Fetch Error", e); }
     }
 
-    // කාල පරාසය අනුව දත්ත විශ්ලේෂණය කිරීමේ අලුත් ශ්‍රිතය
+    function updateDashboard() {
+        let rev = salesList.reduce((s, i) => s + parseFloat(i.total || 0), 0);
+        let gProf = salesList.reduce((s, i) => s + parseFloat(i.profit || 0), 0);
+        let exp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+        
+        document.getElementById('dispRev').innerText = "Rs. " + rev.toLocaleString();
+        document.getElementById('dispGProfit').innerText = "Rs. " + gProf.toLocaleString();
+        document.getElementById('dispExp').innerText = "Rs. " + exp.toLocaleString();
+        document.getElementById('dispNetProfit').innerText = "Rs. " + (gProf - exp).toLocaleString();
+    }
+
+    async function addExpense() {
+        const note = document.getElementById('expNote').value;
+        const amount = document.getElementById('expAmount').value;
+        const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
+        
+        if(!note || !amount) return alert("විස්තර ඇතුළත් කරන්න!");
+        
+        await fetch(`${BASE_URL}expenses.json`, { 
+            method: 'POST', 
+            body: JSON.stringify({ note, amount: parseFloat(amount), date }) 
+        });
+        
+        document.getElementById('expNote').value = "";
+        document.getElementById('expAmount').value = "";
+        fetchData();
+    }
+
+    function renderExpenses() {
+        document.getElementById('expenseBody').innerHTML = expenses.map(e => `
+            <tr>
+                <td>${e.date}</td><td>${e.note}</td><td>${e.amount.toFixed(2)}</td>
+                <td><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td>
+            </tr>`).join('');
+    }
+
+    async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+
     function renderAnalytics() {
-        const period = document.getElementById('chartPeriod').value;
         const stats = {};
-        const now = new Date();
-
         salesList.forEach(s => {
-            if (s.bNo === "WASTAGE") return;
-
-            // දිනය හඳුනා ගැනීම
-            const sDateParts = s.date.split(',')[0].trim().split('/');
-            let sDate;
-            if (sDateParts[0].length > 4) sDate = new Date(s.date);
-            else sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-
-            let include = false;
-            if (period === 'all') include = true;
-            else if (period === 'daily') include = sDate.toDateString() === now.toDateString();
-            else if (period === 'weekly') {
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(now.getDate() - 7);
-                include = sDate >= oneWeekAgo;
-            }
-            else if (period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
-            else if (period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
-
-            if (include) {
-                if (!stats[s.name]) stats[s.name] = { count: 0, totalQty: 0, totalRev: 0, unit: "" };
-                stats[s.name].count += 1;
-                stats[s.name].totalRev += parseFloat(s.total || 0);
-                stats[s.name].totalQty += parseFloat(s.qty) || 0;
-                if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
-            }
+            if(!stats[s.name]) stats[s.name] = { rev: 0, prof: 0 };
+            stats[s.name].rev += parseFloat(s.total || 0);
+            stats[s.name].prof += parseFloat(s.profit || 0);
         });
 
-        document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).length > 0 ? Object.keys(stats).map(name => `
-            <tr>
-                <td><strong>${name}</strong></td>
-                <td>${stats[name].count}</td>
-                <td>${stats[name].totalQty.toFixed(2)} ${stats[name].unit}</td>
-                <td>${stats[name].totalRev.toFixed(2)}</td>
-            </tr>`).join('') : "<tr><td colspan='4' style='text-align:center;'>තෝරාගත් කාලය තුල දත්ත නොමැත.</td></tr>";
-
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        if (myChart) myChart.destroy();
+        const ctx = document.getElementById('proChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: Object.keys(stats),
-                datasets: [{
-                    label: 'ආදායම (Rs.)',
-                    data: Object.values(stats).map(x => x.totalRev),
-                    backgroundColor: '#8e44ad',
-                    borderRadius: 5
-                }]
+                datasets: [
+                    { label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#3498db' },
+                    { label: 'ලාභය', data: Object.values(stats).map(x => x.prof), backgroundColor: '#27ae60' }
+                ]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    function showTab(id) { 
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active')); 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
-        document.getElementById(id).classList.add('active'); 
-        event.currentTarget.classList.add('active'); 
+    function showTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
         if(id === 'analytics') renderAnalytics();
     }
 
-    // මුල් කේතයේ අනෙකුත් සියලුම ශ්‍රිත (Functions) එලෙසම පවතී
-    function searchInventory() {
-        let input = document.getElementById("inventorySearch").value.toLowerCase();
-        let rows = document.getElementById("inventoryBody").getElementsByTagName("tr");
-        for (let row of rows) {
-            let name = row.getElementsByTagName("td")[1].textContent.toLowerCase();
-            row.style.display = name.includes(input) ? "" : "none";
-        }
+    // --- පවතින අනෙක් Functions (Inventory, Sales etc.) ---
+    function renderInventory() {
+        document.getElementById('inventoryBody').innerHTML = inventory.map(i => `
+            <tr>
+                <td><strong>${i.name}</strong></td><td>${i.unit}</td><td>${i.buy}</td><td>${i.sell}</td><td>${i.stock}</td>
+                <td><button onclick="editItem('${i.name}')" style="color:blue; border:none; background:none;">✎</button></td>
+            </tr>`).join('');
+        document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
+    }
+
+    function renderSales() {
+        const filter = document.getElementById('reportFilter').value;
+        const now = new Date().toDateString();
+        const filtered = salesList.filter(s => {
+            if(filter === 'today') return new Date(s.date).toDateString() === now;
+            return true;
+        });
+        document.getElementById('salesBody').innerHTML = filtered.map(s => `
+            <tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total}</td><td>${s.profit}</td></tr>
+        `).reverse().join('');
     }
 
     async function handleUpdate() {
@@ -339,93 +263,16 @@
         let b = parseFloat(document.getElementById('buyPrice').value) || 0;
         let s = parseFloat(document.getElementById('sellPrice').value) || 0;
         let st = parseFloat(document.getElementById('addStock').value) || 0;
-        let img = document.getElementById('itemImg').value;
         if(!n) return;
-        let existing = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-        let item = existing ? { ...existing, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(existing.stock) + st).toFixed(2) } 
-                            : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-        try { await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) }); } catch (e) { alert("Offline බැවින් Cloud එකට සුරැකිය නොහැක!"); }
-        addedToday.push({ name: n, sell: s });
-        clearForm(); fetchData();
+        let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+        let item = ex ? { ...ex, buy: b, sell: s, unit: u, stock: (parseFloat(ex.stock) + st).toFixed(2) } 
+                      : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2) };
+        await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+        fetchData();
     }
 
-    function renderInventory() {
-        document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
-            let profitPct = ((item.sell - item.buy) / item.buy * 100).toFixed(0);
-            if(isNaN(profitPct) || !isFinite(profitPct)) profitPct = 0;
-            let rowClass = parseFloat(item.stock) <= 0 ? 'low-stock-row' : '';
-            return `<tr class="${rowClass}">
-                <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
-                <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td>
-                <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td><td>${item.stock}</td>
-                <td class="no-print">
-                    <button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">✎</button>
-                    <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button>
-                </td></tr>`;
-        }).join('');
-        document.getElementById('itemList').innerHTML = inventory.map(item => `<option value="${item.name}">`).join('');
-    }
-
-    function renderSales() {
-        let totalRev = 0, totalProf = 0;
-        const filter = document.getElementById('reportFilter').value;
-        const customDateInput = document.getElementById('customDate').value;
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-GB');
-        document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
-
-        const filteredSales = salesList.filter(s => {
-            if (filter === 'all') return true;
-            const sDateParts = s.date.split(',')[0].trim().split('/');
-            let sDateObj;
-            if (sDateParts[0].length > 4) { sDateObj = new Date(s.date); }
-            else if (sDateParts[0].length > 2) { sDateObj = new Date(sDateParts[0], sDateParts[1]-1, sDateParts[2]); }
-            else if (parseInt(sDateParts[0]) > 12) { sDateObj = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]); }
-            else { sDateObj = new Date(sDateParts[2], sDateParts[0]-1, sDateParts[1]); }
-            const sDateISO = sDateObj.toLocaleDateString('en-GB');
-            if (filter === 'today') return sDateISO === todayStr;
-            if (filter === 'month') return sDateObj.getMonth() === now.getMonth() && sDateObj.getFullYear() === now.getFullYear();
-            if (filter === 'custom' && customDateInput) {
-                const cDate = new Date(customDateInput).toLocaleDateString('en-GB');
-                return sDateISO === cDate;
-            }
-            return true;
-        });
-
-        const itemCountMap = {};
-        filteredSales.forEach(s => { if(s.bNo !== "WASTAGE") itemCountMap[s.name] = (itemCountMap[s.name] || 0) + 1; });
-        const topItems = Object.entries(itemCountMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-        document.getElementById('topItemsList').innerHTML = topItems.length > 0 ? topItems.map(item => `<span class="top-selling-item">${item[0]} (${item[1]} වතාවක්)</span>`).join('') : "වාර්තා නැත.";
-
-        document.getElementById('salesBody').innerHTML = filteredSales.map(s => {
-            totalRev += parseFloat(s.total); totalProf += parseFloat(s.profit);
-            let rowStyle = (s.bNo === "WASTAGE") ? "color: #e65100; font-weight: bold; background: #fff8e1;" : "";
-            return `<tr style="${rowStyle}">
-                <td><strong>#${s.bNo || 'N/A'}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td>
-                <td>${parseFloat(s.total).toFixed(2)}</td><td>${parseFloat(s.profit).toFixed(2)}</td>
-                <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
-        }).sort((a, b) => new Date(b.date) - new Date(a.date)).join('');
-
-        document.getElementById('totalSales').innerText = "Rs. " + totalRev.toFixed(2);
-        document.getElementById('totalProfit').innerText = "Rs. " + totalProf.toFixed(2);
-        document.getElementById('totalBills').innerText = [...new Set(filteredSales.filter(s => s.bNo !== "WASTAGE").map(s => s.bNo))].filter(n => n).length;
-    }
-
-    // ඉතිරි Functions (delete, wastage, downloadExcel, etc.) එලෙසම තිබේ...
-    async function deleteSingleSale(k) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json`, { method: 'DELETE' }); fetchData(); } }
-    function downloadExcel() { const data = salesList.map(s => ({ "බිල් අංකය": s.bNo, "දිනය": s.date, "භාණ්ඩය": s.name, "ප්‍රමාණය": s.qty, "මුදල": s.total, "ලාභය": s.profit })); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales Report"); XLSX.writeFile(wb, `Sales_Report.xlsx`); }
-    function downloadTodayStockExcel() { if (addedToday.length === 0) return alert("අද දින ඇතුළත් කර නැත!"); const ws = XLSX.utils.json_to_sheet(addedToday); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Today Items"); XLSX.writeFile(wb, `Stock_Today.xlsx`); }
-    async function addWastage() { let n = document.getElementById('wasteItemName').value; let q = parseFloat(document.getElementById('wasteQty').value); let u = document.getElementById('wasteUnit').value; if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(!itm) return alert("භාණ්ඩය නැත!"); let qtyBase = (u === 'g') ? q / 1000 : q; if(confirm("ඉවත් කරනවාද?")) { let ns = (parseFloat(itm.stock) - qtyBase).toFixed(2); await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) }); let loss = -(parseFloat(itm.buy) * qtyBase); let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + u, total: 0, profit: loss }; await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) }); fetchData(); } }
-    function sendShortageToWhatsApp() { const low = inventory.filter(i => parseFloat(i.stock) < 2); if (low.length === 0) return alert("ලැයිස්තුව හිස්!"); let msg = "*ගේන්න ඕනෑ බඩු*\n"; low.forEach(i => msg += `- ${i.name} (${i.stock} ${i.unit})\n`); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
-    function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('totalSales').innerText}\nලාභය: ${document.getElementById('totalProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
-    function renderShortage() { const low = inventory.filter(i => parseFloat(i.stock) < 2); document.getElementById('shortageBody').innerHTML = low.map(i => `<tr><td>${i.name}</td><td>${i.stock}</td><td>${i.unit}</td></tr>`).join(''); }
-    async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
-    function editItem(n) { let itm = inventory.find(i => i.name === n); if(itm) { document.getElementById('itemName').value = itm.name; document.getElementById('itemUnit').value = itm.unit; document.getElementById('buyPrice').value = itm.buy; document.getElementById('sellPrice').value = itm.sell; document.getElementById('addStock').value = 0; document.getElementById('itemImg').value = itm.img || ''; window.scrollTo(0,0); } }
-    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
-    function checkWasteEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex) document.getElementById('wasteUnit').value = ex.unit; }
-    function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
-    async function clearSales() { if(confirm("සියල්ල මකන්නද?")) { await fetch(`${BASE_URL}sales.json`, { method: 'DELETE' }); fetchData(); } }
-
+    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; } }
+    
     fetchData();
 </script>
 </body>
