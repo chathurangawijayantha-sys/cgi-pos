@@ -33,7 +33,7 @@
         .content.active { display: block; }
         
         .add-form, .wastage-form, .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; align-items: flex-end; }
 
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; font-size: 13px; }
         label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
@@ -48,7 +48,9 @@
         .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         
-        .chart-container { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 15px; height: 400px; position: relative; }
+        /* Charts layout */
+        .charts-flex { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; }
+        .chart-box { flex: 1; min-width: 300px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; height: 400px; position: relative; }
 
         @media print {
             .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid { display: none !important; }
@@ -164,7 +166,7 @@
     </div>
 
     <div id="analytics" class="content">
-        <h3 style="color:var(--secondary);">විකුණුම් විශ්ලේෂණය 📊</h3>
+        <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
         <div class="filter-section no-print" style="background: #f3e5f5;">
             <div class="grid-layout" style="grid-template-columns: 1fr;">
                 <div>
@@ -179,7 +181,18 @@
                 </div>
             </div>
         </div>
-        <div class="chart-container no-print"><canvas id="salesChart"></canvas></div>
+        
+        <div class="charts-flex">
+            <div class="chart-box no-print">
+                <h4 style="text-align:center;">ආදායම් විශ්ලේෂණය</h4>
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="chart-box no-print">
+                <h4 style="text-align:center;">වියදම් බෙදී යාම</h4>
+                <canvas id="expensePieChart"></canvas>
+            </div>
+        </div>
+
         <h3 style="margin-top:30px;">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
         <table>
             <thead><tr><th>භාණ්ඩයේ නම</th><th>විකුණුම් වාර</th><th>මුළු විකුණූ ප්‍රමාණය</th><th>මුළු ආදායම (Rs.)</th></tr></thead>
@@ -191,7 +204,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], myChart = null;
+    let inventory = [], salesList = [], expenses = [], myChart = null, myPieChart = null;
     let addedToday = [];
 
 async function fetchData() {
@@ -313,32 +326,17 @@ function downloadTodayStockExcel() {
 }
 
 async function addExpense() {
-    const note = document.getElementById('expNote').value;
-    const amount = document.getElementById('expAmount').value;
+    const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value;
     const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
-
     if(!note || !amount) return alert("විස්තරය සහ මුදල ඇතුළත් කරන්න!");
-
-    try {
-        await fetch(`${BASE_URL}expenses.json`, { 
-            method: 'POST', 
-            body: JSON.stringify({ 
-                note: note, 
-                amount: parseFloat(amount), 
-                date: date 
-            }) 
-        });
-
-        // දත්ත ඇතුළත් කළ පසු Tab එක ක්ලියර් කිරීම
-        document.getElementById('expNote').value = "";
-        document.getElementById('expAmount').value = "";
-        document.getElementById('expDate').value = "";
-
-        alert("වියදම සාර්ථකව ඇතුළත් කළා!");
-        fetchData(); // Dashboard එක සහ Table එක අලුත් කිරීමට
-    } catch (e) {
-        alert("දත්ත ඇතුළත් කිරීමේදී ගැටලුවක් මතු විය!");
-    }
+    await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
+    
+    // Clear fields
+    document.getElementById('expNote').value = "";
+    document.getElementById('expAmount').value = "";
+    document.getElementById('expDate').value = "";
+    
+    fetchData();
 }
 
 function renderExpenses() {
@@ -351,7 +349,9 @@ async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${
 
 function renderAnalytics() {
     const period = document.getElementById('chartPeriod').value;
-    const stats = {}, now = new Date();
+    const stats = {}, expStats = {}, now = new Date();
+    
+    // Sales Logic
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -369,13 +369,46 @@ function renderAnalytics() {
             if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
         }
     });
+
+    // Expense Logic for Pie Chart
+    expenses.forEach(e => {
+        let eDate = new Date(e.date);
+        let include = false;
+        if (period === 'all') include = true;
+        else if (period === 'daily') include = eDate.toDateString() === now.toDateString();
+        else if (period === 'weekly') { let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); include = eDate >= weekAgo; }
+        else if (period === 'monthly') include = eDate.getMonth() === now.getMonth();
+        else if (period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
+        
+        if(include) {
+            expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
+        }
+    });
+
     document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `
         <tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
+    
+    // Bar Chart
     const ctx = document.getElementById('salesChart').getContext('2d');
     if(myChart) myChart.destroy();
     myChart = new Chart(ctx, {
         type: 'bar',
         data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම (Rs.)', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Pie Chart
+    const pctx = document.getElementById('expensePieChart').getContext('2d');
+    if(myPieChart) myPieChart.destroy();
+    myPieChart = new Chart(pctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(expStats),
+            datasets: [{
+                data: Object.values(expStats),
+                backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#e67e22', '#9b59b6']
+            }]
+        },
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
@@ -480,4 +513,3 @@ fetchData();
 </script>
 </body>
 </html>
-
