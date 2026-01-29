@@ -2,9 +2,10 @@
 <html lang="si">
 <head>
     <meta charset="UTF-8">
-    <title>CGI Pro Admin - Full Advanced System</title>
+    <title>CGI Pro Admin - Ultimate System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Professional UI වර්ණ සහ හැඩතල */
         :root {
             --primary: #27ae60;
             --secondary: #8e44ad;
@@ -13,135 +14,171 @@
             --danger: #e74c3c;
         }
 
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: var(--light); }
-        .container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: var(--light); }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1150px; margin: auto; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: #eee; border-radius: 10px; font-weight: 600; transition: 0.3s; white-space: nowrap; }
-        .tab-btn.active { background: var(--primary); color: white; transform: translateY(-2px); }
-
-        /* Dashboard Cards */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid transparent; }
-        .stat-card h3 { margin: 0; font-size: 13px; color: #7f8c8d; text-transform: uppercase; }
-        .stat-card h2 { margin: 10px 0 0; font-size: 24px; }
-        .card-revenue { border-color: #3498db; }
-        .card-profit { border-color: var(--primary); }
-        .card-expense { border-color: var(--danger); }
+        /* Dashboard Cards Style */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #ddd; }
+        .stat-card h3 { margin: 0; font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
+        .stat-card h2 { margin: 10px 0 0; font-size: 22px; color: var(--dark); }
+        .card-rev { border-color: #3498db; }
+        .card-prof { border-color: var(--primary); }
+        .card-exp { border-color: var(--danger); }
         .card-net { border-color: var(--secondary); }
 
-        .content { display: none; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; overflow-x: auto; }
+        .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .content { display: none; }
         .content.active { display: block; }
         
-        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: #f9f9f9; padding: 20px; border-radius: 12px; margin-bottom: 25px; align-items: flex-end; }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
-        label { font-size: 12px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
+        .add-form, .wastage-form, .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
 
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background: #34495e; color: white; }
-        .low-stock-row { background-color: #ffcccc !important; color: #b71c1c; font-weight: bold; }
-
-        .search-box { margin-bottom: 15px; padding: 12px; border: 2px solid var(--primary); width: 100%; border-radius: 8px; box-sizing: border-box; }
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-primary { background: var(--primary); color: white; }
         
-        .chart-container { height: 400px; position: relative; margin-top: 20px; }
+        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        .chart-container { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 15px; height: 400px; position: relative; }
 
-        @media print { .no-print { display: none !important; } .content { display: block !important; } }
+        @media print {
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel { display: none !important; }
+            .content { display: block !important; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header no-print">
-        <h2 style="margin:0; color: var(--primary);">CGI PRO ADMIN</h2>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
-            <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
-            <button class="tab-btn" onclick="showTab('expenses')">වියදම්</button>
-            <button class="tab-btn" style="background:var(--secondary); color:white;" onclick="showTab('analytics')">විශ්ලේෂණය 📊</button>
-        </div>
-    </div>
+    <h2 class="no-print">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
 
     <div class="dashboard-grid no-print">
-        <div class="stat-card card-revenue"><h3>මුළු ආදායම</h3><h2 id="dispRev">Rs. 0</h2></div>
-        <div class="stat-card card-profit"><h3>භාණ්ඩ ලාභය</h3><h2 id="dispGProfit">Rs. 0</h2></div>
-        <div class="stat-card card-expense"><h3>මුළු වියදම්</h3><h2 id="dispExp">Rs. 0</h2></div>
-        <div class="stat-card card-net"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit">Rs. 0</h2></div>
+        <div class="stat-card card-rev"><h3>මුළු ආදායම</h3><h2 id="dispRev">Rs. 0.00</h2></div>
+        <div class="stat-card card-prof"><h3>භාණ්ඩ ලාභය</h3><h2 id="dispGProfit">Rs. 0.00</h2></div>
+        <div class="stat-card card-exp"><h3>මුළු වියදම්</h3><h2 id="dispExp">Rs. 0.00</h2></div>
+        <div class="stat-card card-net"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit" style="color:var(--secondary);">Rs. 0.00</h2></div>
+    </div>
+    
+    <div class="tabs no-print">
+        <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
+        <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
+        <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+        <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
+        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
     <div id="stock" class="content active">
-        <div class="grid-form no-print">
-            <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
-            <div><label>ඒකකය</label><select id="itemUnit"><option>Kg</option><option>මිටි</option><option>පැකට්</option><option>කරල්</option></select></div>
-            <div><label>ගැනුම්</label><input type="number" id="buyPrice"></div>
-            <div><label>විකුණුම්</label><input type="number" id="sellPrice"></div>
-            <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
-            <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
-            <button class="btn btn-primary" onclick="handleUpdate()">Update / Add</button>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select></div>
+                <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
+                <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
+                <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
+                <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
+                <button class="tab-btn" style="background:var(--primary); color:white; height:40px;" onclick="handleUpdate()">Update / Add</button>
+            </div>
         </div>
 
-        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම ටයිප් කර සොයන්න..." onkeyup="searchInventory()">
+        <input type="text" id="inventorySearch" class="search-box no-print" style="margin-bottom:15px; padding:12px; border:2px solid var(--primary); width:100%; border-radius:8px;" placeholder="🔍 භාණ්ඩයේ නම සොයන්න..." onkeyup="searchInventory()">
         
+        <div class="wastage-form no-print">
+            <h4 style="margin:0 0 10px 0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
+            <div class="grid-layout">
+                <input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)">
+                <input type="number" id="wasteQty" placeholder="ප්‍රමාණය">
+                <select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select>
+                <button class="tab-btn" style="background:#ef6c00; color:white; height:40px;" onclick="addWastage()">ඉවත් කරන්න</button>
+            </div>
+        </div>
+
         <table id="inventoryTable">
             <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
 
+    <div id="shortage" class="content">
+        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ</h3>
+        <table id="shortageTable">
+            <thead><tr><th>භාණ්ඩය</th><th>පවතින තොගය</th><th>ඒකකය</th></tr></thead>
+            <tbody id="shortageBody"></tbody>
+        </table>
+        <div class="no-print" style="margin-top:20px;">
+            <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">Shortage List එක WhatsApp කරන්න 🟢</button>
+        </div>
+    </div>
+
     <div id="sales" class="content">
-        <div class="filter-section no-print" style="display:flex; gap:15px; margin-bottom:20px; align-items:center;">
-            <div><label>වාර්තාව තෝරන්න:</label>
-                <select id="reportFilter" onchange="renderSales()" style="width:200px;">
-                    <option value="all">සියලුම වාර්තා</option>
-                    <option value="today" selected>අද දින (Today)</option>
-                    <option value="month">මෙම මාසය</option>
-                    <option value="custom">වෙනත් දිනයක්</option>
-                </select>
-            </div>
-            <div id="customDateDiv" style="display:none;">
-                <label>දිනය:</label>
-                <input type="date" id="customDate" onchange="renderSales()">
+        <div class="filter-section no-print">
+            <div class="grid-layout">
+                <div><label>වාර්තාව තෝරන්න:</label>
+                    <select id="reportFilter" onchange="renderSales()">
+                        <option value="all">සියලුම වාර්තා</option>
+                        <option value="today" selected>අද දින (Today)</option>
+                        <option value="month">මෙම මාසය</option>
+                        <option value="custom">වෙනත් දිනයක්</option>
+                    </select>
+                </div>
+                <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
             </div>
         </div>
+
+        <div class="no-print" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
+            <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
+        </div>
+
         <table>
-            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th></tr></thead>
+            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
     </div>
 
     <div id="expenses" class="content">
-        <h3 class="section-title">💸 වියදම් කළමනාකරණය</h3>
-        <div class="grid-form no-print">
-            <div><label>විස්තරය</label><input type="text" id="expNote" placeholder="උදා: විදුලි බිල"></div>
-            <div><label>මුදල (Rs.)</label><input type="number" id="expAmount"></div>
-            <div><label>දිනය</label><input type="date" id="expDate"></div>
-            <button class="btn" style="background:var(--danger); color:white;" onclick="addExpense()">එක් කරන්න</button>
+        <h3 style="color:var(--danger);">ව්‍යාපාරික වියදම් කළමනාකරණය</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>වියදම් විස්තරය</label><input type="text" id="expNote" placeholder="උදා: විදුලි බිල"></div>
+                <div><label>මුදල (Rs.)</label><input type="number" id="expAmount"></div>
+                <div><label>දිනය</label><input type="date" id="expDate"></div>
+                <button class="tab-btn" style="background:var(--danger); color:white; height:40px;" onclick="addExpense()">වියදම එක් කරන්න</button>
+            </div>
         </div>
-        <table id="expenseTable">
-            <thead><tr><th>දිනය</th><th>විස්තරය</th><th>මුදල (Rs.)</th><th>ක්‍රියා</th></tr></thead>
+        <table>
+            <thead><tr><th>දිනය</th><th>විස්තරය</th><th>මුදල (Rs.)</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="expenseBody"></tbody>
         </table>
     </div>
 
     <div id="analytics" class="content">
-        <h3 class="section-title">📊 කාල පරාසය අනුව විශ්ලේෂණය</h3>
-        <div class="filter-section no-print" style="margin-bottom:20px;">
-            <select id="chartPeriod" onchange="renderAnalytics()" style="width:200px;">
-                <option value="today">අද දින</option>
-                <option value="weekly">මෙම සතිය</option>
-                <option value="monthly">මෙම මාසය</option>
-                <option value="all" selected>සියලු කාලය</option>
+        <h3 style="color:var(--secondary);">විකුණුම් විශ්ලේෂණය 📊</h3>
+        <div class="filter-section no-print" style="justify-content: center; background: #f3e5f5;">
+            <label>කාල පරාසය:</label>
+            <select id="chartPeriod" onchange="renderAnalytics()" style="width: auto; min-width: 150px;">
+                <option value="daily">අද දින (Daily)</option>
+                <option value="weekly">මෙම සතිය (Weekly)</option>
+                <option value="monthly">මෙම මාසය (Monthly)</option>
+                <option value="yearly">මෙම වසර (Yearly)</option>
+                <option value="all" selected>සියලුම කාලය (All Time)</option>
             </select>
         </div>
-        <div class="chart-container">
-            <canvas id="proChart"></canvas>
-        </div>
+        <div class="chart-container no-print"><canvas id="salesChart"></canvas></div>
+        <h3 style="margin-top:30px;">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
+        <table>
+            <thead><tr><th>භාණ්ඩයේ නම</th><th>විකුණුම් වාර</th><th>මුළු විකුණූ ප්‍රමාණය</th><th>මුළු ආදායම (Rs.)</th></tr></thead>
+            <tbody id="itemSummaryBody"></tbody>
+        </table>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = [], salesList = [], expenses = [], myChart = null;
@@ -158,12 +195,15 @@
             inventory = invData ? Object.values(invData) : [];
             
             const salesData = await salesRes.json();
-            salesList = salesData ? Object.keys(salesData).map(k => ({...salesData[k], firebaseKey: k})) : [];
-            
+            salesList = [];
+            if(salesData) {
+                Object.keys(salesData).forEach(k => salesList.push({...salesData[k], firebaseKey: k}));
+            }
+
             const expData = await expRes.json();
             expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
 
-            updateDashboard(); renderInventory(); renderSales(); renderExpenses();
+            updateDashboard(); renderInventory(); renderShortage(); renderSales(); renderExpenses();
         } catch (e) { console.error(e); }
     }
 
@@ -172,26 +212,27 @@
         let gProf = salesList.reduce((s, i) => s + parseFloat(i.profit || 0), 0);
         let exp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
         
-        document.getElementById('dispRev').innerText = "Rs. " + rev.toLocaleString();
-        document.getElementById('dispGProfit').innerText = "Rs. " + gProf.toLocaleString();
-        document.getElementById('dispExp').innerText = "Rs. " + exp.toLocaleString();
-        document.getElementById('dispNetProfit').innerText = "Rs. " + (gProf - exp).toLocaleString();
+        document.getElementById('dispRev').innerText = "Rs. " + rev.toFixed(2);
+        document.getElementById('dispGProfit').innerText = "Rs. " + gProf.toFixed(2);
+        document.getElementById('dispExp').innerText = "Rs. " + exp.toFixed(2);
+        document.getElementById('dispNetProfit').innerText = "Rs. " + (gProf - exp).toFixed(2);
     }
 
+    // --- Stock Logic ---
     function renderInventory() {
         document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
             let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
-            let rowClass = parseFloat(item.stock) <= 0 ? 'low-stock-row' : '';
-            return `<tr class="${rowClass}">
+            return `<tr class="${parseFloat(item.stock) <= 0 ? 'low-stock-row' : ''}">
                 <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
                 <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td>
-                <td>${profitPct}%</td><td>${item.stock}</td>
-                <td><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button></td>
-            </tr>`;
+                <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td><td>${item.stock}</td>
+                <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
+                <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
         }).join('');
         document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
     }
 
+    // --- Sales Logic ---
     function renderSales() {
         const filter = document.getElementById('reportFilter').value;
         const customDate = document.getElementById('customDate').value;
@@ -201,7 +242,8 @@
 
         const filtered = salesList.filter(s => {
             if(filter === 'all') return true;
-            const sDate = new Date(s.date);
+            const sDateParts = s.date.split(',')[0].trim().split('/');
+            let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
             const sDateISO = sDate.toLocaleDateString('en-GB');
             if(filter === 'today') return sDateISO === todayStr;
             if(filter === 'month') return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
@@ -210,8 +252,74 @@
         });
 
         document.getElementById('salesBody').innerHTML = filtered.map(s => `
-            <tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total}</td><td>${s.profit}</td></tr>
+            <tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total}</td><td>${s.profit}</td>
+            <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>
         `).reverse().join('');
+    }
+
+    // --- Expense Logic ---
+    async function addExpense() {
+        const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value;
+        const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
+        if(!note || !amount) return alert("දත්ත ඇතුළත් කරන්න!");
+        await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
+        fetchData();
+    }
+
+    function renderExpenses() {
+        document.getElementById('expenseBody').innerHTML = expenses.map(e => `
+            <tr><td>${e.date}</td><td>${e.note}</td><td>${e.amount.toFixed(2)}</td>
+            <td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+    }
+
+    async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+
+    // --- Analytics Logic ---
+    function renderAnalytics() {
+        const period = document.getElementById('chartPeriod').value;
+        const stats = {}, now = new Date();
+
+        salesList.forEach(s => {
+            if(s.bNo === "WASTAGE") return;
+            const sDateParts = s.date.split(',')[0].trim().split('/');
+            let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+            
+            let include = false;
+            if (period === 'all') include = true;
+            else if (period === 'daily') include = sDate.toDateString() === now.toDateString();
+            else if (period === 'weekly') { let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); include = sDate >= weekAgo; }
+            else if (period === 'monthly') include = sDate.getMonth() === now.getMonth();
+            else if (period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
+
+            if (include) {
+                if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0, unit: "" };
+                stats[s.name].count++;
+                stats[s.name].rev += parseFloat(s.total || 0);
+                stats[s.name].qty += parseFloat(s.qty) || 0;
+                if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
+            }
+        });
+
+        document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `
+            <tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>
+        `).join('');
+
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම (Rs.)', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // --- Helper Functions (From original code) ---
+    function showTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(id === 'analytics') renderAnalytics();
     }
 
     async function handleUpdate() {
@@ -226,50 +334,32 @@
         fetchData(); clearForm();
     }
 
-    async function addExpense() {
-        const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value;
-        const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
-        if(!note || !amount) return;
-        await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
-        fetchData();
+    async function addWastage() {
+        let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value;
+        if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!");
+        let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+        if(!itm) return alert("භාණ්ඩය නැත!");
+        let qtyBase = (u === 'g') ? q / 1000 : q;
+        if(confirm("නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?")) {
+            let ns = (parseFloat(itm.stock) - qtyBase).toFixed(2);
+            await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) });
+            let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString(), name: n, qty: q + " " + u, total: 0, profit: -(itm.buy * qtyBase) };
+            await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
+            fetchData();
+        }
     }
 
-    function renderExpenses() {
-        document.getElementById('expenseBody').innerHTML = expenses.map(e => `
-            <tr><td>${e.date}</td><td>${e.note}</td><td>${e.amount}</td>
-            <td><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
-    }
-
-    async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
-    
-    function showTab(id) {
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
-        if(id === 'analytics') renderAnalytics();
-    }
-
-    function renderAnalytics() {
-        const period = document.getElementById('chartPeriod').value;
-        const stats = {};
-        salesList.forEach(s => {
-            if(!stats[s.name]) stats[s.name] = { rev: 0 };
-            stats[s.name].rev += parseFloat(s.total || 0);
-        });
-        const ctx = document.getElementById('proChart').getContext('2d');
-        if(myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#3498db' }] },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
-    function clearForm() { document.getElementById('itemName').value=""; document.getElementById('buyPrice').value=""; document.getElementById('sellPrice').value=""; document.getElementById('addStock').value="0"; document.getElementById('itemImg').value=""; }
     function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
+    function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
+    function checkWasteEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex) document.getElementById('wasteUnit').value = ex.unit; }
+    function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
     function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
+    async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+    async function deleteSingleSale(k) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json`, { method: 'DELETE' }); fetchData(); } }
+    function renderShortage() { const low = inventory.filter(i => parseFloat(i.stock) < 2); document.getElementById('shortageBody').innerHTML = low.map(i => `<tr><td>${i.name}</td><td>${i.stock}</td><td>${i.unit}</td></tr>`).join(''); }
+    function sendShortageToWhatsApp() { const low = inventory.filter(i => parseFloat(i.stock) < 2); let msg = "*ගේන්න ඕනෑ බඩු*\n"; low.forEach(i => msg += `- ${i.name} (${i.stock} ${i.unit})\n`); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+    function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+    function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales"); XLSX.writeFile(wb, "Sales_Report.xlsx"); }
 
     fetchData();
 </script>
