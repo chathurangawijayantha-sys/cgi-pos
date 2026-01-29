@@ -240,6 +240,7 @@ function renderSales() {
     const todayStr = now.toLocaleDateString('en-GB');
     document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
+    // තෝරාගත් දිනයට අනුව දත්ත Filter කිරීම
     const filtered = salesList.filter(s => {
         if(filter === 'all') return true;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -251,23 +252,23 @@ function renderSales() {
         return true;
     });
 
+    // තෝරාගත් කාලයට අදාළව Dashboard එකේ එකතුවන් ගණනය කිරීම
+    let totalRev = 0;
+    let totalProf = 0;
+
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
-        // රුපියල් (මුදල්) සඳහා දශම ස්ථාන 2ක් කිරීම
-        let formattedTotal = parseFloat(s.total || 0).toFixed(2);
-        let formattedProfit = parseFloat(s.profit || 0).toFixed(2);
+        let revVal = parseFloat(s.total || 0);
+        let profVal = parseFloat(s.profit || 0);
         
-        // ඒකකය අනුව දශම ස්ථාන තීරණය කිරීම
+        totalRev += revVal;
+        totalProf += profVal;
+
+        let formattedTotal = revVal.toFixed(2);
+        let formattedProfit = profVal.toFixed(2);
+        
         let rawQty = parseFloat(s.qty);
         let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim();
-        let formattedQty;
-
-        if (unitPart.toLowerCase() === 'kg') {
-            // කිලෝග්‍රෑම් වලදී පමණක් දශම 3ක් පෙන්වයි
-            formattedQty = rawQty.toFixed(3) + " " + unitPart;
-        } else {
-            // ග්‍රෑම් (g), මිටි, කරල් වැනි අනෙකුත් ඒකක දශම නැතිව සාමාන්‍ය පරිදි පෙන්වයි
-            formattedQty = rawQty + " " + unitPart;
-        }
+        let formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
 
         return `
             <tr>
@@ -282,20 +283,13 @@ function renderSales() {
                 </td>
             </tr>`;
     }).reverse().join('');
-    
-    // Dashboard එකේ දත්තත් දශම 2කට සීමා කර පෙන්වීම
-    updateDashboard();
-}
 
-function updateDashboard() {
-    let rev = salesList.reduce((s, i) => s + parseFloat(i.total || 0), 0);
-    let gProf = salesList.reduce((s, i) => s + parseFloat(i.profit || 0), 0);
-    let exp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+    // Dashboard Cards යාවත්කාලීන කිරීම (තෝරාගත් දිනයට පමණක් අදාළව)
+    let totalExp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0); // වියදම් සාමාන්‍ය පරිදි
     
-    document.getElementById('dispRev').innerText = "Rs. " + rev.toFixed(2);
-    document.getElementById('dispGProfit').innerText = "Rs. " + gProf.toFixed(2);
-    document.getElementById('dispExp').innerText = "Rs. " + exp.toFixed(2);
-    document.getElementById('dispNetProfit').innerText = "Rs. " + (gProf - exp).toFixed(2);
+    document.getElementById('dispRev').innerText = "Rs. " + totalRev.toFixed(2);
+    document.getElementById('dispGProfit').innerText = "Rs. " + totalProf.toFixed(2);
+    document.getElementById('dispNetProfit').innerText = "Rs. " + (totalProf - totalExp).toFixed(2);
 }
 
     // --- Expense Logic ---
@@ -406,5 +400,6 @@ function updateDashboard() {
 </script>
 </body>
 </html>
+
 
 
