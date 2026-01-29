@@ -237,13 +237,27 @@ function updateDashboard(rev, prof) {
 function renderInventory() {
     document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
         let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
-        return `<tr class="${parseFloat(item.stock) <= 0 ? 'low-stock-row' : ''}">
+        
+        // තොගය 0 හෝ ඊට අඩු නම් රතු පැහැයෙන් highlight කිරීමට කොන්දේසිය
+        let isOutOfStock = parseFloat(item.stock) <= 0;
+        let rowClass = isOutOfStock ? 'low-stock-row' : '';
+        let rowStyle = isOutOfStock ? 'background-color: #ffcccc; color: #b71c1c;' : '';
+
+        return `<tr class="${rowClass}" style="${rowStyle}">
             <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
-            <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${item.buy}</td><td>${item.sell}</td>
-            <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td><td>${item.stock}</td>
-            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
-            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
+            <td><strong>${item.name}</strong></td>
+            <td>${item.unit}</td>
+            <td>${parseFloat(item.buy).toFixed(2)}</td>
+            <td>${parseFloat(item.sell).toFixed(2)}</td>
+            <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
+            <td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td>
+            <td class="no-print">
+                <button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px;">✎</button>
+                <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold; font-size: 16px; margin-left: 10px;">X</button>
+            </td>
+        </tr>`;
     }).join('');
+    
     document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
 }
 
@@ -428,3 +442,4 @@ fetchData();
 </script>
 </body>
 </html>
+
