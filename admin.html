@@ -192,14 +192,18 @@
         <h3 style="color:var(--secondary);">පාරිභෝගික දීමනා & Loyalty 🎁</h3>
         <div class="add-form no-print">
             <div class="grid-layout">
-                <div><label>පාරිභෝගිකයා තෝරන්න</label><select id="loyaltyCustSelect"></select></div>
+                <div>
+                    <label>පාරිභෝගිකයා (නම හෝ අංකය)</label>
+                    <input list="loyaltyCustList" id="loyaltyCustSearch" placeholder="සොයන්න..." oninput="checkLoyaltyCust(this.value)">
+                    <datalist id="loyaltyCustList"></datalist>
+                </div>
                 <div><label>ලබාදුන් වට්ටම (Rs.)</label><input type="number" id="discAmount" placeholder="Rs."></div>
                 <div><label>හේතුව</label><input type="text" id="discReason" placeholder="උදා: විශේෂ දීමනා"></div>
                 <button class="tab-btn" style="background:var(--secondary); color:white; height:40px;" onclick="addLoyaltyRecord()">වාර්තා කරන්න</button>
             </div>
         </div>
         <table>
-            <thead><tr><th>දිනය</th><th>පාරිභෝගිකයා</th><th>වට්ටම (Rs.)</th><th>හේතුව</th><th class="no-print">මකන්න</th></tr></thead>
+            <thead><tr><th>දිනය</th><th>පාරිභෝගිකයා</th><th>දුරකථනය</th><th>වට්ටම (Rs.)</th><th>හේතුව</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="loyaltyBody"></tbody>
         </table>
     </div>
@@ -213,11 +217,11 @@
             </div>
             <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                 <div style="padding:15px; background:white; border-radius:8px;">
-                    <p style="margin:0; font-size:12px; color:#666;">පද්ධතියේ එකතුව (System Expectation):</p>
+                    <p style="margin:0; font-size:12px; color:#666;">පද්ධතියේ එකතුව:</p>
                     <h3 id="expectedCash" style="margin:5px 0 0 0; color:#2c3e50;">Rs. 0.00</h3>
                 </div>
                 <div style="padding:15px; background:white; border-radius:8px;">
-                    <p style="margin:0; font-size:12px; color:#666;">වෙනස (Difference):</p>
+                    <p style="margin:0; font-size:12px; color:#666;">වෙනස:</p>
                     <h3 id="cashDifference" style="margin:5px 0 0 0;">Rs. 0.00</h3>
                 </div>
             </div>
@@ -274,8 +278,7 @@ async function fetchData() {
             fetch(`${BASE_URL}customers.json`),
             fetch(`${BASE_URL}loyalty.json`)
         ]);
-        const invData = await invRes.json();
-        inventory = invData ? Object.values(invData) : [];
+        const invData = await invRes.json(); inventory = invData ? Object.values(invData) : [];
         const salesData = await salesRes.json();
         salesList = [];
         if(salesData) {
@@ -287,12 +290,9 @@ async function fetchData() {
             });
             salesList = Array.from(uniqueMap.values());
         }
-        const expData = await expRes.json();
-        expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
-        const custData = await custRes.json();
-        customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
-        const loyData = await loyRes.json();
-        loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
+        const expData = await expRes.json(); expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
+        const custData = await custRes.json(); customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
+        const loyData = await loyRes.json(); loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
 
         renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance();
     } catch (e) { console.error("Error fetching data:", e); }
@@ -307,56 +307,42 @@ function updateDashboard(rev, prof, currentSales) {
     document.getElementById('dispNetProfit').innerText = "Rs. " + (prof - exp - loy).toFixed(2);
 
     const counts = {};
-    currentSales.forEach(s => {
-        if(s.bNo !== "WASTAGE") counts[s.name] = (counts[s.name] || 0) + 1;
-    });
+    currentSales.forEach(s => { if(s.bNo !== "WASTAGE") counts[s.name] = (counts[s.name] || 0) + 1; });
     const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 5);
     document.getElementById('topItemsList').innerHTML = sorted.length > 0 
         ? sorted.map(i => `<span class="top-selling-item">${i[0]} (${i[1]})</span>`).join('') 
-        : "තෝරාගත් කාලය තුල විකුණුම් වාර්තා නැත.";
+        : "වාර්තා නැත.";
 }
 
-function calculateCashBalance() {
-    const today = new Date().toLocaleDateString('en-GB');
-    const todaySales = salesList.filter(s => {
-        const sDate = s.date.split(',')[0].trim();
-        return sDate === today && s.bNo !== "WASTAGE";
-    });
-    const todayExpenses = expenses.filter(e => {
-        const eDate = new Date(e.date).toLocaleDateString('en-GB');
-        return eDate === today;
-    });
-
-    const income = todaySales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
-    const cost = todayExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
-    const open = parseFloat(document.getElementById('openingBalance').value || 0);
-    const actual = parseFloat(document.getElementById('actualCash').value || 0);
-
-    const expected = (open + income) - cost;
-    const diff = actual - expected;
-
-    document.getElementById('expectedCash').innerText = "Rs. " + expected.toFixed(2);
-    const diffEl = document.getElementById('cashDifference');
-    diffEl.innerText = "Rs. " + diff.toFixed(2);
-    diffEl.style.color = diff < 0 ? "#e74c3c" : "#27ae60";
-}
-
-function sendCashierReportToWhatsApp() {
-    const open = document.getElementById('openingBalance').value;
-    const actual = document.getElementById('actualCash').value;
-    const expected = document.getElementById('expectedCash').innerText;
-    const diff = document.getElementById('cashDifference').innerText;
+// Loyalty Functions
+async function addLoyaltyRecord() {
+    const searchVal = document.getElementById('loyaltyCustSearch').value;
+    const amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
+    if(!searchVal || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
     
-    let msg = `*කැෂියර් බැලන්ස් වාර්තාව - ${new Date().toLocaleDateString()}*\n\n`;
-    msg += `ආරම්භක මුදල: Rs. ${open}\n`;
-    msg += `බලාපොරොත්තු වූ මුදල: ${expected}\n`;
-    msg += `ලැබුණු (Hand) මුදල: Rs. ${actual}\n`;
-    msg += `වෙනස: ${diff}\n\n`;
-    msg += `_CGI Admin System_`;
+    // Find customer to get phone
+    const cust = customers.find(c => `${c.name} (${c.phone})` === searchVal || c.name === searchVal);
+    const finalName = cust ? cust.name : searchVal;
+    const finalPhone = cust ? cust.phone : "N/A";
 
-    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
+    await fetch(`${BASE_URL}loyalty.json`, { 
+        method: 'POST', 
+        body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) 
+    });
+    document.getElementById('loyaltyCustSearch').value = ""; document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
+    fetchData();
 }
 
+function renderLoyalty() {
+    document.getElementById('loyaltyCustList').innerHTML = customers.map(c => `<option value="${c.name} (${c.phone})">`).join('');
+    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `
+        <tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${l.phone || 'N/A'}</td><td>${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td>
+        <td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+}
+
+async function delLoyalty(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+
+// Standard Functions (Inventory, Sales, etc.)
 function renderInventory() {
     document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
         let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
@@ -367,8 +353,8 @@ function renderInventory() {
             <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td>
             <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
             <td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td>
-            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold;">✎</button>
-            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button></td></tr>`;
+            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
+            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
     }).join('');
     document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
 }
@@ -399,70 +385,58 @@ function renderSales() {
     updateDashboard(totalRev, totalProf, filtered);
 }
 
-async function addLoyaltyRecord() {
-    const cust = document.getElementById('loyaltyCustSelect').value, amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
-    if(!cust || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
-    await fetch(`${BASE_URL}loyalty.json`, { method: 'POST', body: JSON.stringify({ cust, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
-    document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
-    fetchData();
+function calculateCashBalance() {
+    const today = new Date().toLocaleDateString('en-GB');
+    const income = salesList.filter(s => s.date.split(',')[0].trim() === today && s.bNo !== "WASTAGE").reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+    const cost = expenses.filter(e => new Date(e.date).toLocaleDateString('en-GB') === today).reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const open = parseFloat(document.getElementById('openingBalance').value || 0), actual = parseFloat(document.getElementById('actualCash').value || 0);
+    const expected = (open + income) - cost; const diff = actual - expected;
+    document.getElementById('expectedCash').innerText = "Rs. " + expected.toFixed(2);
+    const diffEl = document.getElementById('cashDifference'); diffEl.innerText = "Rs. " + diff.toFixed(2);
+    diffEl.style.color = diff < 0 ? "#e74c3c" : "#27ae60";
 }
 
-function renderLoyalty() {
-    document.getElementById('loyaltyCustSelect').innerHTML = customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `
-        <tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td>
-        <td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+function sendCashierReportToWhatsApp() {
+    const msg = `*කැෂියර් බැලන්ස් - ${new Date().toLocaleDateString()}*\nආරම්භක: Rs. ${document.getElementById('openingBalance').value}\nබලාපොරොත්තු වූ: ${document.getElementById('expectedCash').innerText}\nඅතේ ඇති: Rs. ${document.getElementById('actualCash').value}\nවෙනස: ${document.getElementById('cashDifference').innerText}`;
+    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
 }
-
-async function delLoyalty(id) { if(confirm("මෙම වාර්තාව මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 async function addCustomer() {
     const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
-    if(!name || !phone) return alert("නම සහ දුරකථන අංකය ඇතුළත් කරන්න!");
+    if(!name || !phone) return alert("දත්ත ඇතුළත් කරන්න!");
     await fetch(`${BASE_URL}customers.json`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
     document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custNote').value = "";
     fetchData();
 }
 
 function renderCustomers() {
-    document.getElementById('customerBody').innerHTML = customers.map(c => `
-        <tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td>
-        <td class="no-print">
-            <button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button>
-            <button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button>
-        </td></tr>`).join('');
+    document.getElementById('customerBody').innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td><td class="no-print"><button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button><button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
-async function delCustomer(id) { if(confirm("මෙම පාරිභෝගිකයා ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+async function delCustomer(id) { if(confirm("ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 async function handleUpdate() {
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
     let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()), item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
     await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
-    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) });
-    fetchData(); clearForm();
+    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); fetchData(); clearForm();
 }
 
 function downloadTodayStockExcel() {
-    if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-    const ws = XLSX.utils.json_to_sheet(addedToday), wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Today Added Items");
-    XLSX.writeFile(wb, `Stock_List_${new Date().toLocaleDateString()}.xlsx`);
+    if (addedToday.length === 0) return alert("හිස්!");
+    const ws = XLSX.utils.json_to_sheet(addedToday); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Added"); XLSX.writeFile(wb, `Stock_${new Date().toLocaleDateString()}.xlsx`);
 }
 
 async function addExpense() {
     const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value, date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
-    if(!note || !amount) return alert("විස්තරය සහ මුදල ඇතුළත් කරන්න!");
+    if(!note || !amount) return alert("විස්තර ඇතුළත් කරන්න!");
     await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
-    document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = "";
-    fetchData();
+    document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = ""; fetchData();
 }
 
 function renderExpenses() {
-    document.getElementById('expenseBody').innerHTML = expenses.map(e => `
-        <tr><td>${e.date}</td><td>${e.note}</td><td>${e.amount.toFixed(2)}</td>
-        <td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+    document.getElementById('expenseBody').innerHTML = expenses.map(e => `<tr><td>${e.date}</td><td>${e.note}</td><td>${e.amount.toFixed(2)}</td><td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
 async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
@@ -473,41 +447,27 @@ function renderAnalytics() {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
         let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-        let include = false;
-        if (period === 'all') include = true;
-        else if (period === 'daily') include = sDate.toDateString() === now.toDateString();
-        else if (period === 'weekly') { let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); include = sDate >= weekAgo; }
-        else if (period === 'monthly') include = sDate.getMonth() === now.getMonth();
-        else if (period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
+        let include = (period === 'all') ? true : (period === 'daily' ? sDate.toDateString() === now.toDateString() : true);
         if (include) {
             if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0, unit: "" };
-            stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0);
-            stats[s.name].qty += parseFloat(s.qty) || 0;
+            stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0); stats[s.name].qty += parseFloat(s.qty) || 0;
             if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
         }
     });
     expenses.forEach(e => {
-        let eDate = new Date(e.date);
-        let include = (period === 'all') ? true : (period === 'daily' && eDate.toDateString() === now.toDateString()) || (period === 'monthly' && eDate.getMonth() === now.getMonth());
+        let eDate = new Date(e.date); let include = (period === 'all') ? true : (period === 'daily' ? eDate.toDateString() === now.toDateString() : true);
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
-    document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `
-        <tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
-    const ctx = document.getElementById('salesChart').getContext('2d');
-    if(myChart) myChart.destroy();
-    myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම (Rs.)', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] }, options: { responsive: true, maintainAspectRatio: false } });
-    const pctx = document.getElementById('expensePieChart').getContext('2d');
-    if(myPieChart) myPieChart.destroy();
-    myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#e67e22', '#9b59b6'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
+    const ctx = document.getElementById('salesChart').getContext('2d'); if(myChart) myChart.destroy(); myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] }, options: { responsive: true, maintainAspectRatio: false } });
+    const pctx = document.getElementById('expensePieChart').getContext('2d'); if(myPieChart) myPieChart.destroy(); myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60'] }] }, options: { responsive: true, maintainAspectRatio: false } });
 }
 
 function showTab(id) {
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
-    if(id === 'analytics') renderAnalytics();
-    if(id === 'cashier') calculateCashBalance();
+    document.getElementById(id).classList.add('active'); if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if(id === 'analytics') renderAnalytics(); if(id === 'cashier') calculateCashBalance();
 }
 
 function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
