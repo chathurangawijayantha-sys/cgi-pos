@@ -25,7 +25,6 @@
         .card-exp { border-color: var(--danger); }
         .card-net { border-color: var(--secondary); }
 
-        /* Top Selling Items Style */
         .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #c8e6c9; }
         .top-selling-item { display: inline-block; background: var(--primary); color: white; padding: 6px 15px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
@@ -83,6 +82,7 @@
         <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
         <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
         <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
+        <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
         <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
@@ -101,9 +101,7 @@
                 </div>
             </div>
         </div>
-
-        <input type="text" id="inventorySearch" class="search-box no-print" style="margin-bottom:15px; padding:12px; border:2px solid var(--primary); width:100%; border-radius:8px;" placeholder="🔍 භාණ්ඩයේ නම සොයන්න..." onkeyup="searchInventory()">
-        
+        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම සොයන්න..." onkeyup="searchInventory()">
         <div class="wastage-form no-print">
             <h4 style="margin:0 0 10px 0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
             <div class="grid-layout">
@@ -113,7 +111,6 @@
                 <button class="tab-btn" style="background:#ef6c00; color:white; height:40px;" onclick="addWastage()">ඉවත් කරන්න</button>
             </div>
         </div>
-
         <table id="inventoryTable">
             <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
@@ -145,12 +142,10 @@
                 <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
             </div>
         </div>
-
         <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
             <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
             <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
         </div>
-
         <table>
             <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th><th>ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="salesBody"></tbody>
@@ -173,6 +168,22 @@
         </table>
     </div>
 
+    <div id="customers" class="content">
+        <h3 style="color:var(--primary);">පාරිභෝගික නාමාවලිය 👥</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>පාරිභෝගික නම</label><input type="text" id="custName" placeholder="නම"></div>
+                <div><label>දුරකථන අංකය</label><input type="text" id="custPhone" placeholder="07XXXXXXXX"></div>
+                <div><label>ලිපිනය / වෙනත්</label><input type="text" id="custNote" placeholder="විස්තර"></div>
+                <button class="tab-btn" style="background:var(--primary); color:white; height:40px;" onclick="addCustomer()">සුරකින්න</button>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>නම</th><th>දුරකථනය</th><th>විස්තර</th><th class="no-print">ක්‍රියා</th></tr></thead>
+            <tbody id="customerBody"></tbody>
+        </table>
+    </div>
+
     <div id="analytics" class="content">
         <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
         <div class="filter-section no-print" style="background: #f3e5f5;">
@@ -189,7 +200,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="charts-flex">
             <div class="chart-box no-print">
                 <h4 style="text-align:center;">ආදායම් විශ්ලේෂණය</h4>
@@ -200,7 +210,6 @@
                 <canvas id="expensePieChart"></canvas>
             </div>
         </div>
-
         <h3 style="margin-top:30px;">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
         <table>
             <thead><tr><th>භාණ්ඩයේ නම</th><th>විකුණුම් වාර</th><th>මුළු විකුණූ ප්‍රමාණය</th><th>මුළු ආදායම (Rs.)</th></tr></thead>
@@ -212,15 +221,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], myChart = null, myPieChart = null;
+    let inventory = [], salesList = [], expenses = [], customers = [], myChart = null, myPieChart = null;
     let addedToday = [];
 
 async function fetchData() {
     try {
-        const [invRes, salesRes, expRes] = await Promise.all([
+        const [invRes, salesRes, expRes, custRes] = await Promise.all([
             fetch(`${BASE_URL}inventory.json`),
             fetch(`${BASE_URL}sales.json`),
-            fetch(`${BASE_URL}expenses.json`)
+            fetch(`${BASE_URL}expenses.json`),
+            fetch(`${BASE_URL}customers.json`)
         ]);
         
         const invData = await invRes.json();
@@ -243,7 +253,10 @@ async function fetchData() {
         const expData = await expRes.json();
         expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
 
-        renderInventory(); renderSales(); renderExpenses(); renderShortage();
+        const custData = await custRes.json();
+        customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
+
+        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers();
     } catch (e) { console.error("Error fetching data:", e); }
 }
 
@@ -254,7 +267,6 @@ function updateDashboard(rev, prof, currentSales) {
     document.getElementById('dispExp').innerText = "Rs. " + exp.toFixed(2);
     document.getElementById('dispNetProfit').innerText = "Rs. " + (prof - exp).toFixed(2);
 
-    // Update Top Selling Items (Top 5)
     const counts = {};
     currentSales.forEach(s => {
         if(s.bNo !== "WASTAGE") counts[s.name] = (counts[s.name] || 0) + 1;
@@ -270,14 +282,13 @@ function renderInventory() {
         let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
         let isOutOfStock = parseFloat(item.stock) <= 0;
         let rowStyle = isOutOfStock ? 'background-color: #ffcccc; color: #b71c1c;' : '';
-
         return `<tr style="${rowStyle}">
             <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
             <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td>
             <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
             <td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td>
-            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold;">✎</button>
-            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button></td></tr>`;
+            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
+            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
     }).join('');
     document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
 }
@@ -301,26 +312,41 @@ function renderSales() {
     });
 
     let totalRev = 0, totalProf = 0;
-
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
         let revVal = parseFloat(s.total || 0);
         let profVal = parseFloat(s.profit || 0);
         totalRev += revVal; totalProf += profVal;
-
         let isWaste = (s.bNo === "WASTAGE");
         let rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
-
         let rawQty = parseFloat(s.qty);
         let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim();
         let formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
-
         return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td>
             <td>${revVal.toFixed(2)}</td><td>${profVal.toFixed(2)}</td>
             <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
-
     updateDashboard(totalRev, totalProf, filtered);
 }
+
+// Customer Directory Functions
+async function addCustomer() {
+    const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
+    if(!name || !phone) return alert("නම සහ දුරකථන අංකය ඇතුළත් කරන්න!");
+    await fetch(`${BASE_URL}customers.json`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
+    document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custNote').value = "";
+    fetchData();
+}
+
+function renderCustomers() {
+    document.getElementById('customerBody').innerHTML = customers.map(c => `
+        <tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td>
+        <td class="no-print">
+            <button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button>
+            <button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button>
+        </td></tr>`).join('');
+}
+
+async function delCustomer(id) { if(confirm("මෙම පාරිභෝගිකයා ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 async function handleUpdate() {
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value;
@@ -344,13 +370,10 @@ function downloadTodayStockExcel() {
 }
 
 async function addExpense() {
-    const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value;
-    const date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
+    const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value, date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
     if(!note || !amount) return alert("විස්තරය සහ මුදල ඇතුළත් කරන්න!");
     await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
-    document.getElementById('expNote').value = "";
-    document.getElementById('expAmount').value = "";
-    document.getElementById('expDate').value = "";
+    document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = "";
     fetchData();
 }
 
@@ -363,8 +386,7 @@ function renderExpenses() {
 async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 function renderAnalytics() {
-    const period = document.getElementById('chartPeriod').value;
-    const stats = {}, expStats = {}, now = new Date();
+    const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, now = new Date();
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -396,18 +418,10 @@ function renderAnalytics() {
         <tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
     const ctx = document.getElementById('salesChart').getContext('2d');
     if(myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම (Rs.)', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම (Rs.)', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] }, options: { responsive: true, maintainAspectRatio: false } });
     const pctx = document.getElementById('expensePieChart').getContext('2d');
     if(myPieChart) myPieChart.destroy();
-    myPieChart = new Chart(pctx, {
-        type: 'pie',
-        data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#e67e22', '#9b59b6'] }] },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#e67e22', '#9b59b6'] }] }, options: { responsive: true, maintainAspectRatio: false } });
 }
 
 function showTab(id) {
@@ -425,66 +439,11 @@ function clearForm() { document.getElementById('itemName').value = ""; document.
 function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
 async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 async function deleteSingleSale(k) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json`, { method: 'DELETE' }); fetchData(); } }
-
-function renderShortage() {
-    const lowStock = inventory.filter(i => {
-        const stockVal = parseFloat(i.stock);
-        return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2;
-    });
-    document.getElementById('shortageBody').innerHTML = lowStock.map(i => {
-        const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock;
-        return `<tr><td>${i.name}</td><td>${displayStock}</td><td>${i.unit}</td></tr>`
-    }).join('');
-}
-
-function sendShortageToWhatsApp() {
-    const lowStock = inventory.filter(i => {
-        const stockVal = parseFloat(i.stock);
-        return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2;
-    });
-    if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!");
-    let msg = "*ගේන්න ඕනෑ බඩු*\n";
-    lowStock.forEach(i => {
-        const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock;
-        msg += `- ${i.name} (${displayStock} ${i.unit})\n`;
-    });
-    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
-}
-
-async function addWastage() {
-    let n = document.getElementById('wasteItemName').value;
-    let q = parseFloat(document.getElementById('wasteQty').value);
-    let u = document.getElementById('wasteUnit').value;
-    if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!");
-    let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-    if(!itm) return alert("මෙම භාණ්ඩය පද්ධතියේ නැත!");
-    let qtyBase = (u === 'g') ? q / 1000 : q;
-    if(confirm(`${n} වලින් ${q}${u} ක් නරක් වූ භාණ්ඩ ලෙස ඉවත් කරනවාද?`)) {
-        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3);
-        await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) });
-        let loss = -(parseFloat(itm.buy) * qtyBase);
-        let now = new Date();
-        let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB');
-        let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss };
-        await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) });
-        document.getElementById('wasteItemName').value = "";
-        document.getElementById('wasteQty').value = "";
-        alert("සාර්ථකව වාර්තාවට එක් කළා!");
-        fetchData();
-    }
-}
-
-function sendSalesReportToWhatsApp() { 
-    let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; 
-    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); 
-}
-
-function downloadExcel() { 
-    const ws = XLSX.utils.json_to_sheet(salesList); 
-    const wb = XLSX.utils.book_new(); 
-    XLSX.utils.book_append_sheet(wb, ws, "Sales"); 
-    XLSX.writeFile(wb, "Sales_Report.xlsx"); 
-}
+function renderShortage() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; return `<tr><td>${i.name}</td><td>${displayStock}</td><td>${i.unit}</td></tr>` }).join(''); }
+function sendShortageToWhatsApp() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!"); let msg = "*ගේන්න ඕනෑ බඩු*\n"; lowStock.forEach(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; msg += `- ${i.name} (${displayStock} ${i.unit})\n`; }); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+async function addWastage() { let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value; if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(!itm) return alert("භාණ්ඩය නැත!"); let qtyBase = (u === 'g') ? q / 1000 : q; if(confirm(`${n} වලින් ${q}${u} ක් ඉවත් කරනවාද?`)) { let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3); await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) }); let loss = -(parseFloat(itm.buy) * qtyBase); let now = new Date(); let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB'); let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss }; await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) }); document.getElementById('wasteItemName').value = ""; document.getElementById('wasteQty').value = ""; fetchData(); } }
+function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales"); XLSX.writeFile(wb, "Sales_Report.xlsx"); }
 
 fetchData();
 </script>
