@@ -233,29 +233,50 @@
     }
 
     // --- Sales Logic ---
-    function renderSales() {
-        const filter = document.getElementById('reportFilter').value;
-        const customDate = document.getElementById('customDate').value;
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-GB');
-        document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
+function renderSales() {
+    const filter = document.getElementById('reportFilter').value;
+    const customDate = document.getElementById('customDate').value;
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-GB');
+    document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
 
-        const filtered = salesList.filter(s => {
-            if(filter === 'all') return true;
-            const sDateParts = s.date.split(',')[0].trim().split('/');
-            let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-            const sDateISO = sDate.toLocaleDateString('en-GB');
-            if(filter === 'today') return sDateISO === todayStr;
-            if(filter === 'month') return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
-            if(filter === 'custom' && customDate) return sDateISO === new Date(customDate).toLocaleDateString('en-GB');
-            return true;
-        });
+    const filtered = salesList.filter(s => {
+        if(filter === 'all') return true;
+        const sDateParts = s.date.split(',')[0].trim().split('/');
+        let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+        const sDateISO = sDate.toLocaleDateString('en-GB');
+        if(filter === 'today') return sDateISO === todayStr;
+        if(filter === 'month') return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        if(filter === 'custom' && customDate) return sDateISO === new Date(customDate).toLocaleDateString('en-GB');
+        return true;
+    });
 
-        document.getElementById('salesBody').innerHTML = filtered.map(s => `
-            <tr><td>#${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total}</td><td>${s.profit}</td>
-            <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>
-        `).reverse().join('');
-    }
+    document.getElementById('salesBody').innerHTML = filtered.map(s => {
+        // මුදල් සඳහා දශම ස්ථාන 2ක් කිරීම
+        let formattedTotal = parseFloat(s.total || 0).toFixed(2);
+        let formattedProfit = parseFloat(s.profit || 0).toFixed(2);
+        
+        // ප්‍රමාණය (Qty) සඳහා බර නම් දශම 3ක් ද, අනෙක්වාට එලෙසම ද පෙන්වීම
+        let rawQty = parseFloat(s.qty);
+        let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim();
+        let formattedQty = (unitPart.toLowerCase() === 'kg' || unitPart.toLowerCase() === 'g') 
+                           ? rawQty.toFixed(3) + " " + unitPart 
+                           : s.qty;
+
+        return `
+            <tr>
+                <td><strong>#${s.bNo}</strong></td>
+                <td>${s.date}</td>
+                <td>${s.name}</td>
+                <td>${formattedQty}</td>
+                <td>${formattedTotal}</td>
+                <td>${formattedProfit}</td>
+                <td class="no-print">
+                    <button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button>
+                </td>
+            </tr>`;
+    }).reverse().join('');
+}
 
     // --- Expense Logic ---
     async function addExpense() {
@@ -365,3 +386,4 @@
 </script>
 </body>
 </html>
+
