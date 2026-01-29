@@ -83,6 +83,7 @@
         <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
         <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
         <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
+        <button class="tab-btn" onclick="showTab('loyalty')">දීමනා & Loyalty 🎁</button>
         <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
@@ -184,6 +185,22 @@
         </table>
     </div>
 
+    <div id="loyalty" class="content">
+        <h3 style="color:var(--secondary);">පාරිභෝගික දීමනා & Loyalty 🎁</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>පාරිභෝගිකයා තෝරන්න</label><select id="loyaltyCustSelect"></select></div>
+                <div><label>ලබාදුන් වට්ටම (Rs.)</label><input type="number" id="discAmount" placeholder="Rs."></div>
+                <div><label>හේතුව</label><input type="text" id="discReason" placeholder="උදා: විශේෂ දීමනා"></div>
+                <button class="tab-btn" style="background:var(--secondary); color:white; height:40px;" onclick="addLoyaltyRecord()">වාර්තා කරන්න</button>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>දිනය</th><th>පාරිභෝගිකයා</th><th>වට්ටම (Rs.)</th><th>හේතුව</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="loyaltyBody"></tbody>
+        </table>
+    </div>
+
     <div id="analytics" class="content">
         <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
         <div class="filter-section no-print" style="background: #f3e5f5;">
@@ -221,16 +238,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], customers = [], myChart = null, myPieChart = null;
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], myChart = null, myPieChart = null;
     let addedToday = [];
 
 async function fetchData() {
     try {
-        const [invRes, salesRes, expRes, custRes] = await Promise.all([
+        const [invRes, salesRes, expRes, custRes, loyRes] = await Promise.all([
             fetch(`${BASE_URL}inventory.json`),
             fetch(`${BASE_URL}sales.json`),
             fetch(`${BASE_URL}expenses.json`),
-            fetch(`${BASE_URL}customers.json`)
+            fetch(`${BASE_URL}customers.json`),
+            fetch(`${BASE_URL}loyalty.json`)
         ]);
         
         const invData = await invRes.json();
@@ -256,16 +274,20 @@ async function fetchData() {
         const custData = await custRes.json();
         customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
 
-        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers();
+        const loyData = await loyRes.json();
+        loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
+
+        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty();
     } catch (e) { console.error("Error fetching data:", e); }
 }
 
 function updateDashboard(rev, prof, currentSales) {
     let exp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+    let loy = loyaltyRecords.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
     document.getElementById('dispRev').innerText = "Rs. " + rev.toFixed(2);
     document.getElementById('dispGProfit').innerText = "Rs. " + prof.toFixed(2);
-    document.getElementById('dispExp').innerText = "Rs. " + exp.toFixed(2);
-    document.getElementById('dispNetProfit').innerText = "Rs. " + (prof - exp).toFixed(2);
+    document.getElementById('dispExp').innerText = "Rs. " + (exp + loy).toFixed(2);
+    document.getElementById('dispNetProfit').innerText = "Rs. " + (prof - exp - loy).toFixed(2);
 
     const counts = {};
     currentSales.forEach(s => {
@@ -287,19 +309,15 @@ function renderInventory() {
             <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td>
             <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
             <td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td>
-            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
-            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
+            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer; font-weight:bold;">✎</button>
+            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">X</button></td></tr>`;
     }).join('');
     document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
 }
 
 function renderSales() {
-    const filter = document.getElementById('reportFilter').value;
-    const customDate = document.getElementById('customDate').value;
-    const now = new Date();
-    const todayStr = now.toLocaleDateString('en-GB');
+    const filter = document.getElementById('reportFilter').value, customDate = document.getElementById('customDate').value, now = new Date(), todayStr = now.toLocaleDateString('en-GB');
     document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
-
     const filtered = salesList.filter(s => {
         if(filter === 'all') return true;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -310,23 +328,36 @@ function renderSales() {
         if(filter === 'custom' && customDate) return sDateISO === new Date(customDate).toLocaleDateString('en-GB');
         return true;
     });
-
     let totalRev = 0, totalProf = 0;
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
-        let revVal = parseFloat(s.total || 0);
-        let profVal = parseFloat(s.profit || 0);
+        let revVal = parseFloat(s.total || 0), profVal = parseFloat(s.profit || 0);
         totalRev += revVal; totalProf += profVal;
-        let isWaste = (s.bNo === "WASTAGE");
-        let rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
-        let rawQty = parseFloat(s.qty);
-        let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim();
-        let formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
+        let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
+        let rawQty = parseFloat(s.qty), unitPart = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
         return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td>
             <td>${revVal.toFixed(2)}</td><td>${profVal.toFixed(2)}</td>
             <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
 }
+
+// Loyalty Functions
+async function addLoyaltyRecord() {
+    const cust = document.getElementById('loyaltyCustSelect').value, amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
+    if(!cust || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
+    await fetch(`${BASE_URL}loyalty.json`, { method: 'POST', body: JSON.stringify({ cust, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
+    document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
+    fetchData();
+}
+
+function renderLoyalty() {
+    document.getElementById('loyaltyCustSelect').innerHTML = customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `
+        <tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td>
+        <td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+}
+
+async function delLoyalty(id) { if(confirm("මෙම වාර්තාව මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 // Customer Directory Functions
 async function addCustomer() {
@@ -349,13 +380,9 @@ function renderCustomers() {
 async function delCustomer(id) { if(confirm("මෙම පාරිභෝගිකයා ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 async function handleUpdate() {
-    let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value;
-    let b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0;
-    let st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
+    let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
-    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
-    let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } 
-                  : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
+    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()), item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
     await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
     addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) });
     fetchData(); clearForm();
@@ -363,8 +390,7 @@ async function handleUpdate() {
 
 function downloadTodayStockExcel() {
     if (addedToday.length === 0) return alert("අද දින අලුතින් කිසිදු භාණ්ඩයක් ඇතුළත් කර නැත!");
-    const ws = XLSX.utils.json_to_sheet(addedToday);
-    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(addedToday), wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Today Added Items");
     XLSX.writeFile(wb, `Stock_List_${new Date().toLocaleDateString()}.xlsx`);
 }
@@ -406,12 +432,7 @@ function renderAnalytics() {
     });
     expenses.forEach(e => {
         let eDate = new Date(e.date);
-        let include = false;
-        if (period === 'all') include = true;
-        else if (period === 'daily') include = eDate.toDateString() === now.toDateString();
-        else if (period === 'weekly') { let weekAgo = new Date(); weekAgo.setDate(now.getDate()-7); include = eDate >= weekAgo; }
-        else if (period === 'monthly') include = eDate.getMonth() === now.getMonth();
-        else if (period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
+        let include = (period === 'all') ? true : (period === 'daily' && eDate.toDateString() === now.toDateString()) || (period === 'monthly' && eDate.getMonth() === now.getMonth());
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
     document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `
