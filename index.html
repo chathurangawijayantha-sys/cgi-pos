@@ -39,12 +39,6 @@
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
-        @media screen and (max-width: 800px) {
-            .main-container { flex-direction: column; }
-            #product-section { width: auto; border-right: none; padding-bottom: 20px; }
-            #bill-section { width: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        }
-
         @media print {
             @page { size: 58mm auto; margin: 0; }
             body { width: 58mm; margin: 0; padding: 0; }
@@ -177,23 +171,72 @@
 
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
-        
-        // Stock Sync
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
             try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) { return; }
         }
         localStorage.removeItem('offline_stocks');
-
-        // Sales Sync
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-        if(offSales.length > 0) {
-            for (let sale of offSales) {
-                try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
-            }
-            localStorage.removeItem('offline_sales');
+        for (let sale of offSales) {
+            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
         }
+        localStorage.removeItem('offline_sales');
         await fetchInventory(); 
+    }
+
+    function render() {
+        const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
+        let html = "";
+        sorted.forEach(p => {
+            const isOut = parseFloat(p.stock) <= 0;
+            if(p.name === "බඩඉරිඟු") {
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
+                    <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>
+                <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
+                    <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            } else {
+                html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+                    <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
+                    <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                </div>`;
+            }
+        });
+        document.getElementById('grid').innerHTML = html;
+        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
+    }
+
+    function openM(id, dispName, customPrice) {
+        tempItem = inventory.find(x => String(x.id) === String(id));
+        if(!tempItem) return;
+        tempDispName = dispName || tempItem.name;
+        tempPrice = customPrice || parseFloat(tempItem.sell);
+        document.getElementById('mTitle').innerText = tempDispName;
+        const uSel = document.getElementById('uSel');
+        const qtyInp = document.getElementById('qty');
+        document.getElementById('unitSelectorDiv').style.display = 'block';
+        if(tempDispName.includes("බඩඉරිඟු")) {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
+        } else if(tempItem.unit === "Kg") {
+            uSel.value = "g"; uSel.disabled = false;
+            document.getElementById('uDisp').innerText = "ඒකකය: Kg";
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
+        } else {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
+        }
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
     }
 
     async function updateStock(id, qty, mode) {
@@ -203,17 +246,79 @@
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
             itm.stock = ns.toFixed(2);
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            
-            // Offline Storage Update
             let offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
             offStocks[itm.id] = itm.stock;
             localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
-
-            // Online Update
             try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
             render();
             if(mode === 'sub') checkLowStockAlert(itm);
         }
+    }
+
+    function checkLowStockAlert(item) {
+        const stockVal = parseFloat(item.stock);
+        let isLow = (item.unit === "Kg") ? (stockVal < 0.5) : (stockVal < 2);
+        if (isLow) alert(`අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal}`);
+    }
+
+    async function confirmAdd() {
+        let qv = document.getElementById('qty').value;
+        if(!qv || parseFloat(qv) <= 0) return;
+        let q = parseFloat(qv), u = document.getElementById('uSel').value;
+        let d = (u==='g') ? q/1000 : q;
+        if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+        await updateStock(tempItem.id, d, 'sub');
+        let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+        let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+        localStorage.setItem('active_cart', JSON.stringify(cart));
+        updateUI(); closeModal();
+    }
+
+    function updateUI() {
+        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+            <tr onclick="removeItem(${idx})" style="cursor:pointer;">
+                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
+        calc();
+    }
+
+    async function removeItem(idx) {
+        if(confirm("ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1);
+            localStorage.setItem('active_cart', JSON.stringify(cart));
+            updateUI();
+        }
+    }
+
+    function calc() {
+        let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
+        let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
+        let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
+        let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
+        let finalTotal = itemsTotal - disc;
+        document.getElementById('gTot').innerText = finalTotal.toFixed(2);
+        document.getElementById('itemCount').innerText = cart.length;
+        document.getElementById('gTotWords').innerText = priceToSinhalaWords(finalTotal);
+        const dr = document.getElementById('discRow');
+        if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); } else dr.style.display = 'none';
+        
+        const custVal = document.getElementById('custSearch').value;
+        const ptsBox = document.getElementById('pointsPrint');
+        if(custVal) {
+            const earned = Math.floor(finalTotal / 100);
+            const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
+            const currentTotalPts = (customerKey && customers[customerKey].points) ? parseInt(customers[customerKey].points) : 0;
+            document.getElementById('earnedPoints').innerText = earned;
+            document.getElementById('totalPoints').innerText = currentTotalPts + earned;
+            ptsBox.style.display = 'block';
+        } else ptsBox.style.display = 'none';
+
+        let c = parseFloat(document.getElementById('cashInput').value) || 0;
+        document.getElementById('cashDisplay').innerText = c.toFixed(2);
+        document.getElementById('balDisplay').innerText = (c - finalTotal).toFixed(2);
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
@@ -224,7 +329,7 @@
         const now = new Date();
         const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear() + ", " + now.toLocaleTimeString('en-GB');
 
-        // Discount/Points logic as per context
+        // Discount/Loyalty Logic
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
@@ -243,14 +348,11 @@
             }
         }
 
-        // Store sales data locally first
         let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         for (let c of cart) {
             let entry = { bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
             offSales.push(entry);
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); 
-                 offSales = offSales.filter(x => x !== entry); // Remove if successful
-            } catch (e) {}
+            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
         }
         localStorage.setItem('offline_sales', JSON.stringify(offSales));
         
@@ -258,65 +360,34 @@
         else resetSystemAfterBill();
     }
 
-    // Remaining basic helper functions (render, openM, calc, etc.)
-    function render() {
-        const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
-        let html = "";
-        sorted.forEach(p => {
-            const isOut = parseFloat(p.stock) <= 0;
-            html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
-                <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
-                <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
-                ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
-            </div>`;
-        });
-        document.getElementById('grid').innerHTML = html;
-        document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
+    async function printDailyClosing() {
+        if(!confirm("අද දින විකුණුම් සාරාංශය මුද්‍රණය කරනවාද?")) return;
+        const uniqueBills = [...new Set(allSalesToday.map(s => s.bNo))].length;
+        const totalSales = allSalesToday.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+        let totalDisc = 0;
+        try {
+            const loyRes = await fetch(`${DB_URL}loyalty.json`);
+            const loyData = await loyRes.json();
+            if(loyData) {
+                const today = new Date().toLocaleDateString('en-GB');
+                totalDisc = Object.values(loyData).filter(l => l.date === today).reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+            }
+        } catch(e) {}
+        document.getElementById('closeBillCount').innerText = uniqueBills;
+        document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
+        document.getElementById('closeTotalDisc').innerText = "Rs. " + totalDisc.toFixed(2);
+        document.body.classList.add('printing-closing');
+        window.print();
+        setTimeout(resetSystemAfterBill, 1000);
     }
-    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
-    function openM(id) { 
-        tempItem = inventory.find(x => String(x.id) === String(id));
-        if(!tempItem) return;
-        document.getElementById('mTitle').innerText = tempItem.name;
-        document.getElementById('pricePreview').innerText = "මිල: " + tempItem.sell;
-        document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
-    }
-    function updateLoyaltyDisplay() { calc(); }
-    function calc() {
-        let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
-        let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
-        let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
-        let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
-        let finalTotal = itemsTotal - disc;
-        document.getElementById('gTot').innerText = finalTotal.toFixed(2);
-        document.getElementById('itemCount').innerText = cart.length;
-        document.getElementById('gTotWords').innerText = priceToSinhalaWords(finalTotal);
-        const dr = document.getElementById('discRow');
-        if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); } else dr.style.display = 'none';
-        let c = parseFloat(document.getElementById('cashInput').value) || 0;
-        document.getElementById('cashDisplay').innerText = c.toFixed(2);
-        document.getElementById('balDisplay').innerText = (c - finalTotal).toFixed(2);
-    }
-    async function confirmAdd() {
-        let q = parseFloat(document.getElementById('qty').value);
-        if(!q) return;
-        let u = document.getElementById('uSel').value;
-        let d = (u==='g') ? q/1000 : q;
-        await updateStock(tempItem.id, d, 'sub');
-        cart.push({ id: tempItem.id, n: tempItem.name, up: tempItem.sell, buy: tempItem.buy, dq: q + (u==='g'?'g':tempItem.unit), t: tempItem.sell * d, d: d });
-        updateUI(); closeModal();
-    }
-    function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `<tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
-        calc();
-    }
-    function resetSystemAfterBill() { cart = []; document.getElementById('cashInput').value = ""; document.getElementById('discountPercent').value = ""; document.getElementById('discountCash').value = ""; document.getElementById('custSearch').value = ""; document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000); updateUI(); isCompletingBill = false; }
+
+    function resetSystemAfterBill() { cart = []; localStorage.removeItem('active_cart'); document.getElementById('cashInput').value = ""; document.getElementById('discountPercent').value = ""; document.getElementById('discountCash').value = ""; document.getElementById('custSearch').value = ""; document.body.classList.remove('printing-closing'); document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000); updateUI(); isCompletingBill = false; fetchCustomers(); fetchTodaySales(); }
     async function fetchInventory() { try { const res = await fetch(`${DB_URL}inventory.json`); const data = await res.json(); if(data) { inventory = Object.values(data); localStorage.setItem('cached_inventory', JSON.stringify(inventory)); render(); } } catch (e) {} }
-    async function fetchCustomers() { try { const res = await fetch(`${DB_URL}customers.json`); const data = await res.json(); if(data) { customers = data; } } catch (e) {} }
-    async function fetchTodaySales() { /* logic */ }
-    function checkLowStockAlert(i) {}
-    function printDailyClosing() {}
-    
+    async function fetchCustomers() { try { const res = await fetch(`${DB_URL}customers.json`); const data = await res.json(); if(data) { customers = data; document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join(''); } } catch (e) {} }
+    async function fetchTodaySales() { try { const res = await fetch(`${DB_URL}sales.json`); const data = await res.json(); if(data) { const today = ("0" + new Date().getDate()).slice(-2) + "/" + ("0" + (new Date().getMonth() + 1)).slice(-2) + "/" + new Date().getFullYear(); allSalesToday = Object.values(data).filter(s => s.date.includes(today)); } } catch(e) {} }
+    function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
+    function updateLoyaltyDisplay() { calc(); }
+
     window.onload = initializeApp;
     window.addEventListener('online', syncOfflineData);
     window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
