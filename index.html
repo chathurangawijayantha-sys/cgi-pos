@@ -28,18 +28,22 @@
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
+        .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
+
         .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
         .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
         .discount-container { display: flex; gap: 5px; }
         .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
+
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
+        /* Mobile View Fix */
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
-            #product-section { width: 100%; border-right: none; }
-            #bill-section { width: 100%; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+            #product-section { width: auto; border-right: none; padding-bottom: 20px; }
+            #bill-section { width: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
         }
 
         @media print {
@@ -47,12 +51,18 @@
             body { width: 58mm; margin: 0; padding: 0; }
             #product-section, .modal-overlay, #unitModal, .no-print, button, input, #offline-status, .loyalty-box { display: none !important; }
             #bill-section { width: 100% !important; display: block !important; padding: 2mm !important; }
+            .bill-header h3 { font-size: 14px !important; margin: 0 !important; }
+            .bill-header p { font-size: 9px !important; margin: 1px 0 !important; }
+            .bill-table { font-size: 10px !important; }
+            .summary-row { font-size: 10px !important; }
+            .sinhala-words { font-size: 9px !important; display: block !important; }
+            .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            
             #dailyClosingPrint { display: none !important; }
             body.printing-closing #dailyClosingPrint { display: block !important; }
             .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
-        @media print { .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; } }
     </style>
 </head>
 <body onbeforeunload="return handleReload()">
@@ -61,7 +71,7 @@
 <div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
-    <div id="pricePreview" style="background:#f9f9f9; padding:8px; border-radius:5px; margin:10px 0; font-size:13px; text-align:center;"></div>
+    <div class="price-info" id="pricePreview"></div>
     <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
     <div id="unitSelectorDiv">
         <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
@@ -118,14 +128,15 @@
                 <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
                 <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
                 <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
+                <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
             </div>
 
             <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
             
-            <div style="display: flex; flex-direction: column; gap: 5px;" class="no-print">
-                <button class="btn-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
-                <button class="btn-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
-                <button class="btn-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
+                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
+                <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
             </div>
         </div>
     </div>
@@ -137,7 +148,25 @@
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
-    // පද්ධතිය ආරම්භය
+    function priceToSinhalaWords(amount) {
+        if (amount == 0) return "රුපියල් බින්දුවයි";
+        const units = ["", "එක", "දෙක", "තුන", "හතර", "පහ", "හය", "හත", "අට", "නව"];
+        const tens = ["", "දහ", "විසි", "තිස්", "හතළිස්", "පනස්", "හැට", "හැත්තෑ", "අසූ", "අනූ"];
+        let num = Math.floor(amount);
+        let words = "රුපියල් ";
+        if (num >= 1000) { words += units[Math.floor(num/1000)] + "දාස් "; num %= 1000; }
+        if (num >= 100) { words += units[Math.floor(num/100)] + "සිය "; num %= 100; }
+        if (num >= 20) { words += tens[Math.floor(num/10)] + " "; num %= 10; }
+        else if (num >= 10) { 
+            const special = ["දහය", "එකොළහ", "දොළහ", "දහතුන", "දහහතර", "පහළොව", "දහසය", "දහහත", "දහඅට", "දහනව"];
+            words += special[num-10]; num = 0;
+        }
+        if (num > 0) words += units[num];
+        return words.trim() + "යි";
+    }
+
+    function handleReload(e) { if (cart.length > 0 && !isCompletingBill) return "බිලක් සකස් වෙමින් පවතී!"; }
+
     async function initializeApp() {
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) cart = JSON.parse(savedCart);
@@ -145,19 +174,55 @@
         render(); updateUI();
         if (navigator.onLine) await syncOfflineData();
         else document.getElementById('offline-status').style.display = 'block';
-        fetchCustomers(); fetchTodaySales(); 
+        fetchCustomers();
+        fetchTodaySales();
+    }
+
+    async function fetchTodaySales() {
+        try {
+            const res = await fetch(`${DB_URL}sales.json`);
+            const data = await res.json();
+            if(data) {
+                const now = new Date();
+                const today = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear();
+                allSalesToday = Object.values(data).filter(s => s.date.includes(today));
+            }
+        } catch(e) {}
+    }
+
+    async function fetchCustomers() {
+        try {
+            const res = await fetch(`${DB_URL}customers.json`);
+            const data = await res.json();
+            if(data) {
+                customers = data;
+                document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join('');
+            }
+        } catch(e) {}
+    }
+
+    async function fetchInventory() {
+        try {
+            const res = await fetch(`${DB_URL}inventory.json`);
+            const data = await res.json();
+            if(data) {
+                inventory = Object.values(data);
+                localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+                render();
+            }
+        } catch (error) {}
     }
 
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
-            try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) { return; }
+            try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) {}
         }
         localStorage.removeItem('offline_stocks');
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         for (let sale of offSales) {
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) { return; }
+            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) {}
         }
         localStorage.removeItem('offline_sales');
         await fetchInventory(); 
@@ -172,18 +237,22 @@
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
                 <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             }
         });
+        html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
@@ -197,13 +266,38 @@
         const uSel = document.getElementById('uSel');
         const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        if(tempDispName.includes("බඩඉරිඟු")) { uSel.value = "main"; uSel.disabled = true; document.getElementById('uDisp').innerText = "ඒකකය: කරල්"; }
-        else if(tempItem.unit === "Kg") { uSel.value = "g"; uSel.disabled = false; document.getElementById('uDisp').innerText = "ඒකකය: Kg"; }
-        else { uSel.value = "main"; uSel.disabled = true; document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit; }
-        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
+        if(tempDispName.includes("බඩඉරිඟු")) {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
+        } else if(tempItem.unit === "Kg") {
+            uSel.value = "g"; uSel.disabled = false;
+            document.getElementById('uDisp').innerText = "ඒකකය: Kg";
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
+        } else {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
+        }
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
+    }
+
+    function openOtherModal() {
+        tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
+        document.getElementById('mTitle').innerText = tempDispName;
+        document.getElementById('unitSelectorDiv').style.display = 'none';
+        const qtyInp = document.getElementById('qty');
+        qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
+        document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
     }
 
     async function updateStock(id, qty, mode) {
+        if(id === 9999) return;
         let itm = inventory.find(i => String(i.id) === String(id));
         if(itm) {
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
@@ -214,29 +308,36 @@
             localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
             try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
             render();
+            if(mode === 'sub') checkLowStockAlert(itm);
         }
     }
 
-    async function removeItem(idx) {
-        if(confirm("මෙම අයිතමය බිලෙන් ඉවත් කරනවාද?")) {
-            let item = cart[idx];
-            await updateStock(item.id, item.d, 'add');
-            cart.splice(idx, 1);
-            localStorage.setItem('active_cart', JSON.stringify(cart));
-            updateUI();
+    function checkLowStockAlert(item) {
+        const stockVal = parseFloat(item.stock);
+        let isLow = false;
+        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
+        else { if (stockVal < 2) isLow = true; }
+        if (isLow) {
+            const msg = `අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal} ${item.unit}`;
+            alert(msg);
         }
     }
 
     async function confirmAdd() {
         let qv = document.getElementById('qty').value;
         if(!qv || parseFloat(qv) <= 0) return;
-        let q = parseFloat(qv), u = document.getElementById('uSel').value;
-        let d = (u==='g') ? q/1000 : q;
-        if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
-        await updateStock(tempItem.id, d, 'sub');
-        let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
-        let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
-        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+        let q = parseFloat(qv);
+        if(tempItem.id === 9999) {
+            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
+        } else {
+            let u = document.getElementById('uSel').value;
+            let d = (u==='g') ? q/1000 : q;
+            if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+            await updateStock(tempItem.id, d, 'sub');
+            let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+        }
         localStorage.setItem('active_cart', JSON.stringify(cart));
         updateUI(); closeModal();
     }
@@ -249,18 +350,86 @@
         calc();
     }
 
+    async function removeItem(idx) {
+        if(confirm("මෙම අයිතමය බිලෙන් ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1);
+            localStorage.setItem('active_cart', JSON.stringify(cart));
+            updateUI();
+        }
+    }
+
     function calc() {
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
         let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
         let finalTotal = itemsTotal - disc;
+        
         document.getElementById('gTot').innerText = finalTotal.toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
-        if(disc > 0) { document.getElementById('discRow').style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); } else document.getElementById('discRow').style.display = 'none';
+        document.getElementById('gTotWords').innerText = priceToSinhalaWords(finalTotal);
+        
+        const dr = document.getElementById('discRow');
+        if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); }
+        else dr.style.display = 'none';
+
+        const custVal = document.getElementById('custSearch').value;
+        const ptsBox = document.getElementById('pointsPrint');
+        if(custVal) {
+            const earned = Math.floor(finalTotal / 100);
+            const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
+            const currentTotalPts = (customerKey && customers[customerKey].points) ? parseInt(customers[customerKey].points) : 0;
+            document.getElementById('earnedPoints').innerText = earned;
+            document.getElementById('totalPoints').innerText = currentTotalPts + earned;
+            ptsBox.style.display = 'block';
+        } else {
+            ptsBox.style.display = 'none';
+        }
+
         let c = parseFloat(document.getElementById('cashInput').value) || 0;
         document.getElementById('cashDisplay').innerText = c.toFixed(2);
         document.getElementById('balDisplay').innerText = (c - finalTotal).toFixed(2);
+    }
+
+    function updateLoyaltyDisplay() { calc(); }
+
+    function resetSystemAfterBill() {
+        cart = [];
+        localStorage.removeItem('active_cart');
+        document.getElementById('cashInput').value = "";
+        document.getElementById('discountPercent').value = "";
+        document.getElementById('discountCash').value = "";
+        document.getElementById('custSearch').value = "";
+        document.getElementById('dailyClosingPrint').style.display = 'none';
+        document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
+        document.body.classList.remove('printing-closing');
+        updateUI();
+        isCompletingBill = false;
+        fetchCustomers(); fetchTodaySales();
+    }
+
+    async function printDailyClosing() {
+        if(!confirm("අද දින විකුණුම් සාරාංශය මුද්‍රණය කරනවාද?")) return;
+        const uniqueBills = [...new Set(allSalesToday.filter(s => s.bNo !== "WASTAGE").map(s => s.bNo))].length;
+        const totalSales = allSalesToday.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+        let totalDisc = 0;
+        try {
+            const loyRes = await fetch(`${DB_URL}loyalty.json`);
+            const loyData = await loyRes.json();
+            if(loyData) {
+                const today = new Date().toLocaleDateString('en-GB');
+                totalDisc = Object.values(loyData).filter(l => l.date === today).reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+            }
+        } catch(e) {}
+        document.getElementById('closeBillCount').innerText = uniqueBills;
+        document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
+        document.getElementById('closeTotalDisc').innerText = "Rs. " + totalDisc.toFixed(2);
+        
+        document.body.classList.add('printing-closing');
+        window.print();
+        setTimeout(resetSystemAfterBill, 1000);
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
@@ -268,36 +437,57 @@
         document.body.classList.remove('printing-closing');
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
+        
         const now = new Date();
-        const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear() + ", " + now.toLocaleTimeString('en-GB');
+        const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + 
+                              ("0" + (now.getMonth() + 1)).slice(-2) + "/" + 
+                              now.getFullYear() + ", " + 
+                              now.toLocaleTimeString('en-GB');
 
-        for (let c of cart) {
-            let entry = { bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {
-                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                offSales.push(entry); localStorage.setItem('offline_sales', JSON.stringify(offSales));
+        let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
+        let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
+        let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
+        let discAmount = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
+        let finalTotal = itemsTotal - discAmount;
+        
+        const custVal = document.getElementById('custSearch').value;
+        const customerKey = Object.keys(customers).find(k => `${customers[k].name} (${customers[k].phone})` === custVal);
+
+        if(custVal && customerKey) {
+            const earned = Math.floor(finalTotal / 100);
+            const newTotalPoints = (parseInt(customers[customerKey].points) || 0) + earned;
+            await fetch(`${DB_URL}customers/${customerKey}/points.json`, { method: 'PUT', body: JSON.stringify(newTotalPoints) });
+            if(discAmount > 0) {
+                let loyEntry = { cust: customers[customerKey].name, phone: customers[customerKey].phone, amount: discAmount, reason: "Bill Discount #" + bNo, date: formattedDate.split(',')[0] };
+                try { await fetch(`${DB_URL}loyalty.json`, { method: 'POST', body: JSON.stringify(loyEntry) }); } catch(e) {}
             }
         }
-        if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); } else resetSystemAfterBill();
+
+        for (let c of cart) {
+            let entry = { 
+                bNo: bNo, 
+                date: formattedDate, 
+                name: c.n, 
+                qty: c.dq, 
+                total: c.t, 
+                profit: (c.up - (c.buy||0)) * (c.d || 1) 
+            };
+            try {
+                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
+            } catch (e) {
+                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                offSales.push(entry);
+                localStorage.setItem('offline_sales', JSON.stringify(offSales));
+            }
+        }
+        
+        if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
+        else resetSystemAfterBill();
     }
 
-    function resetSystemAfterBill() { cart = []; localStorage.removeItem('active_cart'); document.getElementById('cashInput').value = ""; document.getElementById('discountPercent').value = ""; document.getElementById('discountCash').value = ""; document.getElementById('custSearch').value = ""; document.body.classList.remove('printing-closing'); document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000); updateUI(); isCompletingBill = false; }
-    async function fetchInventory() { try { const res = await fetch(`${DB_URL}inventory.json`); const data = await res.json(); if(data) { inventory = Object.values(data); localStorage.setItem('cached_inventory', JSON.stringify(inventory)); render(); } } catch (e) {} }
-    async function fetchCustomers() { try { const res = await fetch(`${DB_URL}customers.json`); const data = await res.json(); if(data) { customers = data; document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join(''); } } catch (e) {} }
-    async function fetchTodaySales() { try { const res = await fetch(`${DB_URL}sales.json`); const data = await res.json(); if(data) { const today = ("0" + new Date().getDate()).slice(-2) + "/" + ("0" + (new Date().getMonth() + 1)).slice(-2) + "/" + new Date().getFullYear(); allSalesToday = Object.values(data).filter(s => s.date.includes(today)); } } catch (e) {} }
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
-    function updateLoyaltyDisplay() { calc(); }
-    function printDailyClosing() { document.body.classList.add('printing-closing'); window.print(); setTimeout(resetSystemAfterBill, 1000); }
-    function handleReload() { if (cart.length > 0 && !isCompletingBill) return "බිලක් සකස් වෙමින් පවතී!"; }
-
-    window.onload = initializeApp;
-    window.addEventListener('online', syncOfflineData);
-    window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('SW OK')).catch(err => console.log('SW Fail')); });
-    }
+    window.onload = initializeApp;
 </script>
 </body>
 </html>
