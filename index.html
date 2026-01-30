@@ -39,7 +39,6 @@
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
-        /* Mobile View Fix */
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
             #product-section { width: auto; border-right: none; padding-bottom: 20px; }
@@ -57,9 +56,7 @@
             .summary-row { font-size: 10px !important; }
             .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            
-            #dailyClosingPrint { display: none !important; }
-            body.printing-closing #dailyClosingPrint { display: block !important; }
+            .closing-receipt-box { display: block !important; }
             .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
@@ -217,14 +214,22 @@
         document.getElementById('offline-status').style.display = 'none';
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
-            try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) {}
+            try { 
+                const res = await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); 
+                if(res.ok) delete offStocks[id];
+            } catch(e) { break; }
         }
-        localStorage.removeItem('offline_stocks');
+        localStorage.setItem('offline_stocks', JSON.stringify(offStocks));
+        
         const offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+        const remainingSales = [];
         for (let sale of offSales) {
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); } catch(e) {}
+            try { 
+                const res = await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(sale) }); 
+                if(!res.ok) remainingSales.push(sale);
+            } catch(e) { remainingSales.push(sale); }
         }
-        localStorage.removeItem('offline_sales');
+        localStorage.setItem('offline_sales', JSON.stringify(remainingSales));
         await fetchInventory(); 
     }
 
@@ -315,7 +320,7 @@
     function checkLowStockAlert(item) {
         const stockVal = parseFloat(item.stock);
         let isLow = false;
-        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
+        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
         else { if (stockVal < 2) isLow = true; }
         if (isLow) {
             const msg = `අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal} ${item.unit}`;
@@ -351,7 +356,7 @@
     }
 
     async function removeItem(idx) {
-        if(confirm("මෙම අයිතමය බිලෙන් ඉවත් කරනවාද?")) {
+        if(confirm("ඉවත් කරනවාද?")) {
             let item = cart[idx];
             if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
             cart.splice(idx, 1);
@@ -366,11 +371,11 @@
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
         let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
         let finalTotal = itemsTotal - disc;
-        
+         
         document.getElementById('gTot').innerText = finalTotal.toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
         document.getElementById('gTotWords').innerText = priceToSinhalaWords(finalTotal);
-        
+         
         const dr = document.getElementById('discRow');
         if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); }
         else dr.style.display = 'none';
@@ -404,7 +409,6 @@
         document.getElementById('custSearch').value = "";
         document.getElementById('dailyClosingPrint').style.display = 'none';
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
-        document.body.classList.remove('printing-closing');
         updateUI();
         isCompletingBill = false;
         fetchCustomers(); fetchTodaySales();
@@ -426,15 +430,13 @@
         document.getElementById('closeBillCount').innerText = uniqueBills;
         document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
         document.getElementById('closeTotalDisc').innerText = "Rs. " + totalDisc.toFixed(2);
-        
-        document.body.classList.add('printing-closing');
+        document.getElementById('dailyClosingPrint').style.display = 'block';
         window.print();
-        setTimeout(resetSystemAfterBill, 1000);
+        setTimeout(() => { document.getElementById('dailyClosingPrint').style.display = 'none'; }, 1000);
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
-        document.body.classList.remove('printing-closing');
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
         
@@ -456,13 +458,14 @@
         if(custVal && customerKey) {
             const earned = Math.floor(finalTotal / 100);
             const newTotalPoints = (parseInt(customers[customerKey].points) || 0) + earned;
-            await fetch(`${DB_URL}customers/${customerKey}/points.json`, { method: 'PUT', body: JSON.stringify(newTotalPoints) });
+            try { await fetch(`${DB_URL}customers/${customerKey}/points.json`, { method: 'PUT', body: JSON.stringify(newTotalPoints) }); } catch(e) {}
             if(discAmount > 0) {
                 let loyEntry = { cust: customers[customerKey].name, phone: customers[customerKey].phone, amount: discAmount, reason: "Bill Discount #" + bNo, date: formattedDate.split(',')[0] };
                 try { await fetch(`${DB_URL}loyalty.json`, { method: 'POST', body: JSON.stringify(loyEntry) }); } catch(e) {}
             }
         }
 
+        const offlineSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
         for (let c of cart) {
             let entry = { 
                 bNo: bNo, 
@@ -472,14 +475,16 @@
                 total: c.t, 
                 profit: (c.up - (c.buy||0)) * (c.d || 1) 
             };
+            offlineSales.push(entry);
             try {
-                await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
-            } catch (e) {
-                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-                offSales.push(entry);
-                localStorage.setItem('offline_sales', JSON.stringify(offSales));
-            }
+                const res = await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
+                if(res.ok) {
+                    const idx = offlineSales.indexOf(entry);
+                    if (idx > -1) offlineSales.splice(idx, 1);
+                }
+            } catch (e) {}
         }
+        localStorage.setItem('offline_sales', JSON.stringify(offlineSales));
         
         if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
         else resetSystemAfterBill();
@@ -488,6 +493,7 @@
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     window.onload = initializeApp;
+    window.addEventListener('online', syncOfflineData);
 </script>
 </body>
 </html>
