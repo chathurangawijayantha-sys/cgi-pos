@@ -180,11 +180,9 @@
             const res = await fetch(`${DB_URL}sales.json`);
             const data = await res.json();
             if(data) {
-                const today = new Date().toLocaleDateString('en-GB');
-                allSalesToday = Object.values(data).filter(s => {
-                    const sDate = s.date.split(',')[0].trim();
-                    return sDate === today;
-                });
+                const now = new Date();
+                const today = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear();
+                allSalesToday = Object.values(data).filter(s => s.date.includes(today));
             }
         } catch(e) {}
     }
@@ -434,11 +432,11 @@
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
         
-        // දින ආකෘතිය ස්ථාවර කිරීම
+        // පැරණි දිනය පෙන්වන ආකාරයටම ස්ථාවර කිරීම
         const now = new Date();
-        const formattedDate = now.getFullYear() + "/" + 
+        const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + 
                               ("0" + (now.getMonth() + 1)).slice(-2) + "/" + 
-                              ("0" + now.getDate()).slice(-2) + ", " + 
+                              now.getFullYear() + ", " + 
                               now.toLocaleTimeString('en-GB');
 
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
@@ -460,7 +458,6 @@
             }
         }
 
-        // විකුණුම් වාර්තා එකින් එක Firebase වෙත යැවීම (With Await)
         for (let c of cart) {
             let entry = { 
                 bNo: bNo, 
@@ -471,7 +468,7 @@
                 profit: (c.up - (c.buy||0)) * (c.d || 1) 
             };
             try {
-                // සෘජුවම Firebase වෙත යැවීම
+                // ඉතා වැදගත්: fetch එක අවසන් වන තෙක් await කිරීම
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
             } catch (e) {
                 let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
