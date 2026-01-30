@@ -36,6 +36,7 @@
         .discount-container { display: flex; gap: 5px; }
         .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
 
+        /* Daily Closing Section on Receipt */
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
@@ -56,7 +57,11 @@
             .summary-row { font-size: 10px !important; }
             .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            .closing-receipt-box { display: block !important; }
+            
+            /* Hidden by default in general prints */
+            #dailyClosingPrint { display: none !important; }
+            /* Only visible when printing closing report */
+            body.printing-closing #dailyClosingPrint { display: block !important; }
             .no-print-icon { display: none !important; }
         }
         .footer-msg { display: none; }
@@ -172,7 +177,7 @@
         if (navigator.onLine) await syncOfflineData();
         else document.getElementById('offline-status').style.display = 'block';
         fetchCustomers();
-        fetchTodaySales();
+        fetchTodaySales(); 
     }
 
     async function fetchTodaySales() {
@@ -401,6 +406,7 @@
         document.getElementById('custSearch').value = "";
         document.getElementById('dailyClosingPrint').style.display = 'none';
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
+        document.body.classList.remove('printing-closing');
         updateUI();
         isCompletingBill = false;
         fetchCustomers(); fetchTodaySales();
@@ -422,17 +428,18 @@
         document.getElementById('closeBillCount').innerText = uniqueBills;
         document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
         document.getElementById('closeTotalDisc').innerText = "Rs. " + totalDisc.toFixed(2);
-        document.getElementById('dailyClosingPrint').style.display = 'block';
+        
+        document.body.classList.add('printing-closing');
         window.print();
-        setTimeout(() => { document.getElementById('dailyClosingPrint').style.display = 'none'; }, 1000);
+        setTimeout(resetSystemAfterBill, 1000);
     }
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
+        document.body.classList.remove('printing-closing');
         isCompletingBill = true;
         const bNo = document.getElementById('bNoDisplay').innerText;
         
-        // පැරණි දිනය පෙන්වන ආකාරයටම ස්ථාවර කිරීම
         const now = new Date();
         const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + 
                               ("0" + (now.getMonth() + 1)).slice(-2) + "/" + 
@@ -468,7 +475,6 @@
                 profit: (c.up - (c.buy||0)) * (c.d || 1) 
             };
             try {
-                // ඉතා වැදගත්: fetch එක අවසන් වන තෙක් await කිරීම
                 await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
             } catch (e) {
                 let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
