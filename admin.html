@@ -94,7 +94,7 @@
         <div class="add-form no-print">
             <div class="grid-layout">
                 <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
-                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select></div>
+                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
                 <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
                 <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
                 <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
@@ -111,7 +111,7 @@
             <div class="grid-layout">
                 <div><label>භාණ්ඩයේ නම</label><input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)"></div>
                 <div><label>ප්‍රමාණය</label><input type="number" id="wasteQty" placeholder="ප්‍රමාණය"></div>
-                <div><label>ඒකකය</label><select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option></select></div>
+                <div><label>ඒකකය</label><select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
                 <button class="tab-btn" style="background:#ef6c00; color:white; height:40px;" onclick="addWastage()">ඉවත් කරන්න</button>
             </div>
         </div>
@@ -286,7 +286,9 @@ async function fetchData() {
             Object.keys(salesData).forEach(key => {
                 const s = salesData[key];
                 const uniqueId = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
-                if (!uniqueMap.has(uniqueId)) uniqueMap.set(uniqueId, {...s, firebaseKey: key});
+                if (!uniqueMap.has(uniqueId)) {
+                    uniqueMap.set(uniqueId, {...s, firebaseKey: key});
+                }
             });
             salesList = Array.from(uniqueMap.values());
         }
@@ -320,7 +322,6 @@ async function addLoyaltyRecord() {
     const amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
     if(!searchVal || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
     
-    // Find customer to get phone
     const cust = customers.find(c => `${c.name} (${c.phone})` === searchVal || c.name === searchVal);
     const finalName = cust ? cust.name : searchVal;
     const finalPhone = cust ? cust.phone : "N/A";
@@ -342,7 +343,6 @@ function renderLoyalty() {
 
 async function delLoyalty(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
-// Standard Functions (Inventory, Sales, etc.)
 function renderInventory() {
     document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
         let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
