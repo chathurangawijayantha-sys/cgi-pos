@@ -8,20 +8,14 @@
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
-        
-        /* Desktop vs Mobile Sidebar Logic */
         #product-section { width: 60%; padding: 15px; border-right: 1px solid #ddd; background: #fff; overflow-y: auto; }
         #bill-section { width: 40%; background: #fff; padding: 15px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
-
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
         .item-card { background: white; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; border: 1px solid #eee; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .item-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 5px; }
         .item-card h4 { margin: 8px 0 4px 0; font-size: 13px; }
-        
-        /* Out of Stock Logic */
         .out-of-stock { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .out-of-stock-label { position: absolute; top: 40%; left: 50%; transform: translate(-50% , -50%); background: rgba(231, 76, 60, 0.9); color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; z-index: 10; }
-        
         .price-tag { font-size: 12px; font-weight: bold; color: #27ae60; }
         .stock-tag { font-size: 11px; color: #7f8c8d; }
         .bill-header { text-align: center; padding-bottom: 10px; border-bottom: 1px solid #333; }
@@ -32,22 +26,16 @@
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
         .sinhala-words { font-size: 11px; color: #333; font-weight: bold; display: block; text-align: right; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
-        
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
-        
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
-
-        /* Loyalty & Discounts */
         .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
         .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
         .discount-container { display: flex; gap: 5px; }
         .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
-
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
-        /* Mobile View Fix: පපැත්තට තිබුණු එක යටට ගෙන ඒම */
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
             #product-section { width: 100%; border-right: none; }
@@ -134,10 +122,10 @@
 
             <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
             
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
-                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
-                <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
+            <div style="display: flex; flex-direction: column; gap: 5px;" class="no-print">
+                <button class="btn-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
+                <button class="btn-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
+                <button class="btn-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
             </div>
         </div>
     </div>
@@ -149,7 +137,7 @@
     let tempItem = null; let tempDispName = ""; let tempPrice = 0;
     let isCompletingBill = false;
 
-    // පද්ධතිය ආරම්භ කිරීම
+    // පද්ධතිය ආරම්භය
     async function initializeApp() {
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) cart = JSON.parse(savedCart);
@@ -160,7 +148,6 @@
         fetchCustomers(); fetchTodaySales(); 
     }
 
-    // Offline දත්ත Sync කිරීම
     async function syncOfflineData() {
         document.getElementById('offline-status').style.display = 'none';
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
@@ -176,7 +163,6 @@
         await fetchInventory(); 
     }
 
-    // බඩඉරිඟු සහිතව Render කිරීම
     function render() {
         const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
         let html = "";
@@ -202,7 +188,6 @@
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
     }
 
-    // Modal විවෘත කිරීම
     function openM(id, dispName, customPrice) {
         tempItem = inventory.find(x => String(x.id) === String(id));
         if(!tempItem) return;
@@ -212,21 +197,12 @@
         const uSel = document.getElementById('uSel');
         const qtyInp = document.getElementById('qty');
         document.getElementById('unitSelectorDiv').style.display = 'block';
-        if(tempDispName.includes("බඩඉරිඟු")) {
-            uSel.value = "main"; uSel.disabled = true;
-            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
-        } else if(tempItem.unit === "Kg") {
-            uSel.value = "g"; uSel.disabled = false;
-            document.getElementById('uDisp').innerText = "ඒකකය: Kg";
-        } else {
-            uSel.value = "main"; uSel.disabled = true;
-            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
-        }
-        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
+        if(tempDispName.includes("බඩඉරිඟු")) { uSel.value = "main"; uSel.disabled = true; document.getElementById('uDisp').innerText = "ඒකකය: කරල්"; }
+        else if(tempItem.unit === "Kg") { uSel.value = "g"; uSel.disabled = false; document.getElementById('uDisp').innerText = "ඒකකය: Kg"; }
+        else { uSel.value = "main"; uSel.disabled = true; document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit; }
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
     }
 
-    // තොගය යාවත්කාලීන කිරීම (Offline & Online)
     async function updateStock(id, qty, mode) {
         let itm = inventory.find(i => String(i.id) === String(id));
         if(itm) {
@@ -241,29 +217,38 @@
         }
     }
 
-    // බිල අවසන් කිරීම
-    async function finalizeBillAndPrint(shouldPrint) {
-        if(cart.length === 0) return;
-        document.body.classList.remove('printing-closing');
-        isCompletingBill = true;
-        const bNo = document.getElementById('bNoDisplay').innerText;
-        const now = new Date();
-        const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear() + ", " + now.toLocaleTimeString('en-GB');
-
-        let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
-        for (let c of cart) {
-            let entry = { bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
-            offSales.push(entry);
-            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {}
+    async function removeItem(idx) {
+        if(confirm("මෙම අයිතමය බිලෙන් ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1);
+            localStorage.setItem('active_cart', JSON.stringify(cart));
+            updateUI();
         }
-        localStorage.setItem('offline_sales', JSON.stringify(offSales));
-        
-        if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
-        else resetSystemAfterBill();
     }
 
-    // ඉතිරි සියලුම Helper Functions කලින් තිබූ පරිදිම පවතී...
-    function priceToSinhalaWords(amount) { /* logic */ return "රුපියල් " + amount + "යි"; }
+    async function confirmAdd() {
+        let qv = document.getElementById('qty').value;
+        if(!qv || parseFloat(qv) <= 0) return;
+        let q = parseFloat(qv), u = document.getElementById('uSel').value;
+        let d = (u==='g') ? q/1000 : q;
+        if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+        await updateStock(tempItem.id, d, 'sub');
+        let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
+        let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
+        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+        localStorage.setItem('active_cart', JSON.stringify(cart));
+        updateUI(); closeModal();
+    }
+
+    function updateUI() {
+        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+            <tr onclick="removeItem(${idx})" style="cursor:pointer;">
+                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
+        calc();
+    }
+
     function calc() {
         let itemsTotal = cart.reduce((s, i) => s + i.t, 0);
         let discPct = parseFloat(document.getElementById('discountPercent').value) || 0;
@@ -272,30 +257,34 @@
         let finalTotal = itemsTotal - disc;
         document.getElementById('gTot').innerText = finalTotal.toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
-        const dr = document.getElementById('discRow');
-        if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); } else dr.style.display = 'none';
+        if(disc > 0) { document.getElementById('discRow').style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); } else document.getElementById('discRow').style.display = 'none';
         let c = parseFloat(document.getElementById('cashInput').value) || 0;
         document.getElementById('cashDisplay').innerText = c.toFixed(2);
         document.getElementById('balDisplay').innerText = (c - finalTotal).toFixed(2);
     }
-    async function confirmAdd() {
-        let q = parseFloat(document.getElementById('qty').value);
-        if(!q) return;
-        let u = document.getElementById('uSel').value;
-        let d = (u==='g') ? q/1000 : q;
-        await updateStock(tempItem.id, d, 'sub');
-        cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + (u==='g'?'g':tempItem.unit), t: tempPrice * q, d: d });
-        localStorage.setItem('active_cart', JSON.stringify(cart));
-        updateUI(); closeModal();
+
+    async function finalizeBillAndPrint(shouldPrint) {
+        if(cart.length === 0) return;
+        document.body.classList.remove('printing-closing');
+        isCompletingBill = true;
+        const bNo = document.getElementById('bNoDisplay').innerText;
+        const now = new Date();
+        const formattedDate = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear() + ", " + now.toLocaleTimeString('en-GB');
+
+        for (let c of cart) {
+            let entry = { bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t, profit: (c.up - (c.buy||0)) * (c.d || 1) };
+            try { await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) }); } catch (e) {
+                let offSales = JSON.parse(localStorage.getItem('offline_sales')) || [];
+                offSales.push(entry); localStorage.setItem('offline_sales', JSON.stringify(offSales));
+            }
+        }
+        if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); } else resetSystemAfterBill();
     }
-    function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `<tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
-        calc();
-    }
-    function resetSystemAfterBill() { cart = []; localStorage.removeItem('active_cart'); document.getElementById('cashInput').value = ""; document.getElementById('discountPercent').value = ""; document.getElementById('discountCash').value = ""; document.getElementById('custSearch').value = ""; document.body.classList.remove('printing-closing'); document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000); updateUI(); isCompletingBill = false; fetchCustomers(); fetchTodaySales(); }
+
+    function resetSystemAfterBill() { cart = []; localStorage.removeItem('active_cart'); document.getElementById('cashInput').value = ""; document.getElementById('discountPercent').value = ""; document.getElementById('discountCash').value = ""; document.getElementById('custSearch').value = ""; document.body.classList.remove('printing-closing'); document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000); updateUI(); isCompletingBill = false; }
     async function fetchInventory() { try { const res = await fetch(`${DB_URL}inventory.json`); const data = await res.json(); if(data) { inventory = Object.values(data); localStorage.setItem('cached_inventory', JSON.stringify(inventory)); render(); } } catch (e) {} }
     async function fetchCustomers() { try { const res = await fetch(`${DB_URL}customers.json`); const data = await res.json(); if(data) { customers = data; document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join(''); } } catch (e) {} }
-    async function fetchTodaySales() { /* logic */ }
+    async function fetchTodaySales() { try { const res = await fetch(`${DB_URL}sales.json`); const data = await res.json(); if(data) { const today = ("0" + new Date().getDate()).slice(-2) + "/" + ("0" + (new Date().getMonth() + 1)).slice(-2) + "/" + new Date().getFullYear(); allSalesToday = Object.values(data).filter(s => s.date.includes(today)); } } catch (e) {} }
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
     function updateLoyaltyDisplay() { calc(); }
     function printDailyClosing() { document.body.classList.add('printing-closing'); window.print(); setTimeout(resetSystemAfterBill, 1000); }
@@ -306,15 +295,8 @@
     window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
 
-    // Service Worker Registration for Offline Use
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('sw.js').then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            }, function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
-        });
+        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('SW OK')).catch(err => console.log('SW Fail')); });
     }
 </script>
 </body>
