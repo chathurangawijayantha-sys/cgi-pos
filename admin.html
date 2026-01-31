@@ -52,7 +52,6 @@
         .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         
-        /* Fixed Charts Alignment */
         .charts-flex { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; align-items: stretch; }
         .chart-box { flex: 1; min-width: 320px; background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee; height: 380px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
 
@@ -235,16 +234,21 @@
     <div id="analytics" class="content">
         <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
         <div class="filter-section no-print" style="background: #f3e5f5;">
-            <div class="grid-layout" style="grid-template-columns: 1fr;">
+            <div class="grid-layout" style="grid-template-columns: 1fr 1fr;">
                 <div>
                     <label>කාල පරාසය:</label>
-                    <select id="chartPeriod" onchange="renderAnalytics()" style="width: auto; min-width: 200px;">
-                        <option value="daily">අද දින (Daily)</option>
+                    <select id="chartPeriod" onchange="toggleChartDatePicker()">
+                        <option value="today" selected>අද දින (Daily)</option>
                         <option value="weekly">මෙම සතිය (Weekly)</option>
                         <option value="monthly">මෙම මාසය (Monthly)</option>
                         <option value="yearly">මෙම වසර (Yearly)</option>
-                        <option value="all" selected>සියලුම කාලය (All Time)</option>
+                        <option value="all">සියලුම කාලය (All Time)</option>
+                        <option value="custom">වෙනත් දිනයක් (Custom Date)</option>
                     </select>
+                </div>
+                <div id="analyticsCustomDateDiv" style="display:none;">
+                    <label>දිනය තෝරන්න:</label>
+                    <input type="date" id="analyticsCustomDate" onchange="renderAnalytics()">
                 </div>
             </div>
         </div>
@@ -315,6 +319,12 @@ async function fetchData() {
 
         renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance();
     } catch (e) { console.error("Error fetching data:", e); }
+}
+
+function toggleChartDatePicker() {
+    const period = document.getElementById('chartPeriod').value;
+    document.getElementById('analyticsCustomDateDiv').style.display = (period === 'custom') ? 'block' : 'none';
+    renderAnalytics();
 }
 
 function updateDashboard(rev, prof, currentSales) {
@@ -444,12 +454,25 @@ async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${
 
 function renderAnalytics() {
     const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
-    
+    const customDateInput = document.getElementById('analyticsCustomDate').value;
+    const targetISO = customDateInput ? new Date(customDateInput).toLocaleDateString('en-GB') : "";
+
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
         let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-        let include = (period === 'all') ? true : (period === 'daily' ? sDate.toDateString() === now.toDateString() : true);
+        const sDateISO = sDate.toLocaleDateString('en-GB');
+        
+        let include = false;
+        if(period === 'all') include = true;
+        else if(period === 'today') include = sDateISO === now.toLocaleDateString('en-GB');
+        else if(period === 'custom') include = sDateISO === targetISO;
+        else if(period === 'weekly') {
+            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
+            include = sDate >= lastWeek;
+        } else if(period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        else if(period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
+
         if (include) {
             if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0, unit: "" };
             stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0); stats[s.name].qty += parseFloat(s.qty) || 0;
@@ -459,9 +482,20 @@ function renderAnalytics() {
 
     expenses.forEach(e => {
         const eDate = new Date(e.date);
+        const eDateISO = eDate.toLocaleDateString('en-GB');
         const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
-        let include = (period === 'all') ? true : (period === 'daily' ? eDate.toDateString() === now.toDateString() : true);
+        
+        let include = false;
+        if(period === 'all') include = true;
+        else if(period === 'today') include = eDateISO === now.toLocaleDateString('en-GB');
+        else if(period === 'custom') include = eDateISO === targetISO;
+        else if(period === 'weekly') {
+            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
+            include = eDate >= lastWeek;
+        } else if(period === 'monthly') include = eDate.getMonth() === now.getMonth() && eDate.getFullYear() === now.getFullYear();
+        else if(period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
+
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
 
@@ -478,14 +512,7 @@ function renderAnalytics() {
 
     const lctx = document.getElementById('monthlyExpChart').getContext('2d');
     if(expLineChart) expLineChart.destroy();
-    expLineChart = new Chart(lctx, { 
-        type: 'line', 
-        data: { 
-            labels: Object.keys(monthlyExp), 
-            datasets: [{ label: 'මාසික වියදම', data: Object.values(monthlyExp), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.3 }] 
-        }, 
-        options: { responsive: true, maintainAspectRatio: false } 
-    });
+    expLineChart = new Chart(lctx, { type: 'line', data: { labels: Object.keys(monthlyExp), datasets: [{ label: 'මාසික වියදම', data: Object.values(monthlyExp), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
 }
 
 function showTab(id) {
