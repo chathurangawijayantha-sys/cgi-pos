@@ -56,6 +56,9 @@
 
         .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
 
+        /* New Monthly Summary Style */
+        .monthly-summary-box { margin-top: 30px; background: #fff8e1; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107; }
+
         @media print {
             .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section { display: none !important; }
             .content { display: block !important; }
@@ -247,14 +250,23 @@
         </div>
         <div class="charts-flex">
             <div class="chart-box no-print">
-                <h4 style="text-align:center;">ආදායම් විශ්ලේෂණය</h4>
+                <h4 style="text-align:center;">භාණ්ඩ අනුව ආදායම</h4>
                 <canvas id="salesChart"></canvas>
             </div>
             <div class="chart-box no-print">
-                <h4 style="text-align:center;">වියදම් බෙදී යාම</h4>
-                <canvas id="expensePieChart"></canvas>
+                <h4 style="text-align:center;">මාසික වියදම් සාරාංශය</h4>
+                <canvas id="monthlyExpChart"></canvas>
             </div>
         </div>
+
+        <div class="monthly-summary-box">
+            <h3 style="margin-top:0; color:#ff8f00;">මාසික වියදම් සාරාංශය</h3>
+            <table id="monthlyExpTable">
+                <thead><tr><th>මාසය</th><th>මුළු වියදම (Rs.)</th></tr></thead>
+                <tbody id="monthlyExpBody"></tbody>
+            </table>
+        </div>
+
         <h3 style="margin-top:30px;">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
         <table>
             <thead><tr><th>භාණ්ඩයේ නම</th><th>විකුණුම් වාර</th><th>මුළු විකුණූ ප්‍රමාණය</th><th>මුළු ආදායම (Rs.)</th></tr></thead>
@@ -266,7 +278,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], myChart = null, myPieChart = null;
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], myChart = null, myPieChart = null, expLineChart = null;
     let addedToday = [];
 
 async function fetchData() {
@@ -442,7 +454,9 @@ function renderExpenses() {
 async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
 
 function renderAnalytics() {
-    const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, now = new Date();
+    const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
+    
+    // Product Sales Analytics
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -454,13 +468,39 @@ function renderAnalytics() {
             if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
         }
     });
+
+    // Monthly Expense Logic
     expenses.forEach(e => {
-        let eDate = new Date(e.date); let include = (period === 'all') ? true : (period === 'daily' ? eDate.toDateString() === now.toDateString() : true);
+        const eDate = new Date(e.date);
+        const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
+        
+        let include = (period === 'all') ? true : (period === 'daily' ? eDate.toDateString() === now.toDateString() : true);
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
+
+    // Render Summary Table
     document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
-    const ctx = document.getElementById('salesChart').getContext('2d'); if(myChart) myChart.destroy(); myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#8e44ad' }] }, options: { responsive: true, maintainAspectRatio: false } });
-    const pctx = document.getElementById('expensePieChart').getContext('2d'); if(myPieChart) myPieChart.destroy(); myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+    
+    // Render Monthly Expense Table
+    document.getElementById('monthlyExpBody').innerHTML = Object.keys(monthlyExp).map(m => `<tr><td><strong>${m}</strong></td><td>Rs. ${monthlyExp[m].toFixed(2)}</td></tr>`).join('');
+
+    // Sales Chart
+    const ctx = document.getElementById('salesChart').getContext('2d'); 
+    if(myChart) myChart.destroy(); 
+    myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#27ae60' }] }, options: { responsive: true, maintainAspectRatio: false } });
+    
+    // Monthly Expense Line Chart
+    const mctx = document.getElementById('monthlyExpChart').getContext('2d');
+    if(expLineChart) expLineChart.destroy();
+    expLineChart = new Chart(mctx, { 
+        type: 'line', 
+        data: { 
+            labels: Object.keys(monthlyExp), 
+            datasets: [{ label: 'මාසික වියදම', data: Object.values(monthlyExp), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.3 }] 
+        }, 
+        options: { responsive: true, maintainAspectRatio: false } 
+    });
 }
 
 function showTab(id) {
