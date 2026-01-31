@@ -55,8 +55,6 @@
         .chart-box { flex: 1; min-width: 300px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; height: 400px; position: relative; }
 
         .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
-
-        /* New Monthly Summary Style */
         .monthly-summary-box { margin-top: 30px; background: #fff8e1; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107; }
 
         @media print {
@@ -254,7 +252,11 @@
                 <canvas id="salesChart"></canvas>
             </div>
             <div class="chart-box no-print">
-                <h4 style="text-align:center;">මාසික වියදම් සාරාංශය</h4>
+                <h4 style="text-align:center;">වියදම් බෙදී යාම (Pie)</h4>
+                <canvas id="expensePieChart"></canvas>
+            </div>
+            <div class="chart-box no-print">
+                <h4 style="text-align:center;">මාසික වියදම් රටාව (Line)</h4>
                 <canvas id="monthlyExpChart"></canvas>
             </div>
         </div>
@@ -328,29 +330,21 @@ function updateDashboard(rev, prof, currentSales) {
         : "වාර්තා නැත.";
 }
 
-// Loyalty Functions
 async function addLoyaltyRecord() {
     const searchVal = document.getElementById('loyaltyCustSearch').value;
     const amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
     if(!searchVal || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
-    
     const cust = customers.find(c => `${c.name} (${c.phone})` === searchVal || c.name === searchVal);
     const finalName = cust ? cust.name : searchVal;
     const finalPhone = cust ? cust.phone : "N/A";
-
-    await fetch(`${BASE_URL}loyalty.json`, { 
-        method: 'POST', 
-        body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) 
-    });
+    await fetch(`${BASE_URL}loyalty.json`, { method: 'POST', body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
     document.getElementById('loyaltyCustSearch').value = ""; document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
     fetchData();
 }
 
 function renderLoyalty() {
     document.getElementById('loyaltyCustList').innerHTML = customers.map(c => `<option value="${c.name} (${c.phone})">`).join('');
-    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `
-        <tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${l.phone || 'N/A'}</td><td>${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td>
-        <td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `<tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${l.phone || 'N/A'}</td><td>${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td><td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
 }
 
 async function delLoyalty(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
@@ -360,13 +354,7 @@ function renderInventory() {
         let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
         let isOutOfStock = parseFloat(item.stock) <= 0;
         let rowStyle = isOutOfStock ? 'background-color: #ffcccc; color: #b71c1c;' : '';
-        return `<tr style="${rowStyle}">
-            <td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td>
-            <td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td>
-            <td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td>
-            <td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td>
-            <td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button>
-            <button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
+        return `<tr style="${rowStyle}"><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td><td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td><td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td><td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td><td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
     }).join('');
     document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
 }
@@ -390,9 +378,7 @@ function renderSales() {
         totalRev += revVal; totalProf += profVal;
         let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
         let rawQty = parseFloat(s.qty), unitPart = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
-        return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td>
-            <td>${revVal.toFixed(2)}</td><td>${profVal.toFixed(2)}</td>
-            <td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
+        return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td>${revVal.toFixed(2)}</td><td>${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
 }
@@ -448,7 +434,7 @@ async function addExpense() {
 }
 
 function renderExpenses() {
-    document.getElementById('expenseBody').innerHTML = expenses.map(e => `<tr><td>${e.date}</td><td>${e.note}</td><td>${e.amount.toFixed(2)}</td><td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+    document.getElementById('expenseBody').innerHTML = expenses.map(e => `<tr><td>${e.date}</td><td>${e.note}</td><td>${parseFloat(e.amount).toFixed(2)}</td><td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
 async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
@@ -456,7 +442,7 @@ async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${
 function renderAnalytics() {
     const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
     
-    // Product Sales Analytics
+    // 1. Sales Data Processing
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
         const sDateParts = s.date.split(',')[0].trim().split('/');
@@ -469,31 +455,36 @@ function renderAnalytics() {
         }
     });
 
-    // Monthly Expense Logic
+    // 2. Expense Data Processing (Pie & Monthly Line)
     expenses.forEach(e => {
+        // Line Chart logic
         const eDate = new Date(e.date);
         const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
         
+        // Pie Chart logic (Current selected period)
         let include = (period === 'all') ? true : (period === 'daily' ? eDate.toDateString() === now.toDateString() : true);
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
 
-    // Render Summary Table
+    // Render Tables
     document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td>${stats[n].count}</td><td>${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td>${stats[n].rev.toFixed(2)}</td></tr>`).join('');
-    
-    // Render Monthly Expense Table
     document.getElementById('monthlyExpBody').innerHTML = Object.keys(monthlyExp).map(m => `<tr><td><strong>${m}</strong></td><td>Rs. ${monthlyExp[m].toFixed(2)}</td></tr>`).join('');
 
-    // Sales Chart
+    // --- CHART 1: Sales Bar Chart ---
     const ctx = document.getElementById('salesChart').getContext('2d'); 
     if(myChart) myChart.destroy(); 
     myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#27ae60' }] }, options: { responsive: true, maintainAspectRatio: false } });
     
-    // Monthly Expense Line Chart
-    const mctx = document.getElementById('monthlyExpChart').getContext('2d');
+    // --- CHART 2: Expense Pie Chart (Kalin thibuna eka) ---
+    const pctx = document.getElementById('expensePieChart').getContext('2d'); 
+    if(myPieChart) myPieChart.destroy(); 
+    myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#8e44ad', '#e67e22'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+    // --- CHART 3: Monthly Expense Line Chart (Aluth eka) ---
+    const lctx = document.getElementById('monthlyExpChart').getContext('2d');
     if(expLineChart) expLineChart.destroy();
-    expLineChart = new Chart(mctx, { 
+    expLineChart = new Chart(lctx, { 
         type: 'line', 
         data: { 
             labels: Object.keys(monthlyExp), 
