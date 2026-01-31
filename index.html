@@ -291,7 +291,7 @@
 
     function openOtherModal() {
         tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
-        tempDispName = "වෙනත් ගාස්තු"; tempPrice = 0;
+        tempDispName = "වෙනත්"; tempPrice = 0;
         document.getElementById('mTitle').innerText = tempDispName;
         document.getElementById('unitSelectorDiv').style.display = 'none';
         const qtyInp = document.getElementById('qty');
@@ -320,7 +320,7 @@
     function checkLowStockAlert(item) {
         const stockVal = parseFloat(item.stock);
         let isLow = false;
-        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
+        if (item.unit === "Kg") { if (stockVal < 0.5) isLow = true; } 
         else { if (stockVal < 2) isLow = true; }
         if (isLow) {
             const msg = `අවධානය! ${item.name} තොගය අවසන් වීමට ආසන්නයි. පවතින තොගය: ${stockVal} ${item.unit}`;
@@ -333,7 +333,7 @@
         if(!qv || parseFloat(qv) <= 0) return;
         let q = parseFloat(qv);
         if(tempItem.id === 9999) {
-            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "1 සේවාව", t: q, d: 0 });
+            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "", t: q, d: 0 });
         } else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
@@ -371,11 +371,11 @@
         let discCash = parseFloat(document.getElementById('discountCash').value) || 0;
         let disc = (discPct > 0) ? (itemsTotal * discPct / 100) : discCash;
         let finalTotal = itemsTotal - disc;
-         
+        
         document.getElementById('gTot').innerText = finalTotal.toFixed(2);
         document.getElementById('itemCount').innerText = cart.length;
         document.getElementById('gTotWords').innerText = priceToSinhalaWords(finalTotal);
-         
+        
         const dr = document.getElementById('discRow');
         if(disc > 0) { dr.style.display = 'flex'; document.getElementById('discDisplay').innerText = disc.toFixed(2); }
         else dr.style.display = 'none';
