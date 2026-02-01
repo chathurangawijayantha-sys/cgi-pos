@@ -39,7 +39,6 @@
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
-        /* Login Screen UI */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
@@ -64,9 +63,10 @@
             .closing-receipt-box { display: none !important; } 
             .no-print-icon { display: none !important; }
         }
+        .footer-msg { display: none; }
     </style>
 </head>
-<body onbeforeunload="return handleReload()">
+<body>
 
 <div id="login-screen">
     <div class="login-box">
@@ -170,7 +170,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
+    const auth = getAuth(app);
 
     window.handleLogin = function() {
         const email = document.getElementById('loginEmail').value;
@@ -187,7 +187,7 @@
         if (user) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
-            if(inventory.length === 0) initializeAppMain();
+            initializeAppMain();
         } else {
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('mainUI').style.display = 'none';
@@ -252,27 +252,26 @@
         } catch(e) {}
     }
 
-async function fetchInventory() {
-    try {
-        const res = await fetch(`${DB_URL}inventory.json`); 
-        const data = await res.json();
-        if(data) {
-            // දත්තගබඩාවේ ඇති අංකිත nodes (17689...) නිවැරදිව හඳුනා ගැනීමට
-            inventory = Object.keys(data).map(key => ({
-                id: key, 
-                name: data[key].name,
-                sell: data[key].sell,
-                stock: data[key].stock,
-                unit: data[key].unit,
-                img: data[key].img
-            }));
-            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            render();
+    async function fetchInventory() {
+        try {
+            const res = await fetch(`${DB_URL}inventory.json`); 
+            const data = await res.json();
+            if(data) {
+                inventory = Object.keys(data).map(key => ({
+                    id: key, 
+                    name: data[key].name || "නමක් නැත",
+                    sell: data[key].sell || 0,
+                    stock: data[key].stock || 0,
+                    unit: data[key].unit || "",
+                    img: data[key].img || "none.jpg"
+                }));
+                localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+                render();
+            }
+        } catch (e) {
+            console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
         }
-    } catch (e) {
-        console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
     }
-}
 
     async function syncOfflineData() {
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
@@ -288,7 +287,6 @@ async function fetchInventory() {
         let html = "";
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            // භාණ්ඩයේ නම සහ මිල නිවැරදිව පරීක්ෂා කිරීම
             const name = p.name;
             const sell = p.sell;
             const stock = p.stock;
@@ -465,4 +463,3 @@ async function fetchInventory() {
 </script>
 </body>
 </html>
-
