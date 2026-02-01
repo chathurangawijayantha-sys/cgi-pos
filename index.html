@@ -73,7 +73,7 @@
     <div class="login-box">
         <h3 style="color: #2e7d32; margin-top: 0;">ගැමි එළවළු POS - Login</h3>
         <input type="email" id="loginEmail" placeholder="Email ලිපිනය">
-        <input type="password" id="loginPass" placeholder="මුරපදය (Password)">
+        <input type="password" id="loginPass" placeholder="Password">
         <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">ඇතුළු වන්න</button>
         <p id="loginError" style="color: red; font-size: 12px; margin-top: 10px; display: none;">වැරදි තොරතුරක්, නැවත උත්සාහ කරන්න!</p>
     </div>
@@ -143,7 +143,7 @@
                 <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
             </div>
 
-            <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
+            <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
             
             <div style="display: flex; flex-direction: column; gap: 5px;">
                 <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
@@ -162,7 +162,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyB-KExZu3r71Z8KZsMzddNJ-i20Y6bptXY",
       authDomain: "cgi-pos.firebaseapp.com",
-      databaseURL: "https://cgi-pos-default-rtdb.firebaseio.com",
+      databaseURL: "https://cgi-pos-default-rtdb.firebaseio.com/",
       projectId: "cgi-pos",
       storageBucket: "cgi-pos.firebasestorage.app",
       messagingSenderId: "425200021707",
@@ -237,7 +237,7 @@
             if(data) {
                 const now = new Date();
                 const today = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear();
-                allSalesToday = Object.values(data).filter(s => s.date.includes(today));
+                allSalesToday = Object.values(data).filter(s => s.date && s.date.includes(today));
             }
         } catch(e) {}
     }
@@ -258,6 +258,7 @@
             const res = await fetch(`${DB_URL}inventory.json`); 
             const data = await res.json();
             if(data) {
+                // ඔබගේ දත්තගබඩාවේ දත්ත ඇති ආකාරයට Array එකක් සාදා ගැනීම මෙහිදී සිදු වේ
                 inventory = Object.keys(data).map(key => ({
                     id: key, 
                     ...data[key]
@@ -287,18 +288,18 @@
             if(p.name === "බඩඉරිඟු") {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
                     <img src="images/amu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    <h4>අමු බඩඉරිඟු</h4><div class="price-tag">Rs. 100</div><div class="stock-tag">තොග: ${p.stock || 0}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>
                 <div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'තම්බපු බඩඉරිඟු', 120)">
                     <img src="images/thambapu-corn.jpg" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock}</div>
+                    <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${p.stock || 0}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             } else {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
-                    <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div><div class="stock-tag">තොග: ${p.stock} ${p.unit}</div>
+                    <h4>${p.name || 'නමක් නැත'}</h4><div class="price-tag">Rs. ${p.sell || 0}</div><div class="stock-tag">තොග: ${p.stock || 0} ${p.unit || ''}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
             }
@@ -327,7 +328,7 @@
             document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
         } else {
             uSel.value = "main"; uSel.disabled = true;
-            document.getElementById('uDisp').innerText = "ඒකකය: " + tempItem.unit;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + (tempItem.unit || 'ඒකක');
             document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
         }
         qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
@@ -371,8 +372,8 @@
             if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
             await updateStock(tempItem.id, d, 'sub');
             let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
-            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : tempItem.unit);
-            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy, dq: q + " " + ul, t: t, d: d });
+            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : (tempItem.unit || ''));
+            cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy || 0, dq: q + " " + ul, t: t, d: d });
         }
         localStorage.setItem('active_cart', JSON.stringify(cart));
         updateUI(); closeModal();
@@ -428,7 +429,7 @@
     }
 
     async function printDailyClosing() {
-        if(!confirm("අද දින විකුණුම් සාරාංශය මුද්‍රණය කරනවාද?")) return;
+        if(!confirm("Print Daily Closing?")) return;
         const totalSales = allSalesToday.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
         document.getElementById('closeBillCount').innerText = [...new Set(allSalesToday.map(s => s.bNo))].length;
         document.getElementById('closeTotalSales').innerText = "Rs. " + totalSales.toFixed(2);
