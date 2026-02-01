@@ -261,7 +261,9 @@
                 localStorage.setItem('cached_inventory', JSON.stringify(inventory));
                 render();
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
+        }
     }
 
     async function syncOfflineData() {
@@ -449,3 +451,4 @@
 </script>
 </body>
 </html>
+
