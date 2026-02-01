@@ -252,12 +252,17 @@
         } catch(e) {}
     }
 
-    async function fetchInventory() {
+async function fetchInventory() {
         try {
-            const res = await fetch(`${DB_URL}/inventory.json`);
+            // මෙහිදී URL එක නිවැරදිව සකසා ඇත
+            const res = await fetch(`${DB_URL}inventory.json`); 
             const data = await res.json();
             if(data) {
-                inventory = Object.values(data);
+                // Firebase දත්ත Object එකක් ලෙස ලැබෙන නිසා එය Array එකකට හරවා inventory විචල්‍යයට ලබා දීම
+                inventory = Object.keys(data).map(key => ({
+                    id: key, // Firebase key එක id ලෙස භාවිතා කරයි
+                    ...data[key]
+                }));
                 localStorage.setItem('cached_inventory', JSON.stringify(inventory));
                 render();
             }
@@ -451,4 +456,5 @@
 </script>
 </body>
 </html>
+
 
