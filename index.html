@@ -61,13 +61,9 @@
             .summary-row { font-size: 10px !important; }
             .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
-            
-            /* සාමාන්‍ය බිල්පතේදී සාරාංශය සැඟවීම */
             .closing-receipt-box { display: none !important; } 
-            
             .no-print-icon { display: none !important; }
         }
-        .footer-msg { display: none; }
     </style>
 </head>
 <body onbeforeunload="return handleReload()">
@@ -77,7 +73,7 @@
         <h3 style="color: #2e7d32; margin-top: 0;">ගැමි එළවළු POS - Login</h3>
         <input type="email" id="loginEmail" placeholder="Email ලිපිනය">
         <input type="password" id="loginPass" placeholder="Password">
-        <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">ඇතුළු වන්න</button>
+        <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">ඇතුළු වන්න</button>
         <p id="loginError" style="color: red; font-size: 12px; margin-top: 10px; display: none;">වැරදි තොරතුරක්, නැවත උත්සාහ කරන්න!</p>
     </div>
 </div>
@@ -146,7 +142,7 @@
                 <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
             </div>
 
-            <div class="footer-msg">ස්තුතියි, නැවත එන්න !</div>
+            <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
             
             <div style="display: flex; flex-direction: column; gap: 5px;">
                 <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
@@ -261,14 +257,14 @@
             const res = await fetch(`${DB_URL}inventory.json`); 
             const data = await res.json();
             if(data) {
-                // ඔබගේ දත්තගබඩාවේ දත්ත ඇති ආකාරයට Array එකක් සාදා ගැනීම මෙහිදී සිදු වේ
+                // Database එකේ ඇති අකුරු (Small/Capital) වලට ගැලපෙන ලෙස දත්ත හසුරුවා ඇත
                 inventory = Object.keys(data).map(key => ({
                     id: key, 
-                    name: data[key].name,
-                    sell: data[key].sell,
-                    stock: data[key].stock,
-                    unit: data[key].unit,
-                    img: data[key].img
+                    name: data[key].name || "නමක් නැත",
+                    sell: data[key].sell || 0,
+                    stock: data[key].stock || 0,
+                    unit: data[key].unit || "",
+                    img: data[key].img || "none.jpg"
                 }));
                 localStorage.setItem('cached_inventory', JSON.stringify(inventory));
                 render();
@@ -292,11 +288,11 @@
         let html = "";
         sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            // භාණ්ඩයේ නම සහ මිල නිවැරදිව පවතින බව පරීක්ෂා කිරීම
-            const name = p.name || 'නමක් නැත';
-            const sell = p.sell || 0;
-            const stock = p.stock || 0;
-            const unit = p.unit || '';
+            // භාණ්ඩයේ නම සහ මිල නිවැරදිව පරීක්ෂා කිරීම
+            const name = p.name;
+            const sell = p.sell;
+            const stock = p.stock;
+            const unit = p.unit;
 
             if(name === "බඩඉරිඟු") {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', 'අමු බඩඉරිඟු', 100)">
@@ -311,7 +307,7 @@
                 </div>`;
             } else {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
-                    <img src="images/${p.img || 'none.jpg'}" onerror="this.src='https://via.placeholder.com/100'">
+                    <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100'">
                     <h4>${name}</h4><div class="price-tag">Rs. ${sell}</div><div class="stock-tag">තොග: ${stock} ${unit}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
