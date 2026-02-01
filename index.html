@@ -63,10 +63,9 @@
             .closing-receipt-box { display: none !important; } 
             .no-print-icon { display: none !important; }
         }
-        .footer-msg { display: none; }
     </style>
 </head>
-<body>
+<body onbeforeunload="return handleReload()">
 
 <div id="login-screen">
     <div class="login-box">
@@ -169,6 +168,7 @@
       measurementId: "G-XNP7JR8HFN"
     };
 
+    // Firebase Initialize
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
@@ -223,6 +223,10 @@
     async function initializeAppMain() {
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) cart = JSON.parse(savedCart);
+        // Clear old undefined data if exists
+        const cached = localStorage.getItem('cached_inventory');
+        if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
+        
         inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         render(); updateUI();
         if (navigator.onLine) await syncOfflineData();
@@ -257,6 +261,7 @@
             const res = await fetch(`${DB_URL}inventory.json`); 
             const data = await res.json();
             if(data) {
+                // Firebase nodes (17689...) නිවැරදිව කියවා Array එකකට හරවා ගැනීම
                 inventory = Object.keys(data).map(key => ({
                     id: key, 
                     name: data[key].name || "නමක් නැත",
@@ -269,7 +274,7 @@
                 render();
             }
         } catch (e) {
-            console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
+            console.error("Data fetch error:", e);
         }
     }
 
