@@ -220,18 +220,23 @@
 
     function handleReload() { if (cart.length > 0 && !isCompletingBill) return "බිලක් සකස් වෙමින් පවතී!"; }
 
-    async function initializeAppMain() {
-        const savedCart = localStorage.getItem('active_cart');
-        if (savedCart) cart = JSON.parse(savedCart);
-        // Clear old undefined data if exists
-        const cached = localStorage.getItem('cached_inventory');
-        if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
-        
-        inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
-        render(); updateUI();
-        if (navigator.onLine) await syncOfflineData();
-        fetchCustomers(); fetchTodaySales();
+async function initializeAppMain() {
+    const savedCart = localStorage.getItem('active_cart');
+    if (savedCart) cart = JSON.parse(savedCart);
+    const cached = localStorage.getItem('cached_inventory');
+    if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
+    
+    inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
+    render(); updateUI();
+    
+    // මෙම පේළිය අනිවාර්යයෙන්ම එක් කරන්න
+    if (navigator.onLine) {
+        await syncOfflineData();
+        await fetchInventory(); // දත්තගබඩාවෙන් අලුත් දත්ත ලබාගැනීම මෙහිදී සිදුවේ
     }
+    
+    fetchCustomers(); fetchTodaySales();
+}
 
     async function fetchTodaySales() {
         try {
@@ -475,5 +480,6 @@ async function fetchInventory() {
 </script>
 </body>
 </html>
+
 
 
