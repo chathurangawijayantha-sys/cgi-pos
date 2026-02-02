@@ -258,10 +258,17 @@
 
 async function fetchInventory() {
     try {
-        const res = await fetch(`${DB_URL}/inventory.json`); 
+        // Firebase හරහා ලොග් වී සිටින පරිශීලකයාගේ idToken එක ලබා ගැනීම
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        const token = await user.getIdToken();
+        
+        // Token එක සහිතව දත්ත කියවීම (මෙය ඉතා ආරක්ෂිත ක්‍රමයකි)
+        const res = await fetch(`${DB_URL}/inventory.json?auth=${token}`); 
         const data = await res.json();
+        
         if(data) {
-            // දත්තගබඩාවේ ඇති අංකිත කොටස් (17689...) නිවැරදිව හඳුනා ගැනීමට
             inventory = Object.keys(data).map(key => ({
                 id: key, 
                 name: data[key].name || "නමක් නැත",
@@ -468,4 +475,5 @@ async function fetchInventory() {
 </script>
 </body>
 </html>
+
 
