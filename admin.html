@@ -365,7 +365,11 @@ async function fetchData() {
             fetch(`${BASE_URL}loyalty.json?auth=${token}`),
             fetch(`${BASE_URL}stock_history.json?auth=${token}`)
         ]);
-        const invData = await invRes.json(); inventory = invData ? Object.values(invData) : [];
+        
+        // Corrected Inventory Retrieval to keep Keys
+        const invData = await invRes.json();
+        inventory = invData ? Object.keys(invData).map(k => ({...invData[k], id: k})) : [];
+        
         const salesData = await salesRes.json();
         salesList = [];
         if(salesData) {
