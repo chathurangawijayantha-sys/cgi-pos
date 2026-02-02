@@ -97,6 +97,7 @@
     
     <div class="tabs no-print">
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
+        <button class="tab-btn" onclick="showTab('stockHist')">තොග ඉතිහාසය 📜</button>
         <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
         <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
         <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
@@ -134,6 +135,14 @@
         <table id="inventoryTable">
             <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
+        </table>
+    </div>
+
+    <div id="stockHist" class="content">
+        <h3 style="color:var(--primary);">තොග අලුත් කිරීමේ ඉතිහාසය 📜</h3>
+        <table>
+            <thead><tr><th>දිනය & වේලාව</th><th>භාණ්ඩය</th><th>එකතුකල ප්‍රමාණය</th><th>ඒකක මිල (Buy)</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="stockHistBody"></tbody>
         </table>
     </div>
 
@@ -339,7 +348,7 @@
 
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], myChart = null, myPieChart = null, expLineChart = null;
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], stockHistory = [], myChart = null, myPieChart = null, expLineChart = null;
     let addedToday = [];
 
 async function fetchData() {
@@ -348,12 +357,13 @@ async function fetchData() {
     const token = await user.getIdToken();
 
     try {
-        const [invRes, salesRes, expRes, custRes, loyRes] = await Promise.all([
+        const [invRes, salesRes, expRes, custRes, loyRes, histRes] = await Promise.all([
             fetch(`${BASE_URL}inventory.json?auth=${token}`),
             fetch(`${BASE_URL}sales.json?auth=${token}`),
             fetch(`${BASE_URL}expenses.json?auth=${token}`),
             fetch(`${BASE_URL}customers.json?auth=${token}`),
-            fetch(`${BASE_URL}loyalty.json?auth=${token}`)
+            fetch(`${BASE_URL}loyalty.json?auth=${token}`),
+            fetch(`${BASE_URL}stock_history.json?auth=${token}`)
         ]);
         const invData = await invRes.json(); inventory = invData ? Object.values(invData) : [];
         const salesData = await salesRes.json();
@@ -372,9 +382,22 @@ async function fetchData() {
         const expData = await expRes.json(); expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
         const custData = await custRes.json(); customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
         const loyData = await loyRes.json(); loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
+        const histData = await histRes.json(); stockHistory = histData ? Object.keys(histData).map(k => ({...histData[k], id: k})) : [];
 
-        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance();
+        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance(); renderStockHistory();
     } catch (e) { console.error("Error fetching data:", e); }
+}
+
+function renderStockHistory() {
+    document.getElementById('stockHistBody').innerHTML = stockHistory.map(h => `<tr><td>${h.dateTime}</td><td><strong>${h.name}</strong></td><td>${h.addedQty} ${h.unit}</td><td>Rs. ${parseFloat(h.buyPrice).toFixed(2)}</td><td class="no-print"><button onclick="delStockHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+}
+
+async function delStockHist(id) {
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මෙම සටහන ඉවත් කරනවාද? (තොගය වෙනස් නොවේ)")) {
+        await fetch(`${BASE_URL}stock_history/${id}.json?auth=${token}`, { method: 'DELETE' });
+        fetchData();
+    }
 }
 
 function toggleChartDatePicker() {
@@ -494,9 +517,24 @@ async function handleUpdate() {
     const token = await window.auth.currentUser.getIdToken();
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
-    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()), item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
+    
+    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+    let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
+    
+    // Update Inventory
     await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
-    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); fetchData(); clearForm();
+    
+    // Add to Stock History if stock was added
+    if(st > 0) {
+        let now = new Date();
+        let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
+        let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: formattedDT };
+        await fetch(`${BASE_URL}stock_history.json?auth=${token}`, { method: 'POST', body: JSON.stringify(histEntry) });
+    }
+
+    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); 
+    fetchData(); 
+    clearForm();
 }
 
 function downloadTodayStockExcel() {
@@ -587,8 +625,11 @@ function renderAnalytics() {
 function showTab(id) {
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active'); if (event && event.currentTarget) event.currentTarget.classList.add('active');
-    if(id === 'analytics') renderAnalytics(); if(id === 'cashier') calculateCashBalance();
+    document.getElementById(id).classList.add('active'); 
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if(id === 'analytics') renderAnalytics(); 
+    if(id === 'cashier') calculateCashBalance();
+    if(id === 'stockHist') renderStockHistory();
 }
 
 function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
