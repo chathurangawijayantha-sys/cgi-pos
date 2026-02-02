@@ -58,13 +58,27 @@
         .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
         .monthly-summary-box { margin: 30px 0; background: #fff8e1; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
+        .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+
         @media print {
-            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section { display: none !important; }
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen { display: none !important; }
             .content { display: block !important; }
         }
     </style>
 </head>
 <body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <h3 style="color: #2e7d32; margin-top: 0;">CGI Pro Admin - Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email ලිපිනය">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">ඇතුළු වන්න</button>
+        <p id="loginError" style="color: red; font-size: 12px; margin-top: 10px; display: none;">වැරදි තොරතුරක්!</p>
+    </div>
+</div>
 
 <div class="container">
     <h2 class="no-print" style="margin-bottom: 25px; color: var(--dark);">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
@@ -285,19 +299,61 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-KExZu3r71Z8KZsMzddNJ-i20Y6bptXY",
+      authDomain: "cgi-pos.firebaseapp.com",
+      databaseURL: "https://cgi-pos-default-rtdb.firebaseio.com/",
+      projectId: "cgi-pos",
+      storageBucket: "cgi-pos.firebasestorage.app",
+      messagingSenderId: "425200021707",
+      appId: "1:425200021707:web:c72bbeb221d8afa3deab4e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.handleLogin = function() {
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        if(!email || !pass) return;
+        signInWithEmailAndPassword(auth, email, pass).catch(() => {
+            document.getElementById('loginError').style.display = 'block';
+        });
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            fetchData();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    });
+
+    window.auth = auth; // Global access for fetchData
+</script>
+
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
     let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], myChart = null, myPieChart = null, expLineChart = null;
     let addedToday = [];
 
 async function fetchData() {
+    const user = window.auth ? window.auth.currentUser : null;
+    if (!user) return;
+    const token = await user.getIdToken();
+
     try {
         const [invRes, salesRes, expRes, custRes, loyRes] = await Promise.all([
-            fetch(`${BASE_URL}inventory.json`),
-            fetch(`${BASE_URL}sales.json`),
-            fetch(`${BASE_URL}expenses.json`),
-            fetch(`${BASE_URL}customers.json`),
-            fetch(`${BASE_URL}loyalty.json`)
+            fetch(`${BASE_URL}inventory.json?auth=${token}`),
+            fetch(`${BASE_URL}sales.json?auth=${token}`),
+            fetch(`${BASE_URL}expenses.json?auth=${token}`),
+            fetch(`${BASE_URL}customers.json?auth=${token}`),
+            fetch(`${BASE_URL}loyalty.json?auth=${token}`)
         ]);
         const invData = await invRes.json(); inventory = invData ? Object.values(invData) : [];
         const salesData = await salesRes.json();
@@ -344,13 +400,14 @@ function updateDashboard(rev, prof, currentSales) {
 }
 
 async function addLoyaltyRecord() {
+    const token = await window.auth.currentUser.getIdToken();
     const searchVal = document.getElementById('loyaltyCustSearch').value;
     const amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
     if(!searchVal || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
     const cust = customers.find(c => `${c.name} (${c.phone})` === searchVal || c.name === searchVal);
     const finalName = cust ? cust.name : searchVal;
     const finalPhone = cust ? cust.phone : "N/A";
-    await fetch(`${BASE_URL}loyalty.json`, { method: 'POST', body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
+    await fetch(`${BASE_URL}loyalty.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
     document.getElementById('loyaltyCustSearch').value = ""; document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
     fetchData();
 }
@@ -360,7 +417,10 @@ function renderLoyalty() {
     document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `<tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${l.phone || 'N/A'}</td><td class="txt-right">${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td><td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
 }
 
-async function delLoyalty(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+async function delLoyalty(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
 
 function renderInventory() {
     document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
@@ -413,9 +473,10 @@ function sendCashierReportToWhatsApp() {
 }
 
 async function addCustomer() {
+    const token = await window.auth.currentUser.getIdToken();
     const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
     if(!name || !phone) return alert("දත්ත ඇතුළත් කරන්න!");
-    await fetch(`${BASE_URL}customers.json`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
+    await fetch(`${BASE_URL}customers.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
     document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custNote').value = "";
     fetchData();
 }
@@ -424,13 +485,17 @@ function renderCustomers() {
     document.getElementById('customerBody').innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td><td class="no-print"><button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button><button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
-async function delCustomer(id) { if(confirm("ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+async function delCustomer(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
 
 async function handleUpdate() {
+    const token = await window.auth.currentUser.getIdToken();
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
     let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()), item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-    await fetch(`${BASE_URL}inventory/${item.id}.json`, { method: 'PUT', body: JSON.stringify(item) });
+    await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
     addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); fetchData(); clearForm();
 }
 
@@ -440,9 +505,10 @@ function downloadTodayStockExcel() {
 }
 
 async function addExpense() {
+    const token = await window.auth.currentUser.getIdToken();
     const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value, date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
     if(!note || !amount) return alert("විස්තර ඇතුළත් කරන්න!");
-    await fetch(`${BASE_URL}expenses.json`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
+    await fetch(`${BASE_URL}expenses.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
     document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = ""; fetchData();
 }
 
@@ -450,7 +516,10 @@ function renderExpenses() {
     document.getElementById('expenseBody').innerHTML = expenses.map(e => `<tr><td>${e.date}</td><td>${e.note}</td><td class="txt-right">${parseFloat(e.amount).toFixed(2)}</td><td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
-async function delExp(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json`, { method: 'DELETE' }); fetchData(); } }
+async function delExp(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
 
 function renderAnalytics() {
     const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
@@ -527,15 +596,42 @@ function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.to
 function checkWasteEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex) document.getElementById('wasteUnit').value = ex.unit; }
 function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
 function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
-async function delCloud(id) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json`, { method: 'DELETE' }); fetchData(); } }
-async function deleteSingleSale(k) { if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json`, { method: 'DELETE' }); fetchData(); } }
+
+async function delCloud(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+async function deleteSingleSale(k) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
 function renderShortage() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; return `<tr><td>${i.name}</td><td class="txt-right">${displayStock}</td><td>${i.unit}</td></tr>` }).join(''); }
 function sendShortageToWhatsApp() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!"); let msg = "*ගේන්න ඕනෑ බඩු*\n"; lowStock.forEach(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; msg += `- ${i.name} (${displayStock} ${i.unit})\n`; }); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
-async function addWastage() { let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value; if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(!itm) return alert("භාණ්ඩය නැත!"); let qtyBase = (u === 'g') ? q / 1000 : q; if(confirm(`${n} වලින් ${q}${u} ක් ඉවත් කරනවාද?`)) { let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3); await fetch(`${BASE_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(ns) }); let loss = -(parseFloat(itm.buy) * qtyBase); let now = new Date(); let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB'); let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss }; await fetch(`${BASE_URL}sales.json`, { method: 'POST', body: JSON.stringify(wasteEntry) }); document.getElementById('wasteItemName').value = ""; document.getElementById('wasteQty').value = ""; fetchData(); } }
+
+async function addWastage() { 
+    const token = await window.auth.currentUser.getIdToken();
+    let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value; 
+    if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); 
+    let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); 
+    if(!itm) return alert("භාණ්ඩය නැත!"); 
+    let qtyBase = (u === 'g') ? q / 1000 : q; 
+    if(confirm(`${n} වලින් ${q}${u} ක් ඉවත් කරනවාද?`)) { 
+        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3); 
+        await fetch(`${BASE_URL}inventory/${itm.id}/stock.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(ns) }); 
+        let loss = -(parseFloat(itm.buy) * qtyBase); 
+        let now = new Date(); 
+        let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB'); 
+        let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss }; 
+        await fetch(`${BASE_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(wasteEntry) }); 
+        document.getElementById('wasteItemName').value = ""; document.getElementById('wasteQty').value = ""; fetchData(); 
+    } 
+}
+
 function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
 function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales"); XLSX.writeFile(wb, "Sales_Report.xlsx"); }
 
-fetchData();
 </script>
 </body>
 </html>
