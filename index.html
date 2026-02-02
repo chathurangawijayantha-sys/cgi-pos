@@ -168,7 +168,6 @@
       measurementId: "G-XNP7JR8HFN"
     };
 
-    // Firebase Initialize
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
@@ -193,6 +192,8 @@
             document.getElementById('mainUI').style.display = 'none';
         }
     });
+
+    window.auth = auth; // Share auth for global use
 </script>
 
 <script>
@@ -220,23 +221,46 @@
 
     function handleReload() { if (cart.length > 0 && !isCompletingBill) return "බිලක් සකස් වෙමින් පවතී!"; }
 
-async function initializeAppMain() {
-    const savedCart = localStorage.getItem('active_cart');
-    if (savedCart) cart = JSON.parse(savedCart);
-    const cached = localStorage.getItem('cached_inventory');
-    if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
-    
-    inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
-    render(); updateUI();
-    
-    // මෙම පේළිය අනිවාර්යයෙන්ම එක් කරන්න
-    if (navigator.onLine) {
-        await syncOfflineData();
-        await fetchInventory(); // දත්තගබඩාවෙන් අලුත් දත්ත ලබාගැනීම මෙහිදී සිදුවේ
+    async function initializeAppMain() {
+        const savedCart = localStorage.getItem('active_cart');
+        if (savedCart) cart = JSON.parse(savedCart);
+        
+        const cached = localStorage.getItem('cached_inventory');
+        if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
+        
+        inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
+        render(); updateUI();
+        
+        // අනිවාර්යයෙන්ම එක් කළ පේළි: දත්ත කියවීම සක්‍රීය කරයි
+        if (navigator.onLine) {
+            await syncOfflineData();
+            await fetchInventory(); 
+        }
+        
+        fetchCustomers(); fetchTodaySales();
     }
-    
-    fetchCustomers(); fetchTodaySales();
-}
+
+    async function fetchInventory() {
+        try {
+            const user = window.auth ? window.auth.currentUser : null;
+            if (!user) return;
+            const token = await user.getIdToken();
+            const res = await fetch(`${DB_URL}inventory.json?auth=${token}`);
+            const data = await res.json();
+            if(data) {
+                inventory = Object.keys(data).map(key => ({
+                    id: key, 
+                    name: data[key].name || "නමක් නැත",
+                    sell: data[key].sell || 0,
+                    stock: data[key].stock || 0,
+                    unit: data[key].unit || "",
+                    img: data[key].img || "none.jpg"
+                }));
+                localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+                render();
+            }
+        } catch (e) { console.error("දත්ත දෝෂය:", e); }
+    }
 
     async function fetchTodaySales() {
         try {
@@ -261,42 +285,12 @@ async function initializeAppMain() {
         } catch(e) {}
     }
 
-async function fetchInventory() {
-    try {
-        // Firebase හරහා ලොග් වී සිටින පරිශීලකයාගේ idToken එක ලබා ගැනීම
-        const user = auth.currentUser;
-        if (!user) return;
-        
-        const token = await user.getIdToken();
-        
-        // Token එක සහිතව දත්ත කියවීම (මෙය ඉතා ආරක්ෂිත ක්‍රමයකි)
-        const res = await fetch(`${DB_URL}/inventory.json?auth=${token}`); 
-        const data = await res.json();
-        
-        if(data) {
-            inventory = Object.keys(data).map(key => ({
-                id: key, 
-                name: data[key].name || "නමක් නැත",
-                sell: data[key].sell || 0,
-                stock: data[key].stock || 0,
-                unit: data[key].unit || "",
-                img: data[key].img || "none.jpg"
-            }));
-            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            render();
-        }
-    } catch (e) {
-        console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
-    }
-}
-
     async function syncOfflineData() {
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
         for (let id in offStocks) {
             try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) {}
         }
         localStorage.removeItem('offline_stocks');
-        await fetchInventory(); 
     }
 
     function render() {
@@ -306,7 +300,7 @@ async function fetchInventory() {
             const isOut = parseFloat(p.stock) <= 0;
             const name = p.name;
             const sell = p.sell;
-            const stock = p.stock;
+            const stock = (p.unit === "Kg") ? parseFloat(p.stock).toFixed(3) : p.stock;
             const unit = p.unit;
 
             if(name === "බඩඉරිඟු") {
@@ -377,9 +371,12 @@ async function fetchInventory() {
         let itm = inventory.find(i => String(i.id) === String(id));
         if(itm) {
             let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
-            itm.stock = ns.toFixed(2);
+            itm.stock = ns.toFixed(3);
             localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-            try { await fetch(`${DB_URL}inventory/${itm.id}/stock.json`, { method: 'PUT', body: JSON.stringify(itm.stock) }); } catch (e) {}
+            try { 
+                const token = await window.auth.currentUser.getIdToken();
+                await fetch(`${DB_URL}inventory/${itm.id}/stock.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(itm.stock) }); 
+            } catch (e) {}
             render();
         }
     }
@@ -465,14 +462,17 @@ async function fetchInventory() {
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
         isCompletingBill = true;
-        const bNo = document.getElementById('bNoDisplay').innerText;
-        const formattedDate = new Date().toLocaleString('en-GB');
-        for (let c of cart) {
-            let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t };
-            await fetch(`${DB_URL}sales.json`, { method: 'POST', body: JSON.stringify(entry) });
-        }
-        if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
-        else resetSystemAfterBill();
+        try {
+            const bNo = document.getElementById('bNoDisplay').innerText;
+            const formattedDate = new Date().toLocaleString('en-GB');
+            const token = await window.auth.currentUser.getIdToken();
+            for (let c of cart) {
+                let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t };
+                await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(entry) });
+            }
+            if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
+            else resetSystemAfterBill();
+        } catch(e) { alert("සුරැකීමේ දෝෂයක්!"); isCompletingBill = false; }
     }
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
@@ -480,6 +480,3 @@ async function fetchInventory() {
 </script>
 </body>
 </html>
-
-
-
