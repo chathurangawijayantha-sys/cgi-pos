@@ -256,27 +256,27 @@
         } catch(e) {}
     }
 
-    async function fetchInventory() {
-        try {
-            const res = await fetch(`${DB_URL}inventory.json`); 
-            const data = await res.json();
-            if(data) {
-                // Firebase nodes (17689...) නිවැරදිව කියවා Array එකකට හරවා ගැනීම
-                inventory = Object.keys(data).map(key => ({
-                    id: key, 
-                    name: data[key].name || "නමක් නැත",
-                    sell: data[key].sell || 0,
-                    stock: data[key].stock || 0,
-                    unit: data[key].unit || "",
-                    img: data[key].img || "none.jpg"
-                }));
-                localStorage.setItem('cached_inventory', JSON.stringify(inventory));
-                render();
-            }
-        } catch (e) {
-            console.error("Data fetch error:", e);
+async function fetchInventory() {
+    try {
+        const res = await fetch(`${DB_URL}/inventory.json`); 
+        const data = await res.json();
+        if(data) {
+            // දත්තගබඩාවේ ඇති අංකිත කොටස් (17689...) නිවැරදිව හඳුනා ගැනීමට
+            inventory = Object.keys(data).map(key => ({
+                id: key, 
+                name: data[key].name || "නමක් නැත",
+                sell: data[key].sell || 0,
+                stock: data[key].stock || 0,
+                unit: data[key].unit || "",
+                img: data[key].img || "none.jpg"
+            }));
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+            render();
         }
+    } catch (e) {
+        console.error("දත්ත ලබාගැනීමේ දෝෂයක්:", e);
     }
+}
 
     async function syncOfflineData() {
         const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
@@ -468,3 +468,4 @@
 </script>
 </body>
 </html>
+
