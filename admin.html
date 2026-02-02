@@ -474,10 +474,24 @@ function renderSales() {
     });
     let totalRev = 0, totalProf = 0;
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
-        let revVal = parseFloat(s.total || 0), profVal = parseFloat(s.profit || 0);
+        let revVal = parseFloat(s.total || 0);
+        
+        // --- නිවැරදි කරන ලද ලාභ ගණනය කිරීම ---
+        let profVal = parseFloat(s.profit || 0);
+        if (s.bNo !== "WASTAGE" && profVal === 0) {
+            let itm = inventory.find(i => i.name.toLowerCase() === s.name.toLowerCase());
+            if (itm) {
+                let rawQty = parseFloat(s.qty) || 0;
+                let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim().toLowerCase();
+                let qtyBase = (unitPart === 'g') ? rawQty / 1000 : rawQty;
+                profVal = revVal - (parseFloat(itm.buy) * qtyBase);
+            }
+        }
+        // ------------------------------------
+
         totalRev += revVal; totalProf += profVal;
         let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
-        let rawQty = parseFloat(s.qty), unitPart = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPart.toLowerCase() === 'kg') ? rawQty.toFixed(3) + " " + unitPart : rawQty + " " + unitPart;
+        let rawQtyDisplay = parseFloat(s.qty), unitPartDisplay = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPartDisplay.toLowerCase() === 'kg') ? rawQtyDisplay.toFixed(3) + " " + unitPartDisplay : rawQtyDisplay + " " + unitPartDisplay;
         return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
