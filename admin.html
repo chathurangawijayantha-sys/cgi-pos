@@ -366,7 +366,6 @@ async function fetchData() {
             fetch(`${BASE_URL}stock_history.json?auth=${token}`)
         ]);
         
-        // Corrected Inventory Retrieval to keep Keys
         const invData = await invRes.json();
         inventory = invData ? Object.keys(invData).map(k => ({...invData[k], id: k})) : [];
         
@@ -476,10 +475,13 @@ function renderSales() {
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
         let revVal = parseFloat(s.total || 0);
         
-        // --- නිවැරදි කරන ලද ලාභ ගණනය කිරීම ---
         let profVal = parseFloat(s.profit || 0);
         if (s.bNo !== "WASTAGE" && profVal === 0) {
-            let itm = inventory.find(i => i.name.toLowerCase() === s.name.toLowerCase());
+            // බඩඉරිඟු සඳහා විශේෂ හඳුනාගැනීමක් සහිත සෙවුම
+            let searchName = s.name.toLowerCase();
+            if (searchName.includes("බඩඉරිඟු")) searchName = "බඩඉරිඟු";
+            
+            let itm = inventory.find(i => i.name.toLowerCase() === searchName);
             if (itm) {
                 let rawQty = parseFloat(s.qty) || 0;
                 let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim().toLowerCase();
@@ -487,7 +489,6 @@ function renderSales() {
                 profVal = revVal - (parseFloat(itm.buy) * qtyBase);
             }
         }
-        // ------------------------------------
 
         totalRev += revVal; totalProf += profVal;
         let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
