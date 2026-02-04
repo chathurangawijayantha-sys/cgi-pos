@@ -32,11 +32,6 @@
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
 
-        .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
-        .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
-        .discount-container { display: flex; gap: 5px; }
-
-        /* පැරණි බිල්පත් සහ යටින් පෙනෙන කොටස */
         .history-section { padding: 15px; background: #fff; margin: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .history-item { padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 13px; }
 
@@ -81,30 +76,18 @@
                         <span id="dtDisplay"></span>
                     </div>
                 </div>
-
-                <div class="loyalty-box no-print">
-                    <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
-                    <datalist id="custList"></datalist>
-                    <div class="discount-container">
-                        <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
-                        <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
-                    </div>
-                </div>
-
                 <table class="bill-table">
                     <thead><tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණ</th><th style="text-align:right;">මුදල</th></tr></thead>
                     <tbody id="bBody"></tbody>
                 </table>
                 <div class="total-area">
                     <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-                    <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
                     <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
                     <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
                     <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
                     <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
                 </div>
             </div>
-
             <div class="no-print" style="display: flex; flex-direction: column; gap: 5px;">
                 <input type="number" id="cashInput" oninput="calc()" placeholder="ලැබුණු මුදල" style="padding: 10px; margin-top: 10px;">
                 <button class="btn-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
@@ -113,7 +96,6 @@
             </div>
         </div>
     </div>
-
     <div class="history-section no-print">
         <h3 style="color: #2e7d32;">අවසන් විකුණුම් 📜</h3>
         <div id="history-list">පූරණය වෙමින්...</div>
@@ -124,12 +106,6 @@
 <div id="unitModal">
     <h3 id="mTitle" style="margin:0;"></h3>
     <div class="price-info" id="pricePreview"></div>
-    <div id="unitSelectorDiv">
-        <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
-            <option value="main">ප්‍රධාන ඒකකය</option>
-            <option value="g">ග්‍රෑම් (g)</option>
-        </select>
-    </div>
     <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px;">
     <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; margin-top:10px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
@@ -177,12 +153,11 @@
 
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = []; let cart = []; let customers = {}; 
-    let tempItem = null; let tempDispName = ""; let tempPrice = 0;
-    let isCompletingBill = false;
+    let inventory = []; let cart = [];
+    let tempItem = null;
 
     async function initializeAppMain() {
-        if (navigator.onLine) { await fetchInventory(); }
+        await fetchInventory();
         fetchBillHistory();
     }
 
@@ -200,16 +175,10 @@
         } catch (e) { console.error(e); }
     }
 
-    async function saveAsPDF() {
-        const element = document.getElementById('printable-bill');
-        const bNo = document.getElementById('bNoDisplay').innerText;
-        const opt = { margin: 10, filename: 'Bill_' + bNo + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-        await html2pdf().set(opt).from(element).save();
-    }
-
     async function fetchBillHistory() {
         try {
-            const res = await fetch(`${DB_URL}sales.json`);
+            const token = await window.auth.currentUser.getIdToken();
+            const res = await fetch(`${DB_URL}sales.json?auth=${token}`);
             const data = await res.json();
             const listDiv = document.getElementById('history-list');
             if(data) {
@@ -221,14 +190,24 @@
                     </div>
                 `).join('');
             }
-        } catch(e) {}
+        } catch(e) { console.error(e); }
+    }
+
+    async function saveAsPDF() {
+        const element = document.getElementById('printable-bill');
+        const bNo = document.getElementById('bNoDisplay').innerText;
+        const opt = { margin: 10, filename: 'Bill_' + bNo + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+        await html2pdf().set(opt).from(element).save();
     }
 
     function render() {
+        // --- තොග අවසන් භාණ්ඩ යටටම යන ලෙස පෙළගැස්වීම (Sorting) ---
+        const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
+        
         let html = "";
-        inventory.forEach(p => {
+        sortedInventory.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
-            html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
+            html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : "openM('" + p.id + "')" }">
                 <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100'">
                 <h4>${p.name}</h4><div class="price-tag">Rs. ${p.sell}</div>
                 ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
@@ -247,7 +226,7 @@
         document.getElementById('overlay').style.display = 'block';
     }
 
-    async function confirmAdd() {
+    function confirmAdd() {
         const qty = parseFloat(document.getElementById('qty').value);
         if(!qty) return;
         const total = qty * tempItem.sell;
@@ -286,6 +265,8 @@
     }
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
+    function priceToSinhalaWords(amount) { return "රුපියල් " + amount + " යි"; }
+    function handleReload() { if (cart.length > 0) return "පිටුවෙන් ඉවත් විය යුතුද?"; }
 </script>
 </body>
 </html>
