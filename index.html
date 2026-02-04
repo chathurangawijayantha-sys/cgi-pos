@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
     <title>ගැමි එළවළු - POS Pro Smart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f4f7f6; overflow-y: auto; height: auto; }
         .main-container { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
@@ -39,6 +40,10 @@
         .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
         .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
+        /* අලුතින් එක් කළ ඉතිහාස කොටස සඳහා CSS */
+        .history-section { padding: 20px; background: #fff; margin: 15px; border-radius: 10px; border-top: 5px solid #2e7d32; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
@@ -52,7 +57,7 @@
         @media print {
             @page { size: 58mm auto; margin: 0; }
             body { width: 58mm; margin: 0; padding: 0; }
-            #product-section, .modal-overlay, #unitModal, .no-print, button, input, #offline-status, .loyalty-box, #login-screen { display: none !important; }
+            #product-section, .modal-overlay, #unitModal, .no-print, button, input, #offline-status, .loyalty-box, #login-screen, .history-section { display: none !important; }
             #bill-section { width: 100% !important; display: block !important; padding: 2mm !important; }
             .bill-header h3 { font-size: 14px !important; margin: 0 !important; }
             .bill-header p { font-size: 9px !important; margin: 1px 0 !important; }
@@ -93,63 +98,71 @@
     <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
-<div class="main-container" id="mainUI" style="display: none;">
-    <div id="product-section"><div class="grid" id="grid"></div></div>
-    <div id="bill-section">
-        <div class="bill-header">
-            <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
-            <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
-            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
-                <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
-                <span id="dtDisplay"></span>
+<div id="mainUI" style="display: none;">
+    <div class="main-container">
+        <div id="product-section"><div class="grid" id="grid"></div></div>
+        <div id="bill-section">
+            <div id="printable-bill">
+                <div class="bill-header">
+                    <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
+                    <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
+                        <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
+                        <span id="dtDisplay"></span>
+                    </div>
+                </div>
+
+                <div class="loyalty-box no-print">
+                    <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
+                    <datalist id="custList"></datalist>
+                    <div class="discount-container">
+                        <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
+                        <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
+                    </div>
+                </div>
+
+                <table class="bill-table">
+                    <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
+                    <tbody id="bBody"></tbody>
+                </table>
+                <div class="total-area">
+                    <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+                    <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
+                    <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+                    
+                    <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
+
+                    <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
+                        ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
+                    </div>
+
+                    <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
+                    <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+                    <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+                    
+                    <div id="dailyClosingPrint" class="closing-receipt-box">
+                        <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
+                        <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
+                        <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
+                        <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
+                        <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
+                    </div>
+
+                    <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
+                </div>
             </div>
-        </div>
-
-        <div class="loyalty-box no-print">
-            <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
-            <datalist id="custList"></datalist>
-            <div class="discount-container">
-                <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
-                <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
-            </div>
-        </div>
-
-        <table class="bill-table">
-            <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
-            <tbody id="bBody"></tbody>
-        </table>
-        <div class="total-area">
-            <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-            <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
-            <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
-            
-            <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
-
-            <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
-                ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
-            </div>
-
-            <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
-            <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-            <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-            
-            <div id="dailyClosingPrint" class="closing-receipt-box">
-                <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
-                <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
-                <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
-                <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
-                <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
-            </div>
-
-            <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
-            
             <div style="display: flex; flex-direction: column; gap: 5px;">
-                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
-                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
+                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර PDF සුරකින්න</button>
+                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර PDF සුරකින්න</button>
                 <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
                 <button class="btn-print no-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
             </div>
         </div>
+    </div>
+    
+    <div class="history-section no-print" id="history-section">
+        <h3 style="color: #2e7d32;">අවසන් විකුණුම් බිල්පත් 📜</h3>
+        <div id="history-list">පූරණය වෙමින්...</div>
     </div>
 </div>
 
@@ -185,7 +198,7 @@
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
+            document.getElementById('mainUI').style.display = 'block';
             initializeAppMain();
         } else {
             document.getElementById('login-screen').style.display = 'flex';
@@ -193,7 +206,7 @@
         }
     });
 
-    window.auth = auth; // Share auth for global use
+    window.auth = auth;
 </script>
 
 <script>
@@ -224,25 +237,55 @@
     async function initializeAppMain() {
         const savedCart = localStorage.getItem('active_cart');
         if (savedCart) cart = JSON.parse(savedCart);
-        
         const cached = localStorage.getItem('cached_inventory');
         if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
-        
         inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
         render(); updateUI();
-        
-        // අනිවාර්යයෙන්ම එක් කළ පේළි: දත්ත කියවීම සක්‍රීය කරයි
         if (navigator.onLine) {
             await syncOfflineData();
             await fetchInventory(); 
         }
-        
-        fetchCustomers(); fetchTodaySales();
+        fetchCustomers(); fetchTodaySales(); fetchBillHistory();
+    }
+
+    // PDF සුරැකීමේ ශ්‍රිතය
+    async function saveAsPDF() {
+        const element = document.getElementById('printable-bill');
+        const bNo = document.getElementById('bNoDisplay').innerText;
+        const opt = {
+            margin: 10,
+            filename: 'Bill_' + bNo + '.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        await html2pdf().set(opt).from(element).save();
+    }
+
+    // බිල්පත් ඉතිහාසය ලබාගැනීමේ ශ්‍රිතය
+    async function fetchBillHistory() {
+        try {
+            const user = window.auth.currentUser;
+            if (!user) return;
+            const token = await user.getIdToken();
+            const res = await fetch(`${DB_URL}sales.json?auth=${token}&orderBy="$key"&limitToLast=10`);
+            const data = await res.json();
+            const listDiv = document.getElementById('history-list');
+            if(data) {
+                const bills = Object.values(data).reverse();
+                listDiv.innerHTML = bills.map(b => `
+                    <div class="history-item">
+                        <span>බිල්: <b>${b.bNo}</b> (${b.date.split(',')[0]})</span>
+                        <span><b>Rs. ${parseFloat(b.total).toFixed(2)}</b></span>
+                    </div>
+                `).join('');
+            }
+        } catch(e) {}
     }
 
     async function fetchInventory() {
         try {
-            const user = window.auth ? window.auth.currentUser : null;
+            const user = window.auth.currentUser;
             if (!user) return;
             const token = await user.getIdToken();
             const res = await fetch(`${DB_URL}inventory.json?auth=${token}`);
@@ -325,6 +368,7 @@
         html += `<div class="item-card" onclick="openOtherModal()" style="border: 2px dashed #27ae60;"><h4>වෙනත්</h4><div class="price-tag">මුදල පමණි</div></div>`;
         document.getElementById('grid').innerHTML = html;
         document.getElementById('dtDisplay').innerText = new Date().toLocaleString('si-LK');
+        document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     }
 
     function openM(id, dispName, customPrice) {
@@ -385,9 +429,8 @@
         let qv = document.getElementById('qty').value;
         if(!qv || parseFloat(qv) <= 0) return;
         let q = parseFloat(qv);
-        if(tempItem.id === 9999) {
-            cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "", t: q, d: 0 });
-        } else {
+        if(tempItem.id === 9999) { cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "", t: q, d: 0 }); }
+        else {
             let u = document.getElementById('uSel').value;
             let d = (u==='g') ? q/1000 : q;
             if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
@@ -447,6 +490,7 @@
         updateUI();
         isCompletingBill = false;
         fetchTodaySales();
+        fetchBillHistory(); // බිල් ඉතිහාසය නැවත ලබාගැනීම
     }
 
     async function printDailyClosing() {
@@ -466,12 +510,23 @@
             const bNo = document.getElementById('bNoDisplay').innerText;
             const formattedDate = new Date().toLocaleString('en-GB');
             const token = await window.auth.currentUser.getIdToken();
+            const finalTotal = document.getElementById('gTot').innerText;
+
             for (let c of cart) {
-                let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: c.t };
+                let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: finalTotal };
                 await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(entry) });
             }
-            if(shouldPrint) { window.print(); setTimeout(resetSystemAfterBill, 1000); }
-            else resetSystemAfterBill();
+
+            // මුලින් PDF එක සුරැකීම
+            await saveAsPDF();
+
+            // මුද්‍රණය කළ යුතු නම් පමණක් මුද්‍රණය කිරීම
+            if(shouldPrint) { 
+                window.print(); 
+                setTimeout(resetSystemAfterBill, 1000); 
+            } else {
+                resetSystemAfterBill();
+            }
         } catch(e) { alert("සුරැකීමේ දෝෂයක්!"); isCompletingBill = false; }
     }
 
