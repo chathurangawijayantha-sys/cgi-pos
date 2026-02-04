@@ -27,13 +27,19 @@
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; font-weight: bold; }
         .sinhala-words { font-size: 11px; color: #333; font-weight: bold; display: block; text-align: right; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
+        
+        /* අලුතින් එක් කළ කොටස - පැරණි බිල්පත් */
+        .history-section { padding: 20px; background: #fff; margin: 15px; border-radius: 10px; border-top: 5px solid #2e7d32; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
 
-        .history-section { padding: 15px; background: #fff; margin: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .history-item { padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 13px; }
+        .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
+        .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
+        .discount-container { display: flex; gap: 5px; }
 
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
@@ -41,13 +47,12 @@
 
         @media screen and (max-width: 800px) {
             .main-container { flex-direction: column; }
-            #product-section { width: auto; border-right: none; }
-            #bill-section { width: auto; }
+            #product-section { width: auto; border-right: none; padding-bottom: 20px; }
+            #bill-section { width: auto; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
         }
 
         @media print {
             .no-print, button, input, select, .history-section { display: none !important; }
-            #printable-bill { width: 100% !important; display: block !important; padding: 0 !important; }
         }
     </style>
 </head>
@@ -69,35 +74,49 @@
         <div id="bill-section">
             <div id="printable-bill">
                 <div class="bill-header">
-                    <h3 style="margin:0; color: #2e7d32;">ගැමි එළවළු කොළ කඩේ</h3>
+                    <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
                     <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
-                    <div style="display:flex; justify-content:space-between; font-size:10px; border-top: 1px solid #eee; padding-top: 5px;">
+                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
                         <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
                         <span id="dtDisplay"></span>
                     </div>
                 </div>
+
+                <div class="loyalty-box no-print">
+                    <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
+                    <datalist id="custList"></datalist>
+                    <div class="discount-container">
+                        <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
+                        <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
+                    </div>
+                </div>
+
                 <table class="bill-table">
-                    <thead><tr><th>භාණ්ඩය</th><th>මිල</th><th>ප්‍රමාණ</th><th style="text-align:right;">මුදල</th></tr></thead>
+                    <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
                     <tbody id="bBody"></tbody>
                 </table>
                 <div class="total-area">
                     <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+                    <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
                     <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
                     <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
-                    <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-                    <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+                    <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
                 </div>
             </div>
-            <div class="no-print" style="display: flex; flex-direction: column; gap: 5px;">
-                <input type="number" id="cashInput" oninput="calc()" placeholder="ලැබුණු මුදල" style="padding: 10px; margin-top: 10px;">
-                <button class="btn-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර අවසන් කරන්න</button>
-                <button class="btn-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර අවසන් කරන්න</button>
-                <button class="btn-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
+            <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
+                <input type="number" id="cashInput" oninput="calc()" placeholder="ලැබුණු මුදල" class="no-print" style="padding: 10px;">
+                <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+                <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+                
+                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර PDF සුරකින්න</button>
+                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර PDF සුරකින්න</button>
+                <button class="btn-print no-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
             </div>
         </div>
     </div>
+
     <div class="history-section no-print">
-        <h3 style="color: #2e7d32;">අවසන් විකුණුම් 📜</h3>
+        <h3 style="color: #2e7d32;">අවසන් විකුණුම් බිල්පත් 📜</h3>
         <div id="history-list">පූරණය වෙමින්...</div>
     </div>
 </div>
@@ -121,7 +140,8 @@
       projectId: "cgi-pos",
       storageBucket: "cgi-pos.firebasestorage.app",
       messagingSenderId: "425200021707",
-      appId: "1:425200021707:web:c72bbeb221d8afa3deab4e"
+      appId: "1:425200021707:web:c72bbeb221d8afa3deab4e",
+      measurementId: "G-XNP7JR8HFN"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -161,6 +181,16 @@
         fetchBillHistory();
     }
 
+    async function saveAsPDF() {
+        const element = document.getElementById('printable-bill');
+        const bNo = document.getElementById('bNoDisplay').innerText;
+        const opt = { 
+            margin: 10, filename: 'Bill_' + bNo + '.pdf', image: { type: 'jpeg', quality: 0.98 }, 
+            html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+        };
+        await html2pdf().set(opt).from(element).save();
+    }
+
     async function fetchInventory() {
         try {
             const token = await window.auth.currentUser.getIdToken();
@@ -193,19 +223,10 @@
         } catch(e) { console.error(e); }
     }
 
-    async function saveAsPDF() {
-        const element = document.getElementById('printable-bill');
-        const bNo = document.getElementById('bNoDisplay').innerText;
-        const opt = { margin: 10, filename: 'Bill_' + bNo + '.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-        await html2pdf().set(opt).from(element).save();
-    }
-
     function render() {
-        // --- තොග අවසන් භාණ්ඩ යටටම යන ලෙස පෙළගැස්වීම (Sorting) ---
-        const sortedInventory = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
-        
+        const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
         let html = "";
-        sortedInventory.forEach(p => {
+        sorted.forEach(p => {
             const isOut = parseFloat(p.stock) <= 0;
             html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="${isOut ? '' : "openM('" + p.id + "')" }">
                 <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100'">
@@ -258,7 +279,7 @@
             for (let c of cart) {
                 await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ bNo, date: new Date().toLocaleString(), name: c.n, qty: c.dq, total: finalTotal }) });
             }
-            await saveAsPDF();
+            await saveAsPDF(); // PDF එක සුරැකීම
             if(shouldPrint) window.print();
             location.reload();
         } catch(e) { alert("Error!"); }
