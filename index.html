@@ -28,16 +28,22 @@
         .sinhala-words { font-size: 11px; color: #333; font-weight: bold; display: block; text-align: right; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .btn-print { width: 100%; padding: 12px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 16px; }
         
-        /* බිල්පත් Reprint කොටස සඳහා CSS */
+        /* ඉතිහාසය පෙන්වන නව කොටස සඳහා CSS */
         .history-section { padding: 20px; background: #fff; margin: 15px; border-radius: 10px; border-top: 5px solid #2e7d32; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .reprint-controls { display: flex; gap: 10px; margin-bottom: 15px; }
-        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .btn-reprint { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .history-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 13px; }
 
         #unitModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; min-width:260px; }
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:150; }
         .price-info { background: #f9f9f9; padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 13px; text-align: center; }
         #offline-status { display: none; background: #e74c3c; color: white; text-align: center; padding: 5px; font-size: 12px; position: fixed; top: 0; width: 100%; z-index: 1000; }
+
+        .loyalty-box { background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #c8e6c9; }
+        .loyalty-box input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 18px); margin-bottom: 5px; font-size: 12px; }
+        .discount-container { display: flex; gap: 5px; }
+        .loyalty-receipt-box { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; text-align: center; font-size: 11px; }
+
+        .closing-receipt-box { border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; font-size: 11px; display: none; }
+        .closing-receipt-box div { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
 
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
@@ -60,6 +66,8 @@
             .summary-row { font-size: 10px !important; }
             .sinhala-words { font-size: 9px !important; display: block !important; }
             .footer-msg { display: block !important; text-align: center; margin-top: 10px; font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; }
+            .closing-receipt-box { display: none !important; } 
+            .no-print-icon { display: none !important; }
         }
     </style>
 </head>
@@ -73,6 +81,22 @@
         <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">ඇතුළු වන්න</button>
         <p id="loginError" style="color: red; font-size: 12px; margin-top: 10px; display: none;">වැරදි තොරතුරක්!</p>
     </div>
+</div>
+
+<div id="offline-status">Offline මාදිලිය: දත්ත බ්‍රවුසරයේ සුරැකේ.</div>
+<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
+<div id="unitModal">
+    <h3 id="mTitle" style="margin:0;"></h3>
+    <div class="price-info" id="pricePreview"></div>
+    <p id="uDisp" style="color:#27ae60; font-weight:bold; margin: 5px 0;"></p>
+    <div id="unitSelectorDiv">
+        <select id="uSel" style="width:100%; padding:10px; margin: 10px 0;">
+            <option value="main">ප්‍රධාන ඒකකය</option>
+            <option value="g">ග්‍රෑම් (g)</option>
+        </select>
+    </div>
+    <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px; margin-bottom: 10px;">
+    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <div id="mainUI" style="display: none;">
@@ -89,46 +113,59 @@
                     </div>
                 </div>
 
+                <div class="loyalty-box no-print">
+                    <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
+                    <datalist id="custList"></datalist>
+                    <div class="discount-container">
+                        <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
+                        <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
+                    </div>
+                </div>
+
                 <table class="bill-table">
                     <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
                     <tbody id="bBody"></tbody>
                 </table>
                 <div class="total-area">
                     <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+                    <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
                     <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+                    
                     <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
+
+                    <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
+                        ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
+                    </div>
+
+                    <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
+                    <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+                    <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+                    
+                    <div id="dailyClosingPrint" class="closing-receipt-box">
+                        <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
+                        <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
+                        <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
+                        <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
+                        <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
+                    </div>
+
                     <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px;">
-                <input type="number" id="cashInput" oninput="calc()" placeholder="ලැබුණු මුදල" class="no-print" style="padding: 10px;">
-                <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-                <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-                
+            <div style="display: flex; flex-direction: column; gap: 5px;">
                 <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර PDF සුරකින්න</button>
                 <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර PDF සුරකින්න</button>
+                <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
                 <button class="btn-print no-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
             </div>
         </div>
     </div>
-
+    
     <div class="history-section no-print">
-        <h3 style="color: #2e7d32;">බිල්පත් ඉතිහාසය (Cloud Storage) 📜</h3>
-        <div class="reprint-controls">
-            <input type="number" id="searchBillNo" placeholder="බිල් අංකය සොයන්න...">
-            <button class="btn-reprint" style="padding: 10px;" onclick="loadAndReprintBill()">සොයන්න & Reprint</button>
-        </div>
+        <h3 style="color: #2e7d32;">අවසන් විකුණුම් 📜</h3>
         <div id="history-list">පූරණය වෙමින්...</div>
     </div>
-</div>
-
-<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
-<div id="unitModal">
-    <h3 id="mTitle" style="margin:0;"></h3>
-    <div class="price-info" id="pricePreview"></div>
-    <input type="number" id="qty" placeholder="ප්‍රමාණය" style="width:92%; padding:10px;">
-    <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; margin-top:10px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
 <script type="module">
@@ -152,6 +189,7 @@
     window.handleLogin = function() {
         const email = document.getElementById('loginEmail').value;
         const pass = document.getElementById('loginPass').value;
+        if(!email || !pass) return;
         signInWithEmailAndPassword(auth, email, pass).catch(() => {
             document.getElementById('loginError').style.display = 'block';
         });
@@ -170,79 +208,130 @@
         }
     });
 
-    window.auth = auth;
+    window.auth = auth; // Global Access
 </script>
 
 <script>
     const DB_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = []; let cart = []; let tempItem = null;
-    let cloudBills = {};
+    let inventory = []; let cart = []; let customers = {}; let allSalesToday = [];
+    let tempItem = null; let tempDispName = ""; let tempPrice = 0;
+    let isCompletingBill = false;
 
-    async function initializeAppMain() {
-        await fetchInventory();
-        fetchBillHistory();
+    function priceToSinhalaWords(amount) {
+        if (amount == 0) return "රුපියල් බින්දුවයි";
+        const units = ["", "එක", "දෙක", "තුන", "හතර", "පහ", "හය", "හත", "අට", "නව"];
+        const tens = ["", "දහ", "විසි", "තිස්", "හතළිස්", "පනස්", "හැට", "හැත්තෑ", "අසූ", "අනූ"];
+        let num = Math.floor(amount);
+        let words = "රුපියල් ";
+        if (num >= 1000) { words += units[Math.floor(num/1000)] + "දාස් "; num %= 1000; }
+        if (num >= 100) { words += units[Math.floor(num/100)] + "සිය "; num %= 100; }
+        if (num >= 20) { words += tens[Math.floor(num/10)] + " "; num %= 10; }
+        else if (num >= 10) { 
+            const special = ["දහය", "එකොළහ", "දොළහ", "දහතුන", "දහහතර", "පහළොව", "දහසය", "දහහත", "දහඅට", "දහනව"];
+            words += special[num-10]; num = 0;
+        }
+        if (num > 0) words += units[num];
+        return words.trim() + "යි";
     }
 
+    function handleReload() { if (cart.length > 0 && !isCompletingBill) return "බිලක් සකස් වෙමින් පවතී!"; }
+
+    async function initializeAppMain() {
+        const savedCart = localStorage.getItem('active_cart');
+        if (savedCart) cart = JSON.parse(savedCart);
+        const cached = localStorage.getItem('cached_inventory');
+        if (cached && cached.includes("undefined")) localStorage.removeItem('cached_inventory');
+        inventory = JSON.parse(localStorage.getItem('cached_inventory')) || [];
+        render(); updateUI();
+        if (navigator.onLine) {
+            await syncOfflineData();
+            await fetchInventory(); 
+        }
+        fetchCustomers(); fetchTodaySales(); fetchBillHistory();
+    }
+
+    // PDF සුරැකීමේ Function එක
     async function saveAsPDF() {
         const element = document.getElementById('printable-bill');
         const bNo = document.getElementById('bNoDisplay').innerText;
-        const opt = { 
-            margin: 10, filename: 'Bill_' + bNo + '.pdf', image: { type: 'jpeg', quality: 0.98 }, 
-            html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+        const opt = {
+            margin: 10,
+            filename: 'Bill_' + bNo + '.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         await html2pdf().set(opt).from(element).save();
     }
 
+    // බිල්පත් ඉතිහාසය Cloud එකෙන් ලබා ගැනීම
+    async function fetchBillHistory() {
+        try {
+            const user = window.auth.currentUser;
+            if (!user) return;
+            const token = await user.getIdToken();
+            const res = await fetch(`${DB_URL}sales.json?auth=${token}&orderBy="$key"&limitToLast=10`);
+            const data = await res.json();
+            const listDiv = document.getElementById('history-list');
+            if(data) {
+                const bills = Object.values(data).reverse();
+                listDiv.innerHTML = bills.map(b => `
+                    <div class="history-item">
+                        <span>බිල්: <b>${b.bNo}</b> (${b.date.split(',')[0]})</span>
+                        <span><b>Rs. ${parseFloat(b.total).toFixed(2)}</b></span>
+                    </div>
+                `).join('');
+            }
+        } catch(e) {}
+    }
+
     async function fetchInventory() {
         try {
-            const token = await window.auth.currentUser.getIdToken();
+            const user = window.auth.currentUser;
+            if (!user) return;
+            const token = await user.getIdToken();
             const res = await fetch(`${DB_URL}inventory.json?auth=${token}`);
             const data = await res.json();
             if(data) {
                 inventory = Object.keys(data).map(key => ({
                     id: key, name: data[key].name || "නමක් නැත", sell: data[key].sell || 0, stock: data[key].stock || 0, unit: data[key].unit || "", img: data[key].img || "none.jpg"
                 }));
+                localStorage.setItem('cached_inventory', JSON.stringify(inventory));
                 render();
             }
         } catch (e) { console.error(e); }
     }
 
-    async function fetchBillHistory() {
+    async function fetchTodaySales() {
         try {
-            const token = await window.auth.currentUser.getIdToken();
-            const res = await fetch(`${DB_URL}bill_storage.json?auth=${token}&orderBy="$key"&limitToLast=10`);
+            const res = await fetch(`${DB_URL}sales.json`); 
             const data = await res.json();
-            cloudBills = data || {};
-            const listDiv = document.getElementById('history-list');
             if(data) {
-                const bills = Object.keys(data).reverse();
-                listDiv.innerHTML = bills.map(id => `
-                    <div class="history-item">
-                        <span>බිල්: <b>${data[id].bNo}</b> (${data[id].date.split(',')[0]})</span>
-                        <span><b>Rs. ${data[id].total}</b> <button class="btn-reprint" onclick="reprintFromHistory('${id}')">Reprint</button></span>
-                    </div>
-                `).join('');
+                const now = new Date();
+                const today = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + now.getFullYear();
+                allSalesToday = Object.values(data).filter(s => s.date && s.date.includes(today));
             }
-        } catch(e) { console.error(e); }
+        } catch(e) {}
     }
 
-    // බිල් අංකය අනුව Cloud එකෙන් බිල සොයා Reprint කිරීම
-    window.loadAndReprintBill = function() {
-        const sNo = document.getElementById('searchBillNo').value;
-        if(!sNo) return alert("බිල් අංකය ඇතුළත් කරන්න!");
-        const id = Object.keys(cloudBills).find(k => cloudBills[k].bNo == sNo);
-        if(id) reprintFromHistory(id);
-        else alert("බිල්පත හමු නොවීය!");
-    };
+    async function fetchCustomers() {
+        try {
+            const res = await fetch(`${DB_URL}customers.json`);
+            const data = await res.json();
+            if(data) {
+                customers = data;
+                document.getElementById('custList').innerHTML = Object.keys(data).map(id => `<option value="${data[id].name} (${data[id].phone})">`).join('');
+            }
+        } catch(e) {}
+    }
 
-    window.reprintFromHistory = function(id) {
-        const bill = cloudBills[id];
-        cart = bill.items;
-        document.getElementById('bNoDisplay').innerText = bill.bNo;
-        document.getElementById('dtDisplay').innerText = bill.date;
-        updateUI();
-        alert("බිල්පත පූරණය විය. දැන් Print බොත්තම ඔබන්න.");
-    };
+    async function syncOfflineData() {
+        const offStocks = JSON.parse(localStorage.getItem('offline_stocks')) || {};
+        for (let id in offStocks) {
+            try { await fetch(`${DB_URL}inventory/${id}/stock.json`, { method: 'PUT', body: JSON.stringify(offStocks[id]) }); } catch(e) {}
+        }
+        localStorage.removeItem('offline_stocks');
+    }
 
     function render() {
         const sorted = [...inventory].sort((a, b) => (parseFloat(a.stock) <= 0) - (parseFloat(b.stock) <= 0));
@@ -260,24 +349,90 @@
         document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
     }
 
-    function openM(id) {
-        tempItem = inventory.find(x => x.id === id);
-        document.getElementById('mTitle').innerText = tempItem.name;
-        document.getElementById('pricePreview').innerText = "මිල: Rs. " + tempItem.sell;
-        document.getElementById('unitModal').style.display = 'block';
+    function openM(id, dispName, customPrice) {
+        tempItem = inventory.find(x => String(x.id) === String(id));
+        if(!tempItem) return;
+        tempDispName = dispName || tempItem.name;
+        tempPrice = customPrice || parseFloat(tempItem.sell);
+        document.getElementById('mTitle').innerText = tempDispName;
+        const uSel = document.getElementById('uSel');
+        const qtyInp = document.getElementById('qty');
+        document.getElementById('unitSelectorDiv').style.display = 'block';
+        if(tempDispName.includes("බඩඉරිඟු")) {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
+            document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
+        } else if(tempItem.unit === "Kg") {
+            uSel.value = "g"; uSel.disabled = false;
+            document.getElementById('uDisp').innerText = "ඒකකය: Kg";
+            document.getElementById('pricePreview').innerHTML = `100g: <b>Rs. ${(tempPrice/10).toFixed(2)}</b> | 250g: <b>Rs. ${(tempPrice/4).toFixed(2)}</b>`;
+        } else {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: " + (tempItem.unit || 'ඒකක');
+            document.getElementById('pricePreview').innerHTML = `ඒකක මිල: <b>Rs. ${tempPrice}</b>`;
+        }
+        qtyInp.value = ""; document.getElementById('unitModal').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
     }
 
-    function confirmAdd() {
-        const qty = parseFloat(document.getElementById('qty').value);
-        if(!qty) return;
-        cart.push({ n: tempItem.name, up: tempItem.sell, dq: qty + " " + tempItem.unit, t: qty * tempItem.sell });
+    function openOtherModal() {
+        tempItem = { id: 9999, name: "වෙනත්", sell: 0, buy: 0, stock: 999 };
+        tempDispName = "වෙනත්"; tempPrice = 0;
+        document.getElementById('mTitle').innerText = tempDispName;
+        document.getElementById('unitSelectorDiv').style.display = 'none';
+        const qtyInp = document.getElementById('qty');
+        qtyInp.placeholder = "මුදල (Rs.)"; qtyInp.value = "";
+        document.getElementById('unitModal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        setTimeout(() => qtyInp.focus(), 100);
+    }
+
+    async function updateStock(id, qty, mode) {
+        if(id === 9999) return;
+        let itm = inventory.find(i => String(i.id) === String(id));
+        if(itm) {
+            let ns = (mode === 'sub') ? (parseFloat(itm.stock) - qty) : (parseFloat(itm.stock) + qty);
+            itm.stock = ns.toFixed(3);
+            localStorage.setItem('cached_inventory', JSON.stringify(inventory));
+            try { 
+                const token = await window.auth.currentUser.getIdToken();
+                await fetch(`${DB_URL}inventory/${itm.id}/stock.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(itm.stock) }); 
+            } catch (e) {}
+            render();
+        }
+    }
+
+    async function confirmAdd() {
+        let qv = document.getElementById('qty').value;
+        if(!qv || parseFloat(qv) <= 0) return;
+        let q = parseFloat(qv);
+        if(tempItem.id === 9999) { cart.push({ id: 9999, n: "වෙනත්", up: q, buy: q, dq: "", t: q, d: 0 }); }
+        else {
+            let u = document.getElementById('uSel').value;
+            let d = (u==='g') ? q/1000 : q;
+            if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
+            await updateStock(tempItem.id, d, 'sub');
+            cart.push({ n: tempDispName, up: tempPrice, dq: q + (u==='g' ? 'g' : tempItem.unit), t: (u==='g' ? (tempPrice/1000)*q : tempPrice*q), d: d });
+        }
         updateUI(); closeModal();
     }
 
     function updateUI() {
-        document.getElementById('bBody').innerHTML = cart.map(i => `<tr><td>${i.n}</td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td></tr>`).join('');
+        document.getElementById('bBody').innerHTML = cart.map((i, idx) => `
+            <tr onclick="removeItem(${idx})" style="cursor:pointer;">
+                <td>${i.n} <span class="no-print-icon">❌</span></td><td>${i.up}</td><td>${i.dq}</td><td style="text-align:right;">${i.t.toFixed(2)}</td>
+            </tr>`).join('');
         calc();
+    }
+
+    async function removeItem(idx) {
+        if(confirm("ඉවත් කරනවාද?")) {
+            let item = cart[idx];
+            if(item.id !== 9999) await updateStock(item.id, item.d, 'add');
+            cart.splice(idx, 1);
+            updateUI();
+        }
     }
 
     function calc() {
@@ -292,30 +447,24 @@
 
     async function finalizeBillAndPrint(shouldPrint) {
         if(cart.length === 0) return;
+        isCompletingBill = true;
         try {
-            const token = await window.auth.currentUser.getIdToken();
             const bNo = document.getElementById('bNoDisplay').innerText;
-            const date = new Date().toLocaleString();
-            const finalTotal = document.getElementById('gTot').innerText;
+            const formattedDate = new Date().toLocaleString('en-GB');
+            const token = await window.auth.currentUser.getIdToken();
+            const totalAmount = document.getElementById('gTot').innerText;
 
-            // බිල්පත සම්පූර්ණයෙන්ම Cloud එකේ සුරැකීම (Reprint සඳහා)
-            const billData = { bNo, date, total: finalTotal, items: cart };
-            await fetch(`${DB_URL}bill_storage.json?auth=${token}`, { method: 'POST', body: JSON.stringify(billData) });
-
-            // පැරණි විකුණුම් වාර්තාවටද දත්ත එක් කිරීම
             for (let c of cart) {
-                await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ bNo, date, name: c.n, qty: c.dq, total: finalTotal }) });
+                await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ bNo, date: formattedDate, name: c.n, qty: c.dq, total: totalAmount }) });
             }
-
             await saveAsPDF();
             if(shouldPrint) window.print();
             location.reload();
-        } catch(e) { alert("සුරැකීමේ දෝෂයක්!"); }
+        } catch(e) { alert("සුරැකීමේ දෝෂයක්!"); isCompletingBill = false; }
     }
 
     function closeModal() { document.getElementById('unitModal').style.display='none'; document.getElementById('overlay').style.display='none'; }
-    function priceToSinhalaWords(amount) { return "රුපියල් " + amount + " යි"; }
-    function handleReload() { if (cart.length > 0) return "බිලක් සකස් වෙමින් පවතී!"; }
+    document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
 </script>
 </body>
 </html>
