@@ -62,17 +62,20 @@
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 
-        /* Stock Summary Print Specific Style */
-        #stockPrintArea { display: none; }
+        /* Print Areas */
+        #stockPrintArea, #billPrintArea { display: none; }
 
         @media print {
-            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button { display: none !important; }
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button, input, select { display: none !important; }
             .content { display: none !important; }
-            #stockHist { display: block !important; }
-            #stockPrintArea { display: block !important; margin-top: 20px; border: 1px solid #000; padding: 10px; }
+            
+            /* Logic to show specific print area */
+            body.printing-stock #stockHist, body.printing-stock #stockPrintArea { display: block !important; }
+            body.printing-bill #sales, body.printing-bill #billPrintArea { display: block !important; }
+
             table { width: 100% !important; border: 1px solid #000 !important; }
             th { background: #eee !important; color: #000 !important; }
-            body { margin: 0; padding: 10px; }
+            body { margin: 0; padding: 10px; background: white; }
         }
     </style>
 </head>
@@ -155,7 +158,7 @@
                     <input type="date" id="stockHistFilterDate" onchange="renderStockHistory()">
                 </div>
                 <div style="display:flex; align-items:flex-end;">
-                    <button class="tab-btn" style="background:#34495e; color:white; width:100%;" onclick="window.print()">වාර්තාව මුද්‍රණය (Print)</button>
+                    <button class="tab-btn" style="background:#34495e; color:white; width:100%;" onclick="printStockReport()">වාර්තාව මුද්‍රණය (Print)</button>
                 </div>
             </div>
         </div>
@@ -201,7 +204,7 @@
 
     <div id="sales" class="content">
         <div class="filter-section no-print">
-            <div class="grid-layout">
+            <div class="grid-layout" style="grid-template-columns: 1fr 1fr 1fr auto;">
                 <div><label>වාර්තාව තෝරන්න:</label>
                     <select id="reportFilter" onchange="renderSales()">
                         <option value="all">සියලුම වාර්තා</option>
@@ -211,13 +214,49 @@
                     </select>
                 </div>
                 <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
+                <div>
+                    <label>බිල් අංකය (Reprint සඳහා):</label>
+                    <input type="number" id="reprintBillNo" placeholder="බිල් අංකය">
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="printSpecificBill()">බිල Reprint කරන්න 🖨️</button>
+                </div>
             </div>
         </div>
+
+        <div id="billPrintArea" style="text-align: center; width: 58mm; margin: auto; font-family: 'Courier New', monospace;">
+            <h3 style="margin:0; font-size: 16px;">ගැමි එළවළු කොළ කඩේ</h3>
+            <p style="margin:2px 0; font-size:10px;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+            <hr>
+            <p style="margin:2px 0; font-size:10px; display: flex; justify-content: space-between;">
+                <span>බිල් අංකය: <b id="prBillNo"></b></span>
+                <span id="prBillDate"></span>
+            </p>
+            <hr>
+            <table style="width: 100%; font-size: 10px; border: none !important;">
+                <thead>
+                    <tr style="border-bottom: 1px dashed #000;">
+                        <th style="text-align: left;">භාණ්ඩය</th>
+                        <th>මිල</th>
+                        <th>ප්‍රමාණ</th>
+                        <th style="text-align: right;">මුදල</th>
+                    </tr>
+                </thead>
+                <tbody id="prBillBody"></tbody>
+            </table>
+            <hr style="border-top: 1px dashed #000;">
+            <div style="font-size: 11px; font-weight: bold; display: flex; justify-content: space-between;">
+                <span>භාණ්ඩ ගණන: <span id="prItemCount"></span></span>
+                <span>මුළු එකතුව: Rs. <span id="prTotal"></span></span>
+            </div>
+            <p style="margin-top: 10px; font-size: 10px;">ස්තුතියියි, නැවත එන්න !</p>
+        </div>
+
         <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
             <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
             <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
         </div>
-        <table>
+        <table class="no-print">
             <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th class="txt-right">මුදල</th><th class="txt-right">ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
@@ -438,7 +477,6 @@ function renderStockHistory() {
     const histBody = document.getElementById('stockHistBody');
     const summaryBody = document.getElementById('stockSummaryBody');
     
-    // Set default date if not selected
     if (!filterDate) {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('stockHistFilterDate').value = today;
@@ -446,15 +484,13 @@ function renderStockHistory() {
 
     const selectedDateStr = document.getElementById('stockHistFilterDate').value;
     const [y, m, d] = selectedDateStr.split('-');
-    const formattedFilterDate = `${d}/${m}/${y}`; // Matches DD/MM/YYYY
+    const formattedFilterDate = `${d}/${m}/${y}`;
 
     document.getElementById('printDateLabel').innerText = formattedFilterDate;
 
-    // Detailed Table rendering (Filtered by date)
     const filteredHist = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedFilterDate);
     histBody.innerHTML = filteredHist.map(h => `<tr><td>${h.dateTime}</td><td><strong>${h.name}</strong></td><td>${h.addedQty} ${h.unit}</td><td>Rs. ${parseFloat(h.buyPrice).toFixed(2)}</td><td class="no-print"><button onclick="delStockHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
 
-    // Summary Calculation for Print
     const summaryMap = {};
     let grandTotalCost = 0;
 
@@ -478,6 +514,50 @@ function renderStockHistory() {
     `).join('');
 
     document.getElementById('stockSummaryTotal').innerText = "Rs. " + grandTotalCost.toFixed(2);
+}
+
+// Print Specific Bill Reprint Logic
+function printSpecificBill() {
+    const billNo = document.getElementById('reprintBillNo').value;
+    if (!billNo) return alert("කරුණාකර බිල් අංකයක් ඇතුළත් කරන්න!");
+
+    const items = salesList.filter(s => String(s.bNo) === String(billNo));
+    if (items.length === 0) return alert("මෙම බිල් අංකය යටතේ දත්ත හමු නොවීය!");
+
+    const prBody = document.getElementById('prBillBody');
+    let total = 0;
+
+    document.getElementById('prBillNo').innerText = billNo;
+    document.getElementById('prBillDate').innerText = items[0].date;
+    document.getElementById('prItemCount').innerText = items.length;
+
+    prBody.innerHTML = items.map(i => {
+        const itemTotal = parseFloat(i.total) || 0;
+        total += itemTotal;
+        
+        // Try to find original unit price from inventory
+        const itm = inventory.find(inv => inv.name === i.name);
+        const unitPrice = itm ? itm.sell : (itemTotal / parseFloat(i.qty) || 0).toFixed(2);
+
+        return `<tr>
+            <td style="text-align: left;">${i.name}</td>
+            <td>${unitPrice}</td>
+            <td>${i.qty}</td>
+            <td style="text-align: right;">${itemTotal.toFixed(2)}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('prTotal').innerText = total.toFixed(2);
+
+    document.body.classList.add('printing-bill');
+    window.print();
+    document.body.classList.remove('printing-bill');
+}
+
+function printStockReport() {
+    document.body.classList.add('printing-stock');
+    window.print();
+    document.body.classList.remove('printing-stock');
 }
 
 async function delStockHist(id) {
@@ -562,7 +642,6 @@ function renderSales() {
         
         let profVal = parseFloat(s.profit || 0);
         if (s.bNo !== "WASTAGE" && profVal === 0) {
-            // බඩඉරිඟු සඳහා විශේෂ හඳුනාගැනීමක් සහිත සෙවුම
             let searchName = s.name.toLowerCase();
             if (searchName.includes("බඩඉරිඟු")) searchName = "බඩඉරිඟු";
             
@@ -625,10 +704,8 @@ async function handleUpdate() {
     let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
     let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
     
-    // Update Inventory
     await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
     
-    // Add to Stock History if stock was added
     if(st > 0) {
         let now = new Date();
         let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
