@@ -98,66 +98,64 @@
     <button onclick="confirmAdd()" style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:5px; font-weight:bold;">බිලට එක් කරන්න</button>
 </div>
 
-<div class="main-container" id="mainUI" style="display: none; flex-direction: column;">
-    <div style="display: flex; flex-direction: row; width: 100%;">
-        <div id="product-section"><div class="grid" id="grid"></div></div>
-        <div id="bill-section">
-            <div id="printable-bill">
-                <div class="bill-header">
-                    <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
-                    <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
-                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
-                        <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
-                        <span id="dtDisplay"></span>
-                    </div>
-                </div>
-
-                <div class="loyalty-box no-print">
-                    <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
-                    <datalist id="custList"></datalist>
-                    <div class="discount-container">
-                        <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
-                        <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
-                    </div>
-                </div>
-
-                <table class="bill-table">
-                    <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
-                    <tbody id="bBody"></tbody>
-                </table>
-                <div class="total-area">
-                    <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
-                    <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
-                    <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
-                    
-                    <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
-
-                    <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
-                        ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
-                    </div>
-
-                    <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
-                    <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
-                    <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
-                    
-                    <div id="dailyClosingPrint" class="closing-receipt-box">
-                        <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
-                        <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
-                        <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
-                        <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
-                        <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
-                    </div>
-
-                    <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
+<div class="main-container" id="mainUI" style="display: none;">
+    <div id="product-section"><div class="grid" id="grid"></div></div>
+    <div id="bill-section">
+        <div id="printable-bill">
+            <div class="bill-header">
+                <h3 style="margin:0; color: #2e7d32; font-size: 20px;">ගැමි එළවළු කොළ කඩේ</h3>
+                <p style="margin:2px 0; font-size:12px; font-weight: bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:5px; border-top: 1px solid #eee; padding-top: 5px;">
+                    <span>බිල් අංකය: <b id="bNoDisplay"></b></span>
+                    <span id="dtDisplay"></span>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර PDF & WhatsApp</button>
-                <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර PDF & WhatsApp</button>
-                <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
-                <button class="btn-print no-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
+            <div class="loyalty-box no-print">
+                <input list="custList" id="custSearch" placeholder="පාරිභෝගිකයා සොයන්න..." onchange="updateLoyaltyDisplay()">
+                <datalist id="custList"></datalist>
+                <div class="discount-container">
+                    <input type="number" id="discountPercent" placeholder="වට්ටම %" oninput="calc()">
+                    <input type="number" id="discountCash" placeholder="රු. වට්ටම" oninput="calc()">
+                </div>
             </div>
+
+            <table class="bill-table">
+                <thead><tr><th style="width:40%;">භාණ්ඩය</th><th style="width:20%;">මිල</th><th style="width:20%;">ප්‍රමාණ</th><th style="width:20%; text-align:right;">මුදල</th></tr></thead>
+                <tbody id="bBody"></tbody>
+            </table>
+            <div class="total-area">
+                <div class="summary-row"><span>භාණ්ඩ ගණන:</span> <span id="itemCount">0</span></div>
+                <div class="summary-row" id="discRow" style="color: #e67e22; display:none;"><span>ලබාදුන් වට්ටම:</span> <span>- Rs. <span id="discDisplay">0.00</span></span></div>
+                <div class="summary-row" style="font-size:18px; border-top: 1px dashed black; padding-top: 5px;"><span>මුළු එකතුව:</span> <span>Rs. <span id="gTot">0.00</span></span></div>
+                
+                <span id="gTotWords" class="sinhala-words">රුපියල් බින්දුවයි</span>
+
+                <div id="pointsPrint" class="loyalty-receipt-box" style="display:none;">
+                    ලැබුණු Points: <b id="earnedPoints">0</b> | මුළු Points: <b id="totalPoints">0</b>
+                </div>
+
+                <div class="summary-row no-print"><span>ලැබුණු මුදල:</span> <input type="number" id="cashInput" oninput="calc()" style="width:80px;"></div>
+                <div class="summary-row"><span>ගෙවූ මුදල:</span> <span>Rs. <span id="cashDisplay">0.00</span></span></div>
+                <div class="summary-row" style="color:red;"><span>ඉතිරි මුදල:</span> <span>Rs. <span id="balDisplay">0.00</span></span></div>
+                
+                <div id="dailyClosingPrint" class="closing-receipt-box">
+                    <p style="text-align:center; text-decoration: underline;">DAILY SALES SUMMARY</p>
+                    <div><span>මුළු බිල්පත් ගණන:</span> <span id="closeBillCount">0</span></div>
+                    <div><span>මුළු විකුණුම් (Net):</span> <span id="closeTotalSales">Rs. 0.00</span></div>
+                    <div><span>ලබාදුන් මුළු වට්ටම්:</span> <span id="closeTotalDisc">Rs. 0.00</span></div>
+                    <p style="font-size:9px; text-align:center; margin-top:5px;">System Generated Closing Report</p>
+                </div>
+
+                <div class="footer-msg">ස්තුතියියි, නැවත එන්න !</div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <button class="btn-print no-print" onclick="finalizeBillAndPrint(true)">මුද්‍රණය කර PDF සුරකින්න</button>
+            <button class="btn-print no-print" style="background: #34495e;" onclick="finalizeBillAndPrint(false)">මුද්‍රණය නොකර PDF සුරකින්න</button>
+            <button class="btn-print no-print" style="background: #e67e22;" onclick="printDailyClosing()">Daily Closing Report මුද්‍රණය</button>
+            <button class="btn-print no-print" style="background: #c0392b;" onclick="handleLogout()">Logout</button>
         </div>
     </div>
 
@@ -256,7 +254,6 @@
         await html2pdf().set(opt).from(element).save();
     }
 
-    // WhatsApp හරහා බිල් විස්තර යැවීමේ Function එක
     function sendToWhatsApp() {
         const bNo = document.getElementById('bNoDisplay').innerText;
         const total = document.getElementById('gTot').innerText;
@@ -502,17 +499,15 @@
             const bNo = document.getElementById('bNoDisplay').innerText;
             const formattedDate = new Date().toLocaleString('en-GB');
             const token = await auth.currentUser.getIdToken();
-            const totalAmount = document.getElementById('gTot').innerText;
+            const finalTotal = document.getElementById('gTot').innerText;
 
             for (let c of cart) {
-                let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: totalAmount };
+                let entry = { bNo: bNo, date: formattedDate, name: c.n, qty: c.dq, total: finalTotal };
                 await fetch(`${DB_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(entry) });
             }
 
-            // PDF සුරැකීම
             await saveAsPDF();
 
-            // WhatsApp පණිවිඩය සඳහා විමසීම
             if(confirm("බිල් විස්තර WhatsApp මගින් යැවිය යුතුද?")) {
                 sendToWhatsApp();
             }
