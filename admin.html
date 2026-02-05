@@ -399,6 +399,7 @@
             <thead>
                 <tr>
                     <th>Item</th>
+                    <th class="r-right">Price</th>
                     <th class="r-right">Qty</th>
                     <th class="r-right">Amount</th>
                 </tr>
@@ -675,9 +676,13 @@ window.reprintBill = function(bNo) {
         let unit = String(item.qty).replace(/[0-9.]/g, '').trim();
         let qtyDisplay = (unit.toLowerCase() === 'kg') ? rawQty.toFixed(3) + unit : rawQty + unit;
 
+        // Calculate Unit Price (Total / Qty)
+        let unitPrice = (rawQty > 0) ? (amount / rawQty).toFixed(2) : "0.00";
+
         return `
             <tr>
                 <td>${item.name}</td>
+                <td class="r-right">${unitPrice}</td>
                 <td class="r-right">${qtyDisplay}</td>
                 <td class="r-right">${amount.toFixed(2)}</td>
             </tr>
