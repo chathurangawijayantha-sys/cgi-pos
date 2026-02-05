@@ -52,14 +52,27 @@
         .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
         
+        .charts-flex { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; align-items: stretch; }
+        .chart-box { flex: 1; min-width: 320px; background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee; height: 380px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+
+        .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
+        .monthly-summary-box { margin: 30px 0; background: #fff8e1; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 
-        #billPrintArea { display: none; }
+        /* Stock Summary Print Specific Style */
+        #stockPrintArea { display: none; }
+
         @media print {
-            .no-print, .tabs, .stat-card, button, input, select { display: none !important; }
-            #billPrintArea { display: block !important; margin: auto; }
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button { display: none !important; }
+            .content { display: none !important; }
+            #stockHist { display: block !important; }
+            #stockPrintArea { display: block !important; margin-top: 20px; border: 1px solid #000; padding: 10px; }
+            table { width: 100% !important; border: 1px solid #000 !important; }
+            th { background: #eee !important; color: #000 !important; }
+            body { margin: 0; padding: 10px; }
         }
     </style>
 </head>
@@ -85,46 +98,258 @@
         <div class="stat-card card-net"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit" style="color:var(--secondary);">Rs. 0.00</h2></div>
     </div>
 
+    <div class="top-selling-section no-print">
+        <h4 style="margin:0 0 10px 0; color:#2e7d32;">වැඩිපුරම විකුණුනු භාණ්ඩ (Top 5):</h4>
+        <div id="topItemsList">දත්ත පූරණය වෙමින්...</div>
+    </div>
+    
     <div class="tabs no-print">
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
+        <button class="tab-btn" onclick="showTab('stockHist')">තොග ඉතිහාසය 📜</button>
+        <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
         <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+        <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
+        <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
+        <button class="tab-btn" onclick="showTab('loyalty')">දීමනා & Loyalty 🎁</button>
+        <button class="tab-btn" style="background:#2980b9; color:white;" onclick="showTab('cashier')">කැෂියර් බැලන්ස් 🧾</button>
+        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
     </div>
 
     <div id="stock" class="content active">
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
+                <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
+                <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
+                <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
+                <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
+                <div class="btn-group-action">
+                    <button class="tab-btn-action" style="background:var(--primary);" onclick="handleUpdate()">Update / Add</button>
+                    <button class="tab-btn-action" style="background:#1D6F42;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
+                </div>
+            </div>
+        </div>
+        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම සොයන්න..." onkeyup="searchInventory()">
+        <div class="wastage-form no-print">
+            <h4 style="margin:0 0 10px 0; color:#e65100;">නරක් වී ඉවත් කරන භාණ්ඩ (Wastage)</h4>
+            <div class="grid-layout">
+                <div><label>භාණ්ඩයේ නම</label><input list="itemList" id="wasteItemName" placeholder="භාණ්ඩයේ නම" oninput="checkWasteEx(this.value)"></div>
+                <div><label>ප්‍රමාණය</label><input type="number" id="wasteQty" placeholder="ප්‍රමාණය"></div>
+                <div><label>ඒකකය</label><select id="wasteUnit"><option value="Kg">Kg</option><option value="g">ග්‍රෑම් (g)</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
+                <button class="tab-btn" style="background:#ef6c00; color:white; height:40px;" onclick="addWastage()">ඉවත් කරන්න</button>
+            </div>
+        </div>
         <table id="inventoryTable">
-            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>තොගය</th></tr></thead>
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
         </table>
     </div>
 
-    <div id="sales" class="content">
+    <div id="stockHist" class="content">
         <div class="filter-section no-print">
-            <div class="grid-layout" style="grid-template-columns: 1fr 1fr 1fr auto;">
+            <h3 style="color:var(--primary); margin-top:0;">තොග ඇතුළත් කිරීමේ සාරාංශය</h3>
+            <div class="grid-layout" style="grid-template-columns: 1fr 1fr auto;">
                 <div>
-                    <label>බිල් අංකය (Reprint):</label>
-                    <input type="number" id="reprintBillNo" placeholder="අංකය ඇතුළත් කරන්න">
+                    <label>දිනය තෝරන්න:</label>
+                    <input type="date" id="stockHistFilterDate" onchange="renderStockHistory()">
                 </div>
                 <div style="display:flex; align-items:flex-end;">
-                    <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="printSpecificBill()">Reprint කරන්න 🖨️</button>
+                    <button class="tab-btn" style="background:#34495e; color:white; width:100%;" onclick="window.print()">වාර්තාව මුද්‍රණය (Print)</button>
                 </div>
             </div>
         </div>
-        <table id="salesTable">
-            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>මුදල</th></tr></thead>
+
+        <div id="stockPrintArea">
+            <h2 style="text-align:center; margin-bottom:5px;">තොග ඇතුළත් කිරීමේ සාරාංශය</h2>
+            <p style="text-align:center; margin:0 0 15px 0;">දිනය: <span id="printDateLabel"></span></p>
+            <table border="1" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th>භාණ්ඩය</th>
+                        <th style="text-align:right;">මුළු ප්‍රමාණය</th>
+                        <th style="text-align:right;">වැයවූ මුදල (Rs.)</th>
+                    </tr>
+                </thead>
+                <tbody id="stockSummaryBody"></tbody>
+                <tfoot>
+                    <tr style="background:#f2f2f2; font-weight:bold;">
+                        <td>මුළු එකතුව</td>
+                        <td colspan="2" id="stockSummaryTotal" style="text-align:right;">Rs. 0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <h3 class="no-print" style="color:var(--primary); margin-top:20px;">විස්තරාත්මක ඉතිහාසය 📜</h3>
+        <table class="no-print">
+            <thead><tr><th>දිනය & වේලාව</th><th>භාණ්ඩය</th><th>එකතුකල ප්‍රමාණය</th><th>ඒකක මිල (Buy)</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="stockHistBody"></tbody>
+        </table>
+    </div>
+
+    <div id="shortage" class="content">
+        <h3 style="color:#c62828;">තොග අඩු භාණ්ඩ</h3>
+        <table id="shortageTable">
+            <thead><tr><th>භාණ්ඩය</th><th class="txt-right">පවතින තොගය</th><th>ඒකකය</th></tr></thead>
+            <tbody id="shortageBody"></tbody>
+        </table>
+        <div class="no-print" style="margin-top:20px;">
+            <button class="btn-whatsapp" onclick="sendShortageToWhatsApp()">Shortage List එක WhatsApp කරන්න 🟢</button>
+        </div>
+    </div>
+
+    <div id="sales" class="content">
+        <div class="filter-section no-print">
+            <div class="grid-layout">
+                <div><label>වාර්තාව තෝරන්න:</label>
+                    <select id="reportFilter" onchange="renderSales()">
+                        <option value="all">සියලුම වාර්තා</option>
+                        <option value="today" selected>අද දින (Today)</option>
+                        <option value="month">මෙම මාසය</option>
+                        <option value="custom">වෙනත් දිනයක්</option>
+                    </select>
+                </div>
+                <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
+            </div>
+        </div>
+        <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
+            <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
+        </div>
+        <table>
+            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th class="txt-right">මුදල</th><th class="txt-right">ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="salesBody"></tbody>
         </table>
     </div>
 
-    <div id="billPrintArea" style="text-align:center;">
-        <h3>ගැමි එළවළු - Reprint</h3>
-        <p>බිල් අංකය: <b id="prBillNo"></b></p>
-        <table border="1" style="width:100%; border-collapse:collapse;">
-            <tbody id="prBillBody"></tbody>
+    <div id="expenses" class="content">
+        <h3 style="color:var(--danger);">ව්‍යාපාරික වියදම් කළමනාකරණය</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>වියදම් විස්තරය</label><input type="text" id="expNote" placeholder="උදා: විදුලි බිල"></div>
+                <div><label>මුදල (Rs.)</label><input type="number" id="expAmount"></div>
+                <div><label>දිනය</label><input type="date" id="expDate"></div>
+                <button class="tab-btn" style="background:var(--danger); color:white; height:40px;" onclick="addExpense()">වියදම එක් කරන්න</button>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>දිනය</th><th>විස්තරය</th><th class="txt-right">මුදල (Rs.)</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="expenseBody"></tbody>
         </table>
-        <h4 id="prTotal"></h4>
+    </div>
+
+    <div id="customers" class="content">
+        <h3 style="color:var(--primary);">පාරිභෝගික නාමාවලිය 👥</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>පාරිභෝගික නම</label><input type="text" id="custName" placeholder="නම"></div>
+                <div><label>දුරකථන අංකය</label><input type="text" id="custPhone" placeholder="07XXXXXXXX"></div>
+                <div><label>ලිපිනය / වෙනත්</label><input type="text" id="custNote" placeholder="විස්තර"></div>
+                <button class="tab-btn" style="background:var(--primary); color:white; height:40px;" onclick="addCustomer()">සුරකින්න</button>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>නම</th><th>දුරකථනය</th><th>විස්තර</th><th class="no-print">ක්‍රියා</th></tr></thead>
+            <tbody id="customerBody"></tbody>
+        </table>
+    </div>
+
+    <div id="loyalty" class="content">
+        <h3 style="color:var(--secondary);">පාරිභෝගික දීමනා & Loyalty 🎁</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div>
+                    <label>පාරිභෝගිකයා (නම හෝ අංකය)</label>
+                    <input list="loyaltyCustList" id="loyaltyCustSearch" placeholder="සොයන්න..." oninput="checkLoyaltyCust(this.value)">
+                    <datalist id="loyaltyCustList"></datalist>
+                </div>
+                <div><label>ලබාදුන් වට්ටම (Rs.)</label><input type="number" id="discAmount" placeholder="Rs."></div>
+                <div><label>හේතුව</label><input type="text" id="discReason" placeholder="උදා: විශේෂ දීමනා"></div>
+                <button class="tab-btn" style="background:var(--secondary); color:white; height:40px;" onclick="addLoyaltyRecord()">වාර්තා කරන්න</button>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>දිනය</th><th>පාරිභෝගිකයා</th><th>දුරකථනය</th><th class="txt-right">වට්ටම (Rs.)</th><th>හේතුව</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="loyaltyBody"></tbody>
+        </table>
+    </div>
+
+    <div id="cashier" class="content">
+        <h3 style="color:#2980b9;">ඩේලි කැෂියර් බැලන්ස් 🧾</h3>
+        <div class="cash-summary-box no-print">
+            <div class="grid-layout">
+                <div><label>ආරම්භක මුදල (Draw Balance)</label><input type="number" id="openingBalance" value="0" oninput="calculateCashBalance()"></div>
+                <div><label>අතේ ඇති මුදල (Cash in Hand)</label><input type="number" id="actualCash" placeholder="Rs." oninput="calculateCashBalance()"></div>
+            </div>
+            <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="padding:15px; background:white; border-radius:8px;">
+                    <p style="margin:0; font-size:12px; color:#666;">පද්ධතියේ එකතුව:</p>
+                    <h3 id="expectedCash" style="margin:5px 0 0 0; color:#2c3e50;">Rs. 0.00</h3>
+                </div>
+                <div style="padding:15px; background:white; border-radius:8px;">
+                    <p style="margin:0; font-size:12px; color:#666;">වෙනස:</p>
+                    <h3 id="cashDifference" style="margin:5px 0 0 0;">Rs. 0.00</h3>
+                </div>
+            </div>
+        </div>
+        <button class="btn-whatsapp no-print" style="background:#2980b9;" onclick="sendCashierReportToWhatsApp()">කැෂියර් වාර්තාව WhatsApp කරන්න 📲</button>
+    </div>
+
+    <div id="analytics" class="content">
+        <h3 style="color:var(--secondary);">විකුණුම් සහ වියදම් විශ්ලේෂණය 📊</h3>
+        <div class="filter-section no-print" style="background: #f3e5f5;">
+            <div class="grid-layout" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label>කාල පරාසය:</label>
+                    <select id="chartPeriod" onchange="toggleChartDatePicker()">
+                        <option value="today" selected>අද දින (Daily)</option>
+                        <option value="weekly">මෙම සතිය (Weekly)</option>
+                        <option value="monthly">මෙම මාසය (Monthly)</option>
+                        <option value="yearly">මෙම වසර (Yearly)</option>
+                        <option value="all">සියලුම කාලය (All Time)</option>
+                        <option value="custom">වෙනත් දිනයක් (Custom Date)</option>
+                    </select>
+                </div>
+                <div id="analyticsCustomDateDiv" style="display:none;">
+                    <label>දිනය තෝරන්න:</label>
+                    <input type="date" id="analyticsCustomDate" onchange="renderAnalytics()">
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts-flex">
+            <div class="chart-box no-print">
+                <h4 style="text-align:center; font-size: 14px; color: #34495e;">භාණ්ඩ අනුව ආදායම (Bar)</h4>
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="chart-box no-print">
+                <h4 style="text-align:center; font-size: 14px; color: #34495e;">වියදම් බෙදී යාම (Pie)</h4>
+                <canvas id="expensePieChart"></canvas>
+            </div>
+            <div class="chart-box no-print">
+                <h4 style="text-align:center; font-size: 14px; color: #34495e;">මාසික වියදම් රටාව (Line)</h4>
+                <canvas id="monthlyExpChart"></canvas>
+            </div>
+        </div>
+
+        <div class="monthly-summary-box">
+            <h3 style="margin-top:0; color:#ff8f00; font-size: 16px;">මාසික වියදම් සාරාංශය</h3>
+            <table id="monthlyExpTable">
+                <thead><tr><th>මාසය</th><th class="txt-right">මුළු වියදම (Rs.)</th></tr></thead>
+                <tbody id="monthlyExpBody"></tbody>
+            </table>
+        </div>
+
+        <h3 style="margin-top:30px; font-size: 16px; color: var(--dark);">භාණ්ඩ අනුව විකුණුම් සාරාංශය</h3>
+        <table style="margin-bottom: 30px;">
+            <thead><tr><th>භාණ්ඩයේ නම</th><th class="txt-right">විකුණුම් වාර</th><th class="txt-right">මුළු ප්‍රමාණය</th><th class="txt-right">ආදායම (Rs.)</th></tr></thead>
+            <tbody id="itemSummaryBody"></tbody>
+        </table>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -145,6 +370,7 @@
     window.handleLogin = function() {
         const email = document.getElementById('loginEmail').value;
         const pass = document.getElementById('loginPass').value;
+        if(!email || !pass) return;
         signInWithEmailAndPassword(auth, email, pass).catch(() => {
             document.getElementById('loginError').style.display = 'block';
         });
@@ -154,52 +380,404 @@
         if (user) {
             document.getElementById('login-screen').style.display = 'none';
             fetchData();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
         }
     });
 
-    window.auth = auth;
+    window.auth = auth; // Global access for fetchData
 </script>
 
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let salesList = [];
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], stockHistory = [], myChart = null, myPieChart = null, expLineChart = null;
+    let addedToday = [];
 
-    async function fetchData() {
-        const user = window.auth.currentUser;
-        if(!user) return;
-        const token = await user.getIdToken(true); // මෙයින් "500 Error" එක විසඳේ
+async function fetchData() {
+    const user = window.auth ? window.auth.currentUser : null;
+    if (!user) return;
+    const token = await user.getIdToken();
 
-        try {
-            const res = await fetch(`${BASE_URL}sales.json?auth=${token}`);
-            const data = await res.json();
-            salesList = Object.keys(data).map(k => ({...data[k], id: k}));
-            renderSales();
-        } catch (e) { console.error(e); }
+    try {
+        const [invRes, salesRes, expRes, custRes, loyRes, histRes] = await Promise.all([
+            fetch(`${BASE_URL}inventory.json?auth=${token}`),
+            fetch(`${BASE_URL}sales.json?auth=${token}`),
+            fetch(`${BASE_URL}expenses.json?auth=${token}`),
+            fetch(`${BASE_URL}customers.json?auth=${token}`),
+            fetch(`${BASE_URL}loyalty.json?auth=${token}`),
+            fetch(`${BASE_URL}stock_history.json?auth=${token}`)
+        ]);
+        
+        const invData = await invRes.json();
+        inventory = invData ? Object.keys(invData).map(k => ({...invData[k], id: k})) : [];
+        
+        const salesData = await salesRes.json();
+        salesList = [];
+        if(salesData) {
+            const uniqueMap = new Map();
+            Object.keys(salesData).forEach(key => {
+                const s = salesData[key];
+                const uniqueId = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
+                if (!uniqueMap.has(uniqueId)) {
+                    uniqueMap.set(uniqueId, {...s, firebaseKey: key});
+                }
+            });
+            salesList = Array.from(uniqueMap.values());
+        }
+        const expData = await expRes.json(); expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
+        const custData = await custRes.json(); customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
+        const loyData = await loyRes.json(); loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
+        const histData = await histRes.json(); stockHistory = histData ? Object.keys(histData).map(k => ({...histData[k], id: k})) : [];
+
+        renderInventory(); renderSales(); renderExpenses(); renderShortage(); renderCustomers(); renderLoyalty(); calculateCashBalance(); renderStockHistory();
+    } catch (e) { console.error("Error fetching data:", e); }
+}
+
+function renderStockHistory() {
+    const filterDate = document.getElementById('stockHistFilterDate').value;
+    const histBody = document.getElementById('stockHistBody');
+    const summaryBody = document.getElementById('stockSummaryBody');
+    
+    // Set default date if not selected
+    if (!filterDate) {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('stockHistFilterDate').value = today;
     }
 
-    function showTab(id) {
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+    const selectedDateStr = document.getElementById('stockHistFilterDate').value;
+    const [y, m, d] = selectedDateStr.split('-');
+    const formattedFilterDate = `${d}/${m}/${y}`; // Matches DD/MM/YYYY
+
+    document.getElementById('printDateLabel').innerText = formattedFilterDate;
+
+    // Detailed Table rendering (Filtered by date)
+    const filteredHist = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedFilterDate);
+    histBody.innerHTML = filteredHist.map(h => `<tr><td>${h.dateTime}</td><td><strong>${h.name}</strong></td><td>${h.addedQty} ${h.unit}</td><td>Rs. ${parseFloat(h.buyPrice).toFixed(2)}</td><td class="no-print"><button onclick="delStockHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+
+    // Summary Calculation for Print
+    const summaryMap = {};
+    let grandTotalCost = 0;
+
+    filteredHist.forEach(h => {
+        if (!summaryMap[h.name]) {
+            summaryMap[h.name] = { qty: 0, cost: 0, unit: h.unit };
+        }
+        const qty = parseFloat(h.addedQty) || 0;
+        const buyPrice = parseFloat(h.buyPrice) || 0;
+        summaryMap[h.name].qty += qty;
+        summaryMap[h.name].cost += (qty * buyPrice);
+        grandTotalCost += (qty * buyPrice);
+    });
+
+    summaryBody.innerHTML = Object.keys(summaryMap).map(name => `
+        <tr>
+            <td>${name}</td>
+            <td style="text-align:right;">${summaryMap[name].qty.toFixed(2)} ${summaryMap[name].unit}</td>
+            <td style="text-align:right;">${summaryMap[name].cost.toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('stockSummaryTotal').innerText = "Rs. " + grandTotalCost.toFixed(2);
+}
+
+async function delStockHist(id) {
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මෙම සටහන ඉවත් කරනවාද? (තොගය වෙනස් නොවේ)")) {
+        await fetch(`${BASE_URL}stock_history/${id}.json?auth=${token}`, { method: 'DELETE' });
+        fetchData();
+    }
+}
+
+function toggleChartDatePicker() {
+    const period = document.getElementById('chartPeriod').value;
+    document.getElementById('analyticsCustomDateDiv').style.display = (period === 'custom') ? 'block' : 'none';
+    renderAnalytics();
+}
+
+function updateDashboard(rev, prof, currentSales) {
+    let exp = expenses.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+    let loy = loyaltyRecords.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+    document.getElementById('dispRev').innerText = "Rs. " + rev.toFixed(2);
+    document.getElementById('dispGProfit').innerText = "Rs. " + prof.toFixed(2);
+    document.getElementById('dispExp').innerText = "Rs. " + (exp + loy).toFixed(2);
+    document.getElementById('dispNetProfit').innerText = "Rs. " + (prof - exp - loy).toFixed(2);
+
+    const counts = {};
+    currentSales.forEach(s => { if(s.bNo !== "WASTAGE") counts[s.name] = (counts[s.name] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    document.getElementById('topItemsList').innerHTML = sorted.length > 0 
+        ? sorted.map(i => `<span class="top-selling-item">${i[0]} (${i[1]})</span>`).join('') 
+        : "වාර්තා නැත.";
+}
+
+async function addLoyaltyRecord() {
+    const token = await window.auth.currentUser.getIdToken();
+    const searchVal = document.getElementById('loyaltyCustSearch').value;
+    const amount = document.getElementById('discAmount').value, reason = document.getElementById('discReason').value;
+    if(!searchVal || !amount) return alert("පාරිභෝගිකයා සහ වට්ටම ඇතුළත් කරන්න!");
+    const cust = customers.find(c => `${c.name} (${c.phone})` === searchVal || c.name === searchVal);
+    const finalName = cust ? cust.name : searchVal;
+    const finalPhone = cust ? cust.phone : "N/A";
+    await fetch(`${BASE_URL}loyalty.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ cust: finalName, phone: finalPhone, amount: parseFloat(amount), reason, date: new Date().toLocaleDateString('en-GB') }) });
+    document.getElementById('loyaltyCustSearch').value = ""; document.getElementById('discAmount').value = ""; document.getElementById('discReason').value = "";
+    fetchData();
+}
+
+function renderLoyalty() {
+    document.getElementById('loyaltyCustList').innerHTML = customers.map(c => `<option value="${c.name} (${c.phone})">`).join('');
+    document.getElementById('loyaltyBody').innerHTML = loyaltyRecords.map(l => `<tr><td>${l.date}</td><td><strong>${l.cust}</strong></td><td>${l.phone || 'N/A'}</td><td class="txt-right">${parseFloat(l.amount).toFixed(2)}</td><td>${l.reason || '-'}</td><td class="no-print"><button onclick="delLoyalty('${l.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
+}
+
+async function delLoyalty(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}loyalty/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+function renderInventory() {
+    document.getElementById('inventoryBody').innerHTML = inventory.map(item => {
+        let profitPct = item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0;
+        let isOutOfStock = parseFloat(item.stock) <= 0;
+        let rowStyle = isOutOfStock ? 'background-color: #ffcccc; color: #b71c1c;' : '';
+        return `<tr style="${rowStyle}"><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40" style="object-fit:cover; border-radius:5px;" onerror="this.src='https://via.placeholder.com/40'"></td><td><strong>${item.name}</strong></td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td><td style="color:${profitPct > 0 ? 'green' : 'red'}; font-weight:bold;">${profitPct}%</td><td><strong>${(item.unit === "Kg") ? parseFloat(item.stock).toFixed(3) : item.stock}</strong></td><td class="no-print"><button onclick="editItem('${item.name}')" style="color:blue; border:none; background:none; cursor:pointer;">✎</button><button onclick="delCloud('${item.id}')" style="color:red; border:none; background:none; cursor:pointer;">X</button></td></tr>`;
+    }).join('');
+    document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
+}
+
+function renderSales() {
+    const filter = document.getElementById('reportFilter').value, customDate = document.getElementById('customDate').value, now = new Date(), todayStr = now.toLocaleDateString('en-GB');
+    document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
+    const filtered = salesList.filter(s => {
+        if(filter === 'all') return true;
+        const sDateParts = s.date.split(',')[0].trim().split('/');
+        let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+        const sDateISO = sDate.toLocaleDateString('en-GB');
+        if(filter === 'today') return sDateISO === todayStr;
+        if(filter === 'month') return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        if(filter === 'custom' && customDate) return sDateISO === new Date(customDate).toLocaleDateString('en-GB');
+        return true;
+    });
+    let totalRev = 0, totalProf = 0;
+    document.getElementById('salesBody').innerHTML = filtered.map(s => {
+        let revVal = parseFloat(s.total || 0);
+        
+        let profVal = parseFloat(s.profit || 0);
+        if (s.bNo !== "WASTAGE" && profVal === 0) {
+            // බඩඉරිඟු සඳහා විශේෂ හඳුනාගැනීමක් සහිත සෙවුම
+            let searchName = s.name.toLowerCase();
+            if (searchName.includes("බඩඉරිඟු")) searchName = "බඩඉරිඟු";
+            
+            let itm = inventory.find(i => i.name.toLowerCase() === searchName);
+            if (itm) {
+                let rawQty = parseFloat(s.qty) || 0;
+                let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim().toLowerCase();
+                let qtyBase = (unitPart === 'g') ? rawQty / 1000 : rawQty;
+                profVal = revVal - (parseFloat(itm.buy) * qtyBase);
+            }
+        }
+
+        totalRev += revVal; totalProf += profVal;
+        let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
+        let rawQtyDisplay = parseFloat(s.qty), unitPartDisplay = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPartDisplay.toLowerCase() === 'kg') ? rawQtyDisplay.toFixed(3) + " " + unitPartDisplay : rawQtyDisplay + " " + unitPartDisplay;
+        return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
+    }).reverse().join('');
+    updateDashboard(totalRev, totalProf, filtered);
+}
+
+function calculateCashBalance() {
+    const today = new Date().toLocaleDateString('en-GB');
+    const income = salesList.filter(s => s.date.split(',')[0].trim() === today && s.bNo !== "WASTAGE").reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+    const cost = expenses.filter(e => new Date(e.date).toLocaleDateString('en-GB') === today).reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const open = parseFloat(document.getElementById('openingBalance').value || 0), actual = parseFloat(document.getElementById('actualCash').value || 0);
+    const expected = (open + income) - cost; const diff = actual - expected;
+    document.getElementById('expectedCash').innerText = "Rs. " + expected.toFixed(2);
+    const diffEl = document.getElementById('cashDifference'); diffEl.innerText = "Rs. " + diff.toFixed(2);
+    diffEl.style.color = diff < 0 ? "#e74c3c" : "#27ae60";
+}
+
+function sendCashierReportToWhatsApp() {
+    const msg = `*කැෂියර් බැලන්ස් - ${new Date().toLocaleDateString()}*\nආරම්භක: Rs. ${document.getElementById('openingBalance').value}\nබලාපොරොත්තු වූ: ${document.getElementById('expectedCash').innerText}\nඅතේ ඇති: Rs. ${document.getElementById('actualCash').value}\nවෙනස: ${document.getElementById('cashDifference').innerText}`;
+    window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
+}
+
+async function addCustomer() {
+    const token = await window.auth.currentUser.getIdToken();
+    const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
+    if(!name || !phone) return alert("දත්ත ඇතුළත් කරන්න!");
+    await fetch(`${BASE_URL}customers.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
+    document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custNote').value = "";
+    fetchData();
+}
+
+function renderCustomers() {
+    document.getElementById('customerBody').innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td><td class="no-print"><button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button><button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+}
+
+async function delCustomer(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("ඉවත් කරනවාද?")) { await fetch(`${BASE_URL}customers/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+async function handleUpdate() {
+    const token = await window.auth.currentUser.getIdToken();
+    let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
+    if(!n) return;
+    
+    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+    let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
+    
+    // Update Inventory
+    await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
+    
+    // Add to Stock History if stock was added
+    if(st > 0) {
+        let now = new Date();
+        let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
+        let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: formattedDT };
+        await fetch(`${BASE_URL}stock_history.json?auth=${token}`, { method: 'POST', body: JSON.stringify(histEntry) });
     }
 
-    function renderSales() {
-        document.getElementById('salesBody').innerHTML = salesList.map(s => `<tr><td>${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.total}</td></tr>`).join('');
-    }
+    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); 
+    fetchData(); 
+    clearForm();
+}
 
-    function printSpecificBill() {
-        const bNo = document.getElementById('reprintBillNo').value;
-        const filtered = salesList.filter(s => String(s.bNo) === String(bNo));
-        if(filtered.length === 0) return alert("බිල හමුවුනේ නැත");
+function downloadTodayStockExcel() {
+    if (addedToday.length === 0) return alert("හිස්!");
+    const ws = XLSX.utils.json_to_sheet(addedToday); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Added"); XLSX.writeFile(wb, `Stock_${new Date().toLocaleDateString()}.xlsx`);
+}
 
-        document.getElementById('prBillNo').innerText = bNo;
-        let total = 0;
-        document.getElementById('prBillBody').innerHTML = filtered.map(f => {
-            total += parseFloat(f.total);
-            return `<tr><td>${f.name}</td><td>${f.qty}</td><td>${f.total}</td></tr>`;
-        }).join('');
-        document.getElementById('prTotal').innerText = "මුළු එකතුව: Rs. " + total.toFixed(2);
-        window.print();
-    }
+async function addExpense() {
+    const token = await window.auth.currentUser.getIdToken();
+    const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value, date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
+    if(!note || !amount) return alert("විස්තර ඇතුළත් කරන්න!");
+    await fetch(`${BASE_URL}expenses.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
+    document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = ""; fetchData();
+}
+
+function renderExpenses() {
+    document.getElementById('expenseBody').innerHTML = expenses.map(e => `<tr><td>${e.date}</td><td>${e.note}</td><td class="txt-right">${parseFloat(e.amount).toFixed(2)}</td><td class="no-print"><button onclick="delExp('${e.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+}
+
+async function delExp(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}expenses/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+function renderAnalytics() {
+    const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
+    const customDateInput = document.getElementById('analyticsCustomDate').value;
+    const targetISO = customDateInput ? new Date(customDateInput).toLocaleDateString('en-GB') : "";
+
+    salesList.forEach(s => {
+        if(s.bNo === "WASTAGE") return;
+        const sDateParts = s.date.split(',')[0].trim().split('/');
+        let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
+        const sDateISO = sDate.toLocaleDateString('en-GB');
+        
+        let include = false;
+        if(period === 'all') include = true;
+        else if(period === 'today') include = sDateISO === now.toLocaleDateString('en-GB');
+        else if(period === 'custom') include = sDateISO === targetISO;
+        else if(period === 'weekly') {
+            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
+            include = sDate >= lastWeek;
+        } else if(period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        else if(period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
+
+        if (include) {
+            if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0, unit: "" };
+            stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0); stats[s.name].qty += parseFloat(s.qty) || 0;
+            if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
+        }
+    });
+
+    expenses.forEach(e => {
+        const eDate = new Date(e.date);
+        const eDateISO = eDate.toLocaleDateString('en-GB');
+        const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
+        
+        let include = false;
+        if(period === 'all') include = true;
+        else if(period === 'today') include = eDateISO === now.toLocaleDateString('en-GB');
+        else if(period === 'custom') include = eDateISO === targetISO;
+        else if(period === 'weekly') {
+            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
+            include = eDate >= lastWeek;
+        } else if(period === 'monthly') include = eDate.getMonth() === now.getMonth() && eDate.getFullYear() === now.getFullYear();
+        else if(period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
+
+        if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
+    });
+
+    document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td class="txt-right">${stats[n].count}</td><td class="txt-right">${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td class="txt-right">${stats[n].rev.toFixed(2)}</td></tr>`).join('');
+    document.getElementById('monthlyExpBody').innerHTML = Object.keys(monthlyExp).map(m => `<tr><td><strong>${m}</strong></td><td class="txt-right">Rs. ${monthlyExp[m].toFixed(2)}</td></tr>`).join('');
+
+    const ctx = document.getElementById('salesChart').getContext('2d'); 
+    if(myChart) myChart.destroy(); 
+    myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#27ae60' }] }, options: { responsive: true, maintainAspectRatio: false } });
+    
+    const pctx = document.getElementById('expensePieChart').getContext('2d'); 
+    if(myPieChart) myPieChart.destroy(); 
+    myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#8e44ad', '#e67e22'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+    const lctx = document.getElementById('monthlyExpChart').getContext('2d');
+    if(expLineChart) expLineChart.destroy();
+    expLineChart = new Chart(lctx, { type: 'line', data: { labels: Object.keys(monthlyExp), datasets: [{ label: 'මාසික වියදම', data: Object.values(monthlyExp), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
+
+function showTab(id) {
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active'); 
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+    if(id === 'analytics') renderAnalytics(); 
+    if(id === 'cashier') calculateCashBalance();
+    if(id === 'stockHist') renderStockHistory();
+}
+
+function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
+function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
+function checkWasteEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex) document.getElementById('wasteUnit').value = ex.unit; }
+function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
+function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
+
+async function delCloud(id) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}inventory/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+async function deleteSingleSale(k) { 
+    const token = await window.auth.currentUser.getIdToken();
+    if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
+}
+
+function renderShortage() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; return `<tr><td>${i.name}</td><td class="txt-right">${displayStock}</td><td>${i.unit}</td></tr>` }).join(''); }
+function sendShortageToWhatsApp() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!"); let msg = "*ගේන්න ඕනෑ බඩු*\n"; lowStock.forEach(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; msg += `- ${i.name} (${displayStock} ${i.unit})\n`; }); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+
+async function addWastage() { 
+    const token = await window.auth.currentUser.getIdToken();
+    let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value; 
+    if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); 
+    let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); 
+    if(!itm) return alert("භාණ්ඩය නැත!"); 
+    let qtyBase = (u === 'g') ? q / 1000 : q; 
+    if(confirm(`${n} වලින් ${q}${u} ක් ඉවත් කරනවාද?`)) { 
+        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3); 
+        await fetch(`${BASE_URL}inventory/${itm.id}/stock.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(ns) }); 
+        let loss = -(parseFloat(itm.buy) * qtyBase); 
+        let now = new Date(); 
+        let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB'); 
+        let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss }; 
+        await fetch(`${BASE_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(wasteEntry) }); 
+        document.getElementById('wasteItemName').value = ""; document.getElementById('wasteQty').value = ""; fetchData(); 
+    } 
+}
+
+function sendSalesReportToWhatsApp() { let msg = `*විකුණුම් වාර්තාව*\nආදායම: ${document.getElementById('dispRev').innerText}\nලාභය: ${document.getElementById('dispGProfit').innerText}`; window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sales"); XLSX.writeFile(wb, "Sales_Report.xlsx"); }
+
 </script>
 </body>
 </html>
+
