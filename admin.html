@@ -64,16 +64,54 @@
 
         /* Stock Summary Print Specific Style */
         #stockPrintArea { display: none; }
+        
+        /* Receipt / Bill Print Style */
+        #receipt-print-area { display: none; }
 
         @media print {
             .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button { display: none !important; }
             .content { display: none !important; }
+            
+            /* If printing Stock History */
             #stockHist { display: block !important; }
             #stockPrintArea { display: block !important; margin-top: 20px; border: 1px solid #000; padding: 10px; }
+            
+            /* If printing Receipt */
+            body.printing-bill * { visibility: hidden; }
+            body.printing-bill #receipt-print-area, body.printing-bill #receipt-print-area * { visibility: visible; }
+            body.printing-bill #receipt-print-area { 
+                display: block !important; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                margin: 0; 
+                padding: 10px;
+                color: black;
+            }
+            body.printing-bill #stockHist, body.printing-bill #stockPrintArea { display: none !important; }
+            
             table { width: 100% !important; border: 1px solid #000 !important; }
             th { background: #eee !important; color: #000 !important; }
             body { margin: 0; padding: 10px; }
         }
+        
+        /* Receipt Specific CSS for Thermal Look */
+        .receipt-box {
+            width: 300px; /* Adjust for thermal printer usually 58mm or 80mm */
+            margin: 0 auto;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px dashed #333;
+            padding: 10px;
+        }
+        .receipt-header h2 { margin: 5px 0; font-size: 18px; }
+        .receipt-header p { margin: 2px 0; font-size: 12px; }
+        .receipt-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; border: none !important; }
+        .receipt-table th, .receipt-table td { border-bottom: 1px dashed #000 !important; border-top: none; border-left: none; border-right: none; padding: 5px 0; text-align: left; }
+        .receipt-table .r-right { text-align: right; }
+        .receipt-total { margin-top: 10px; border-top: 2px solid #000; padding-top: 5px; }
+        .receipt-footer { margin-top: 15px; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -212,6 +250,7 @@
                 </div>
                 <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
             </div>
+            <p style="font-size:11px; color:#666; margin-top:5px;">💡 බිල් අංකය (Bill No) මත Click කර බිල නැවත Print කරන්න.</p>
         </div>
         <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
             <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
@@ -346,6 +385,33 @@
             <thead><tr><th>භාණ්ඩයේ නම</th><th class="txt-right">විකුණුම් වාර</th><th class="txt-right">මුළු ප්‍රමාණය</th><th class="txt-right">ආදායම (Rs.)</th></tr></thead>
             <tbody id="itemSummaryBody"></tbody>
         </table>
+    </div>
+</div>
+
+<div id="receipt-print-area">
+    <div class="receipt-box">
+        <div class="receipt-header">
+            <h2 style="font-weight:bold;">ගැමි එළවළු</h2>
+            <p>ස්තූතියි! නැවත එන්න.</p>
+            <p id="receiptDate"></p>
+            <p>Bill No: <span id="receiptBillNo"></span></p>
+        </div>
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="r-right">Qty</th>
+                    <th class="r-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody id="receiptBody"></tbody>
+        </table>
+        <div class="receipt-total">
+            <h3 style="margin:5px 0; font-size:16px;">Total: <span id="receiptTotal"></span></h3>
+        </div>
+        <div class="receipt-footer">
+            <p>Software by CGI Pro</p>
+        </div>
     </div>
 </div>
 
@@ -578,10 +644,53 @@ function renderSales() {
         totalRev += revVal; totalProf += profVal;
         let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
         let rawQtyDisplay = parseFloat(s.qty), unitPartDisplay = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPartDisplay.toLowerCase() === 'kg') ? rawQtyDisplay.toFixed(3) + " " + unitPartDisplay : rawQtyDisplay + " " + unitPartDisplay;
-        return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
+        
+        // Modified Bill No to be Clickable
+        let billNoDisplay = isWaste ? s.bNo : `<strong onclick="reprintBill('${s.bNo}')" style="cursor:pointer; color:#2980b9; text-decoration:underline;" title="බිල මුද්‍රණය කරන්න">${s.bNo}</strong>`;
+
+        return `<tr style="${rowStyle}"><td>${billNoDisplay}</td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
 }
+
+// Function to handle Reprinting Bill
+window.reprintBill = function(bNo) {
+    if(!bNo || bNo === "WASTAGE") return;
+
+    // Filter items belonging to this Bill No
+    const billItems = salesList.filter(s => s.bNo === bNo);
+    if(billItems.length === 0) return alert("බිල්පත සොයාගත නොහැක!");
+
+    // Populate Receipt Template
+    document.getElementById('receiptBillNo').innerText = bNo;
+    document.getElementById('receiptDate').innerText = billItems[0].date;
+    
+    let totalBillAmount = 0;
+    document.getElementById('receiptBody').innerHTML = billItems.map(item => {
+        let amount = parseFloat(item.total);
+        totalBillAmount += amount;
+        
+        // Clean quantity display
+        let rawQty = parseFloat(item.qty);
+        let unit = String(item.qty).replace(/[0-9.]/g, '').trim();
+        let qtyDisplay = (unit.toLowerCase() === 'kg') ? rawQty.toFixed(3) + unit : rawQty + unit;
+
+        return `
+            <tr>
+                <td>${item.name}</td>
+                <td class="r-right">${qtyDisplay}</td>
+                <td class="r-right">${amount.toFixed(2)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('receiptTotal').innerText = "Rs. " + totalBillAmount.toFixed(2);
+
+    // Trigger Print
+    document.body.classList.add('printing-bill');
+    window.print();
+    document.body.classList.remove('printing-bill');
+};
 
 function calculateCashBalance() {
     const today = new Date().toLocaleDateString('en-GB');
@@ -780,4 +889,3 @@ function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const
 </script>
 </body>
 </html>
-
