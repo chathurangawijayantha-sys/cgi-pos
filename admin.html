@@ -213,9 +213,6 @@
                     <label>බිල් අංකය (Reprint සඳහා):</label>
                     <input type="number" id="reprintBillNo" placeholder="බිල් අංකය">
                 </div>
-                <div style="display:flex; align-items:flex-end;">
-                    <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="printSpecificBill()">බිල Reprint කරන්න 🖨️</button>
-                </div>
             </div>
         </div>
 
@@ -351,10 +348,6 @@
                 <h4 style="text-align:center; font-size: 14px; color: #34495e;">වියදම් බෙදී යාම (Pie)</h4>
                 <canvas id="expensePieChart"></canvas>
             </div>
-            <div class="chart-box no-print">
-                <h4 style="text-align:center; font-size: 14px; color: #34495e;">මාසික වියදම් රටාව (Line)</h4>
-                <canvas id="monthlyExpChart"></canvas>
-            </div>
         </div>
 
         <div class="monthly-summary-box">
@@ -409,12 +402,12 @@
         }
     });
 
-    window.auth = auth; // Global access for fetchData
+    window.auth = auth;
 </script>
 
 <script>
     const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
-    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], stockHistory = [], myChart = null, myPieChart = null, expLineChart = null;
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], stockHistory = [], myChart = null, myPieChart = null;
     let addedToday = [];
 
 async function fetchData() {
@@ -436,18 +429,8 @@ async function fetchData() {
         inventory = invData ? Object.keys(invData).map(k => ({...invData[k], id: k})) : [];
         
         const salesData = await salesRes.json();
-        salesList = [];
-        if(salesData) {
-            const uniqueMap = new Map();
-            Object.keys(salesData).forEach(key => {
-                const s = salesData[key];
-                const uniqueId = `${s.bNo}_${s.name}_${s.date}_${s.total}`;
-                if (!uniqueMap.has(uniqueId)) {
-                    uniqueMap.set(uniqueId, {...s, firebaseKey: key});
-                }
-            });
-            salesList = Array.from(uniqueMap.values());
-        }
+        salesList = salesData ? Object.keys(salesData).map(k => ({...salesData[k], firebaseKey: k})) : [];
+        
         const expData = await expRes.json(); expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
         const custData = await custRes.json(); customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
         const loyData = await loyRes.json(); loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
@@ -473,7 +456,7 @@ function renderStockHistory() {
 
     document.getElementById('printDateLabel').innerText = formattedFilterDate;
 
-    const filteredHist = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedFilterDate);
+    const filteredHist = stockHistory.filter(h => h.dateTime && h.dateTime.split(' ')[0] === formattedFilterDate);
     histBody.innerHTML = filteredHist.map(h => `<tr><td>${h.dateTime}</td><td><strong>${h.name}</strong></td><td>${h.addedQty} ${h.unit}</td><td>Rs. ${parseFloat(h.buyPrice).toFixed(2)}</td><td class="no-print"><button onclick="delStockHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
 
     const summaryMap = {};
@@ -497,8 +480,6 @@ function renderStockHistory() {
             <td style="text-align:right; padding: 2px 4px;">${summaryMap[name].cost.toFixed(2)}</td>
         </tr>
     `).join('');
-
-    document.getElementById('stockSummaryTotal').innerText = "Rs. " + grandTotalCost.toFixed(2);
 }
 
 function printSpecificBill() {
@@ -525,7 +506,6 @@ function printSpecificBill() {
     }).join('');
 
     document.getElementById('prTotal').innerText = total.toFixed(2);
-
     document.body.classList.add('printing-bill');
     window.print();
     document.body.classList.remove('printing-bill');
@@ -539,7 +519,7 @@ function printStockReport() {
 
 async function delStockHist(id) {
     const token = await window.auth.currentUser.getIdToken();
-    if(confirm("මෙම සටහන ඉවත් කරනවාද? (තොගය වෙනස් නොවේ)")) {
+    if(confirm("මෙම සටහන ඉවත් කරනවාද?")) {
         await fetch(`${BASE_URL}stock_history/${id}.json?auth=${token}`, { method: 'DELETE' });
         fetchData();
     }
@@ -604,6 +584,7 @@ function renderSales() {
     const filter = document.getElementById('reportFilter').value, customDate = document.getElementById('customDate').value, now = new Date(), todayStr = now.toLocaleDateString('en-GB');
     document.getElementById('customDateDiv').style.display = (filter === 'custom') ? 'block' : 'none';
     const filtered = salesList.filter(s => {
+        if(!s.date) return false;
         if(filter === 'all') return true;
         const sDateParts = s.date.split(',')[0].trim().split('/');
         let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
@@ -616,33 +597,18 @@ function renderSales() {
     let totalRev = 0, totalProf = 0;
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
         let revVal = parseFloat(s.total || 0);
-        
         let profVal = parseFloat(s.profit || 0);
-        if (s.bNo !== "WASTAGE" && profVal === 0) {
-            let searchName = s.name.toLowerCase();
-            if (searchName.includes("බඩඉරිඟු")) searchName = "බඩඉරිඟු";
-            
-            let itm = inventory.find(i => i.name.toLowerCase() === searchName);
-            if (itm) {
-                let rawQty = parseFloat(s.qty) || 0;
-                let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim().toLowerCase();
-                let qtyBase = (unitPart === 'g') ? rawQty / 1000 : rawQty;
-                profVal = revVal - (parseFloat(itm.buy) * qtyBase);
-            }
-        }
-
         totalRev += revVal; totalProf += profVal;
-        let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
-        let rawQtyDisplay = parseFloat(s.qty), unitPartDisplay = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPartDisplay.toLowerCase() === 'kg') ? rawQtyDisplay.toFixed(3) + " " + unitPartDisplay : rawQtyDisplay + " " + unitPartDisplay;
-        return `<tr style="${rowStyle}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
+        let isWaste = (s.bNo === "WASTAGE");
+        return `<tr style="${isWaste ? "background-color: #fff3e0; color: #e65100;" : ""}"><td><strong>${s.bNo}</strong></td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
 }
 
 function calculateCashBalance() {
     const today = new Date().toLocaleDateString('en-GB');
-    const income = salesList.filter(s => s.date.split(',')[0].trim() === today && s.bNo !== "WASTAGE").reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
-    const cost = expenses.filter(e => new Date(e.date).toLocaleDateString('en-GB') === today).reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const income = salesList.filter(s => s.date && s.date.split(',')[0].trim() === today && s.bNo !== "WASTAGE").reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+    const cost = expenses.filter(e => e.date && new Date(e.date).toLocaleDateString('en-GB') === today).reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
     const open = parseFloat(document.getElementById('openingBalance').value || 0), actual = parseFloat(document.getElementById('actualCash').value || 0);
     const expected = (open + income) - cost; const diff = actual - expected;
     document.getElementById('expectedCash').innerText = "Rs. " + expected.toFixed(2);
@@ -651,7 +617,7 @@ function calculateCashBalance() {
 }
 
 function sendCashierReportToWhatsApp() {
-    const msg = `*කැෂියර් බැලන්ස් - ${new Date().toLocaleDateString()}*\nආරම්භක: Rs. ${document.getElementById('openingBalance').value}\nබලාපොරොත්තු වූ: ${document.getElementById('expectedCash').innerText}\nඅතේ ඇති: Rs. ${document.getElementById('actualCash').value}\nවෙනස: ${document.getElementById('cashDifference').innerText}`;
+    const msg = `*කැෂියර් බැලන්ස් - ${new Date().toLocaleDateString()}*\nබලාපොරොත්තු වූ: ${document.getElementById('expectedCash').innerText}\nඅතේ ඇති: Rs. ${document.getElementById('actualCash').value}\nවෙනස: ${document.getElementById('cashDifference').innerText}`;
     window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`);
 }
 
@@ -660,12 +626,11 @@ async function addCustomer() {
     const name = document.getElementById('custName').value, phone = document.getElementById('custPhone').value, note = document.getElementById('custNote').value;
     if(!name || !phone) return alert("දත්ත ඇතුළත් කරන්න!");
     await fetch(`${BASE_URL}customers.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ name, phone, note }) });
-    document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custNote').value = "";
     fetchData();
 }
 
 function renderCustomers() {
-    document.getElementById('customerBody').innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td><td class="no-print"><button onclick="window.open('https://wa.me/${c.phone}')" style="color:green; border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">💬</button><button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
+    document.getElementById('customerBody').innerHTML = customers.map(c => `<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.note || '-'}</td><td class="no-print"><button onclick="delCustomer('${c.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).join('');
 }
 
 async function delCustomer(id) { 
@@ -677,27 +642,15 @@ async function handleUpdate() {
     const token = await window.auth.currentUser.getIdToken();
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
-    
     let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
     let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-    
     await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
-    
     if(st > 0) {
         let now = new Date();
-        let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
-        let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: formattedDT };
+        let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB') };
         await fetch(`${BASE_URL}stock_history.json?auth=${token}`, { method: 'POST', body: JSON.stringify(histEntry) });
     }
-
-    addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); 
-    fetchData(); 
-    clearForm();
-}
-
-function downloadTodayStockExcel() {
-    if (addedToday.length === 0) return alert("හිස්!");
-    const ws = XLSX.utils.json_to_sheet(addedToday); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Added"); XLSX.writeFile(wb, `Stock_${new Date().toLocaleDateString()}.xlsx`);
+    fetchData(); clearForm();
 }
 
 async function addExpense() {
@@ -705,7 +658,7 @@ async function addExpense() {
     const note = document.getElementById('expNote').value, amount = document.getElementById('expAmount').value, date = document.getElementById('expDate').value || new Date().toISOString().split('T')[0];
     if(!note || !amount) return alert("විස්තර ඇතුළත් කරන්න!");
     await fetch(`${BASE_URL}expenses.json?auth=${token}`, { method: 'POST', body: JSON.stringify({ note, amount: parseFloat(amount), date }) });
-    document.getElementById('expNote').value = ""; document.getElementById('expAmount').value = ""; document.getElementById('expDate').value = ""; fetchData();
+    fetchData();
 }
 
 function renderExpenses() {
@@ -718,83 +671,27 @@ async function delExp(id) { 
 }
 
 function renderAnalytics() {
-    const period = document.getElementById('chartPeriod').value, stats = {}, expStats = {}, monthlyExp = {}, now = new Date();
-    const customDateInput = document.getElementById('analyticsCustomDate').value;
-    const targetISO = customDateInput ? new Date(customDateInput).toLocaleDateString('en-GB') : "";
-
+    const stats = {};
     salesList.forEach(s => {
         if(s.bNo === "WASTAGE") return;
-        const sDateParts = s.date.split(',')[0].trim().split('/');
-        let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
-        const sDateISO = sDate.toLocaleDateString('en-GB');
-        
-        let include = false;
-        if(period === 'all') include = true;
-        else if(period === 'today') include = sDateISO === now.toLocaleDateString('en-GB');
-        else if(period === 'custom') include = sDateISO === targetISO;
-        else if(period === 'weekly') {
-            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
-            include = sDate >= lastWeek;
-        } else if(period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
-        else if(period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
-
-        if (include) {
-            if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0, unit: "" };
-            stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0); stats[s.name].qty += parseFloat(s.qty) || 0;
-            if(!stats[s.name].unit) stats[s.name].unit = String(s.qty).replace(/[0-9.]/g, '').trim();
-        }
+        if (!stats[s.name]) stats[s.name] = { count: 0, qty: 0, rev: 0 };
+        stats[s.name].count++; stats[s.name].rev += parseFloat(s.total || 0); stats[s.name].qty += parseFloat(s.qty) || 0;
     });
-
-    expenses.forEach(e => {
-        const eDate = new Date(e.date);
-        const eDateISO = eDate.toLocaleDateString('en-GB');
-        const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-        monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
-        
-        let include = false;
-        if(period === 'all') include = true;
-        else if(period === 'today') include = eDateISO === now.toLocaleDateString('en-GB');
-        else if(period === 'custom') include = eDateISO === targetISO;
-        else if(period === 'weekly') {
-            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
-            include = eDate >= lastWeek;
-        } else if(period === 'monthly') include = eDate.getMonth() === now.getMonth() && eDate.getFullYear() === now.getFullYear();
-        else if(period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
-
-        if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
-    });
-
-    document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td class="txt-right">${stats[n].count}</td><td class="txt-right">${stats[n].qty.toFixed(2)} ${stats[n].unit}</td><td class="txt-right">${stats[n].rev.toFixed(2)}</td></tr>`).join('');
-    document.getElementById('monthlyExpBody').innerHTML = Object.keys(monthlyExp).map(m => `<tr><td><strong>${m}</strong></td><td class="txt-right">Rs. ${monthlyExp[m].toFixed(2)}</td></tr>`).join('');
-
-    const ctx = document.getElementById('salesChart').getContext('2d'); 
-    if(myChart) myChart.destroy(); 
-    myChart = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(stats), datasets: [{ label: 'ආදායම', data: Object.values(stats).map(x => x.rev), backgroundColor: '#27ae60' }] }, options: { responsive: true, maintainAspectRatio: false } });
-    
-    const pctx = document.getElementById('expensePieChart').getContext('2d'); 
-    if(myPieChart) myPieChart.destroy(); 
-    myPieChart = new Chart(pctx, { type: 'pie', data: { labels: Object.keys(expStats), datasets: [{ data: Object.values(expStats), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#27ae60', '#8e44ad', '#e67e22'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-
-    const lctx = document.getElementById('monthlyExpChart').getContext('2d');
-    if(expLineChart) expLineChart.destroy();
-    expLineChart = new Chart(lctx, { type: 'line', data: { labels: Object.keys(monthlyExp), datasets: [{ label: 'මාසික වියදම', data: Object.values(monthlyExp), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
+    document.getElementById('itemSummaryBody').innerHTML = Object.keys(stats).map(n => `<tr><td><strong>${n}</strong></td><td class="txt-right">${stats[n].count}</td><td class="txt-right">${stats[n].qty.toFixed(2)}</td><td class="txt-right">${stats[n].rev.toFixed(2)}</td></tr>`).join('');
 }
 
 function showTab(id) {
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active'); 
-    if (event && event.currentTarget) event.currentTarget.classList.add('active');
     if(id === 'analytics') renderAnalytics(); 
-    if(id === 'cashier') calculateCashBalance();
-    if(id === 'stockHist') renderStockHistory();
 }
 
 function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; }); }
-function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; document.getElementById('itemImg').value=ex.img || ''; } }
+function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; } }
 function checkWasteEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex) document.getElementById('wasteUnit').value = ex.unit; }
-function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; document.getElementById('addStock').value = "0"; document.getElementById('itemImg').value = ""; }
-function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('itemUnit').value=i.unit; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; document.getElementById('itemImg').value=i.img || ''; window.scrollTo(0,0); } }
+function clearForm() { document.getElementById('itemName').value = ""; document.getElementById('buyPrice').value = ""; document.getElementById('sellPrice').value = ""; }
+function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; window.scrollTo(0,0); } }
 
 async function delCloud(id) { 
     const token = await window.auth.currentUser.getIdToken();
@@ -806,25 +703,21 @@ async function deleteSingleSale(k) { 
     if(confirm("මකන්නද?")) { await fetch(`${BASE_URL}sales/${k}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } 
 }
 
-function renderShortage() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); document.getElementById('shortageBody').innerHTML = lowStock.map(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; return `<tr><td>${i.name}</td><td class="txt-right">${displayStock}</td><td>${i.unit}</td></tr>` }).join(''); }
-function sendShortageToWhatsApp() { const lowStock = inventory.filter(i => { const stockVal = parseFloat(i.stock); return (i.unit === "Kg") ? stockVal < 0.5 : stockVal < 2; }); if (lowStock.length === 0) return alert("ලැයිස්තුව හිස්!"); let msg = "*ගේන්න ඕනෑ බඩු*\n"; lowStock.forEach(i => { const displayStock = (i.unit === "Kg") ? parseFloat(i.stock).toFixed(3) : i.stock; msg += `- ${i.name} (${displayStock} ${i.unit})\n`; }); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
+function renderShortage() { const lowStock = inventory.filter(i => parseFloat(i.stock) < 2); document.getElementById('shortageBody').innerHTML = lowStock.map(i => `<tr><td>${i.name}</td><td class="txt-right">${i.stock}</td><td>${i.unit}</td></tr>`).join(''); }
+function sendShortageToWhatsApp() { let msg = "*ගේන්න ඕනෑ බඩු*\n"; inventory.filter(i => parseFloat(i.stock) < 2).forEach(i => msg += `- ${i.name} (${i.stock})\n`); window.open(`https://wa.me/94706920007?text=${encodeURIComponent(msg)}`); }
 
 async function addWastage() { 
     const token = await window.auth.currentUser.getIdToken();
     let n = document.getElementById('wasteItemName').value, q = parseFloat(document.getElementById('wasteQty').value), u = document.getElementById('wasteUnit').value; 
-    if(!n || !q) return alert("දත්ත ඇතුළත් කරන්න!"); 
     let itm = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); 
     if(!itm) return alert("භාණ්ඩය නැත!"); 
-    let qtyBase = (u === 'g') ? q / 1000 : q; 
-    if(confirm(`${n} වලින් ${q}${u} ක් ඉවත් කරනවාද?`)) { 
-        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(3); 
+    if(confirm("ඉවත් කරනවාද?")) { 
+        let qtyBase = (u === 'g') ? q / 1000 : q;
+        let ns = (parseFloat(itm.stock) - qtyBase).toFixed(2); 
         await fetch(`${BASE_URL}inventory/${itm.id}/stock.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(ns) }); 
-        let loss = -(parseFloat(itm.buy) * qtyBase); 
-        let now = new Date(); 
-        let formattedDate = now.toLocaleDateString('en-GB') + ", " + now.toLocaleTimeString('en-GB'); 
-        let wasteEntry = { bNo: "WASTAGE", date: formattedDate, name: n, qty: q + " " + u, total: 0, profit: loss }; 
+        let wasteEntry = { bNo: "WASTAGE", date: new Date().toLocaleString('en-GB'), name: n, qty: q + u, total: 0, profit: -(parseFloat(itm.buy) * qtyBase) }; 
         await fetch(`${BASE_URL}sales.json?auth=${token}`, { method: 'POST', body: JSON.stringify(wasteEntry) }); 
-        document.getElementById('wasteItemName').value = ""; document.getElementById('wasteQty').value = ""; fetchData(); 
+        fetchData(); 
     } 
 }
 
