@@ -96,22 +96,30 @@
             body { margin: 0; padding: 10px; }
         }
         
-        /* Receipt Specific CSS for Thermal Look */
+        /* Receipt Specific CSS for Thermal Look - Updated to Match Image */
         .receipt-box {
-            width: 300px; /* Adjust for thermal printer usually 58mm or 80mm */
+            width: 300px; 
             margin: 0 auto;
-            text-align: center;
-            font-family: 'Courier New', Courier, monospace;
-            border: 1px dashed #333;
-            padding: 10px;
+            font-family: 'Iskoola Pota', 'Abhaya Libre', 'Courier New', sans-serif; /* Sinhala friendly fonts */
+            padding: 5px;
+            color: #000;
         }
-        .receipt-header h2 { margin: 5px 0; font-size: 18px; }
-        .receipt-header p { margin: 2px 0; font-size: 12px; }
-        .receipt-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; border: none !important; }
-        .receipt-table th, .receipt-table td { border-bottom: 1px dashed #000 !important; border-top: none; border-left: none; border-right: none; padding: 5px 0; text-align: left; }
+        .receipt-header { text-align: center; margin-bottom: 10px; }
+        .receipt-header h2 { margin: 0; font-size: 18px; color: #1e6d30; font-weight: bold; } /* Green Header */
+        .receipt-header p { margin: 2px 0; font-size: 12px; font-weight: bold; }
+        
+        .bill-details { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; border-top: 1px solid #999; padding-top: 5px; font-weight: bold; }
+        
+        .receipt-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; border: none !important; }
+        .receipt-table th { border-bottom: 2px solid #000 !important; border-top: 2px solid #000 !important; padding: 5px 0; text-align: left; background: none !important; color: #000 !important; font-weight: bold; }
+        .receipt-table td { padding: 8px 0; border-bottom: 1px dashed #ccc !important; }
         .receipt-table .r-right { text-align: right; }
-        .receipt-total { margin-top: 10px; border-top: 2px solid #000; padding-top: 5px; }
-        .receipt-footer { margin-top: 15px; font-size: 11px; }
+        .receipt-table .r-center { text-align: center; }
+
+        .receipt-summary { margin-top: 10px; border-top: 2px solid #000; padding-top: 5px; font-size: 13px; font-weight: bold; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        
+        .receipt-footer { margin-top: 15px; font-size: 12px; text-align: center; font-weight: bold; border-top: 1px dashed #000; padding-top: 10px; }
     </style>
 </head>
 <body>
@@ -391,27 +399,37 @@
 <div id="receipt-print-area">
     <div class="receipt-box">
         <div class="receipt-header">
-            <h2 style="font-weight:bold;">ගැමි එළවළු</h2>
-            <p id="receiptDate"></p>
-            <p>Bill No: <span id="receiptBillNo"></span></p>
+            <h2>ගැමි එළවළු තොග කඩේ</h2>
+            <p>නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+        </div>
+        <div class="bill-details">
+            <span>බිල් අංකය: <span id="receiptBillNo"></span></span>
+            <span id="receiptDate"></span>
         </div>
         <table class="receipt-table">
             <thead>
                 <tr>
-                    <th>Item</th>
-                    <th class="r-right">Price</th>
-                    <th class="r-right">Qty</th>
-                    <th class="r-right">Amount</th>
+                    <th>භාණ්ඩය</th>
+                    <th class="r-center">මිල</th>
+                    <th class="r-center">ප්‍රමාණ</th>
+                    <th class="r-right">මුදල</th>
                 </tr>
             </thead>
             <tbody id="receiptBody"></tbody>
         </table>
-        <div class="receipt-total">
-            <h3 style="margin:5px 0; font-size:16px;">Total: <span id="receiptTotal"></span></h3>
+        <div class="receipt-summary">
+            <div class="summary-row">
+                <span>භාණ්ඩ ගණන:</span>
+                <span id="receiptItemCount">0</span>
+            </div>
+            <div class="summary-row" style="font-size:15px; border-bottom: 2px solid #000; padding-bottom: 5px;">
+                <span>මුළු එකතුව:</span>
+                <span>Rs. <span id="receiptTotal"></span></span>
+            </div>
         </div>
         <div class="receipt-footer">
-            <p style="margin-bottom:5px;">ස්තූතියි! නැවත එන්න.</p>
-            <p>Software by CGI Pro</p>
+            <p style="margin-bottom:5px;">ස්තූතියි, නැවත එන්න !</p>
+            <p style="font-size:10px; color:#666; margin:0;">Software by CGI Pro</p>
         </div>
     </div>
 </div>
@@ -654,7 +672,7 @@ function renderSales() {
     updateDashboard(totalRev, totalProf, filtered);
 }
 
-// Function to handle Reprinting Bill
+// Function to handle Reprinting Bill - UPDATED FOR NEW LAYOUT
 window.reprintBill = function(bNo) {
     if(!bNo || bNo === "WASTAGE") return;
 
@@ -666,6 +684,9 @@ window.reprintBill = function(bNo) {
     document.getElementById('receiptBillNo').innerText = bNo;
     document.getElementById('receiptDate').innerText = billItems[0].date;
     
+    // Set Item Count
+    document.getElementById('receiptItemCount').innerText = billItems.length;
+
     let totalBillAmount = 0;
     document.getElementById('receiptBody').innerHTML = billItems.map(item => {
         let amount = parseFloat(item.total);
@@ -673,14 +694,12 @@ window.reprintBill = function(bNo) {
         
         // Clean quantity display
         let rawQty = parseFloat(item.qty);
-        let unit = String(item.qty).replace(/[0-9.]/g, '').trim().toLowerCase(); // Normalize unit to lowercase
+        let unit = String(item.qty).replace(/[0-9.]/g, '').trim().toLowerCase(); 
         
         // Display Qty String
         let qtyDisplay = (unit === 'kg') ? rawQty.toFixed(3) + "kg" : item.qty;
 
         // Calculate Unit Price
-        // If unit is 'g', formula: (Amount / Qty) * 1000 to get Price per Kg
-        // If unit is anything else, formula: Amount / Qty to get Price per Item
         let unitPrice = 0;
         if (rawQty > 0) {
             if (unit === 'g') {
@@ -693,14 +712,14 @@ window.reprintBill = function(bNo) {
         return `
             <tr>
                 <td>${item.name}</td>
-                <td class="r-right">${unitPrice.toFixed(2)}</td>
-                <td class="r-right">${qtyDisplay}</td>
+                <td class="r-center">${unitPrice.toFixed(2)}</td>
+                <td class="r-center">${qtyDisplay}</td>
                 <td class="r-right">${amount.toFixed(2)}</td>
             </tr>
         `;
     }).join('');
 
-    document.getElementById('receiptTotal').innerText = "Rs. " + totalBillAmount.toFixed(2);
+    document.getElementById('receiptTotal').innerText = totalBillAmount.toFixed(2);
 
     // Trigger Print
     document.body.classList.add('printing-bill');
