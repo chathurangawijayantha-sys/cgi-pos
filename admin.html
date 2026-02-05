@@ -673,16 +673,27 @@ window.reprintBill = function(bNo) {
         
         // Clean quantity display
         let rawQty = parseFloat(item.qty);
-        let unit = String(item.qty).replace(/[0-9.]/g, '').trim();
-        let qtyDisplay = (unit.toLowerCase() === 'kg') ? rawQty.toFixed(3) + unit : rawQty + unit;
+        let unit = String(item.qty).replace(/[0-9.]/g, '').trim().toLowerCase(); // Normalize unit to lowercase
+        
+        // Display Qty String
+        let qtyDisplay = (unit === 'kg') ? rawQty.toFixed(3) + "kg" : item.qty;
 
-        // Calculate Unit Price (Total / Qty)
-        let unitPrice = (rawQty > 0) ? (amount / rawQty).toFixed(2) : "0.00";
+        // Calculate Unit Price
+        // If unit is 'g', formula: (Amount / Qty) * 1000 to get Price per Kg
+        // If unit is anything else, formula: Amount / Qty to get Price per Item
+        let unitPrice = 0;
+        if (rawQty > 0) {
+            if (unit === 'g') {
+                unitPrice = (amount / rawQty) * 1000;
+            } else {
+                unitPrice = amount / rawQty;
+            }
+        }
 
         return `
             <tr>
                 <td>${item.name}</td>
-                <td class="r-right">${unitPrice}</td>
+                <td class="r-right">${unitPrice.toFixed(2)}</td>
                 <td class="r-right">${qtyDisplay}</td>
                 <td class="r-right">${amount.toFixed(2)}</td>
             </tr>
