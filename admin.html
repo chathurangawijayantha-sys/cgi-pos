@@ -5,85 +5,373 @@
     <title>CGI Pro Admin - Ultimate System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* මෙහි ඔබගේ මුල්ම CSS මෝස්තර සියල්ල එලෙසම තිබිය යුතුය */
-        :root { --primary: #27ae60; --secondary: #8e44ad; --dark: #2c3e50; --light: #f4f7f6; --danger: #e74c3c; }
+        :root {
+            --primary: #27ae60;
+            --secondary: #8e44ad;
+            --dark: #2c3e50;
+            --light: #f4f7f6;
+            --danger: #e74c3c;
+        }
+
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: var(--light); }
         .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+        
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #ddd; }
+        .stat-card h3 { margin: 0; font-size: 12px; color: #7f8c8d; text-transform: uppercase; }
+        .stat-card h2 { margin: 10px 0 0; font-size: 22px; color: var(--dark); }
+        .card-rev { border-color: #3498db; }
+        .card-prof { border-color: var(--primary); }
+        .card-exp { border-color: var(--danger); }
+        .card-net { border-color: var(--secondary); }
+
+        .top-selling-section { background: #f1f8e9; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #c8e6c9; }
+        .top-selling-item { display: inline-block; background: var(--primary); color: white; padding: 6px 15px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; overflow-x: auto; }
         .tab-btn { padding: 12px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
+        
         .content { display: none; }
         .content.active { display: block; }
-        .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; align-items: flex-end; }
-        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        
+        .add-form, .wastage-form, .filter-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; align-items: flex-end; }
+
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; height: 40px; font-size: 13px; }
+        label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #555; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
-        th { background: #34495e; color: white; }
+        th { background: #34495e; color: white; font-size: 13px; }
+        .txt-right { text-align: right; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+        
+        .btn-group-action { display: flex; gap: 8px; height: 40px; }
+        .tab-btn-action { flex: 1; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; font-size: 12px; transition: 0.3s; }
+
+        .btn-whatsapp { background: #25D366; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        .btn-excel { background: #1D6F42; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        
+        .charts-flex { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; align-items: stretch; }
+        .chart-box { flex: 1; min-width: 320px; background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee; height: 380px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+
+        .cash-summary-box { background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #2196f3; }
+        .monthly-summary-box { margin: 30px 0; background: #fff8e1; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2e7d32; display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; color: white; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
+        .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+
         #billPrintArea { display: none; }
-        @media print { .no-print { display: none !important; } #billPrintArea { display: block !important; } }
+
+        @media print {
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button, input, select { display: none !important; }
+            .content { display: none !important; }
+            body.printing-bill #billPrintArea { display: block !important; margin: auto; }
+            table { width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
+            th, td { padding: 4px !important; border: 1px solid #000 !important; font-size: 12px !important; }
+        }
     </style>
 </head>
 <body>
-    <div id="login-screen" class="no-print"> </div>
 
-    <div class="container">
-        <h2 class="no-print">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
-        
-        <div class="dashboard-grid no-print">
-            <div class="stat-card"><h3>ආදායම</h3><h2 id="dispRev">Rs. 0.00</h2></div>
-            <div class="stat-card"><h3>ලාභය</h3><h2 id="dispGProfit">Rs. 0.00</h2></div>
-            <div class="stat-card"><h3>වියදම්</h3><h2 id="dispExp">Rs. 0.00</h2></div>
-            <div class="stat-card"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit">Rs. 0.00</h2></div>
-        </div>
+<div id="login-screen">
+    <div class="login-box">
+        <h3 style="color: #2e7d32; margin-top: 0;">CGI Pro Admin - Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email ලිපිනය">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">ඇතුළු වන්න</button>
+        <p id="loginError" style="color: red; font-size: 12px; margin-top: 10px; display: none;">වැරදි තොරතුරක්!</p>
+    </div>
+</div>
 
-        <div class="tabs no-print">
-            <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
-            <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
-            </div>
+<div class="container">
+    <h2 class="no-print" style="margin-bottom: 25px; color: var(--dark);">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
 
-        <div id="sales" class="content">
-            <div class="filter-section no-print">
-                <div class="grid-layout">
-                    <div>
-                        <label>බිල් අංකය (Reprint සඳහා):</label>
-                        <input type="number" id="reprintBillNo" placeholder="බිල් අංකය">
-                    </div>
-                    <div>
-                        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="printSpecificBill()">Reprint Bill 🖨️</button>
-                    </div>
+    <div class="dashboard-grid no-print">
+        <div class="stat-card card-rev"><h3>තෝරාගත් කාලයේ ආදායම</h3><h2 id="dispRev">Rs. 0.00</h2></div>
+        <div class="stat-card card-prof"><h3>තෝරාගත් කාලයේ ලාභය</h3><h2 id="dispGProfit">Rs. 0.00</h2></div>
+        <div class="stat-card card-exp"><h3>මුළු වියදම්</h3><h2 id="dispExp">Rs. 0.00</h2></div>
+        <div class="stat-card card-net"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit" style="color:var(--secondary);">Rs. 0.00</h2></div>
+    </div>
+
+    <div class="top-selling-section no-print">
+        <h4 style="margin:0 0 10px 0; color:#2e7d32;">වැඩිපුරම විකුණුනු භාණ්ඩ (Top 5):</h4>
+        <div id="topItemsList">දත්ත පූරණය වෙමින්...</div>
+    </div>
+    
+    <div class="tabs no-print">
+        <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
+        <button class="tab-btn" onclick="showTab('stockHist')">තොග ඉතිහාසය 📜</button>
+        <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
+        <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+        <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
+        <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
+        <button class="tab-btn" onclick="showTab('loyalty')">දීමනා & Loyalty 🎁</button>
+        <button class="tab-btn" style="background:#2980b9; color:white;" onclick="showTab('cashier')">කැෂියර් බැලන්ස් 🧾</button>
+        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
+    </div>
+
+    <div id="sales" class="content">
+        <div class="filter-section no-print">
+            <div class="grid-layout" style="grid-template-columns: 1fr 1fr 1fr auto;">
+                <div><label>වාර්තාව තෝරන්න:</label>
+                    <select id="reportFilter" onchange="renderSales()">
+                        <option value="all">සියලුම වාර්තා</option>
+                        <option value="today" selected>අද දින (Today)</option>
+                        <option value="month">මෙම මාසය</option>
+                        <option value="custom">වෙනත් දිනයක්</option>
+                    </select>
+                </div>
+                <div id="customDateDiv" style="display:none;"><label>දිනය:</label><input type="date" id="customDate" onchange="renderSales()"></div>
+                <div>
+                    <label>බිල් අංකය (Reprint සඳහා):</label>
+                    <input type="number" id="reprintBillNo" placeholder="බිල් අංකය">
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="printSpecificBill()">බිල Reprint කරන්න 🖨️</button>
                 </div>
             </div>
-            <table class="no-print">
-                <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>මුදල</th></tr></thead>
-                <tbody id="salesBody"></tbody>
-            </table>
         </div>
+        <div class="no-print" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <button class="btn-whatsapp" onclick="sendSalesReportToWhatsApp()">වාර්තාව WhatsApp කරන්න 🟢</button>
+            <button class="btn-excel" onclick="downloadExcel()">Sales Excel 📊</button>
+        </div>
+        <table class="no-print">
+            <thead><tr><th>බිල් අංකය</th><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th class="txt-right">මුදල</th><th class="txt-right">ලාභය</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="salesBody"></tbody>
+        </table>
+    </div>
 
-        <div id="billPrintArea">
-            <h3 style="text-align:center;">ගැමි එළවළු - බිල්පත</h3>
-            <p>බිල් අංකය: <span id="prBillNo"></span></p>
-            <table border="1" style="width:100%; border-collapse:collapse;">
-                <thead><tr><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මුදල</th></tr></thead>
-                <tbody id="prBillBody"></tbody>
-            </table>
-            <h4 style="text-align:right;">මුළු එකතුව: Rs. <span id="prTotal"></span></h4>
+    <div id="billPrintArea" style="text-align: center; width: 80mm; margin: auto; font-family: 'Segoe UI', sans-serif;">
+        <h3>ගැමි එළවළු කොළ කඩේ</h3>
+        <p>නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+        <hr>
+        <p>බිල් අංකය: <b id="prBillNo"></b> | දිනය: <span id="prBillDate"></span></p>
+        <hr>
+        <table style="width: 100%; border: none;">
+            <thead>
+                <tr><th style="text-align: left;">භාණ්ඩය</th><th>ප්‍රමාණ</th><th style="text-align: right;">මුදල</th></tr>
+            </thead>
+            <tbody id="prBillBody"></tbody>
+        </table>
+        <hr>
+        <h4 style="text-align: right;">මුළු එකතුව: Rs. <span id="prTotal"></span></h4>
+    </div>
+
+    <div id="stock" class="content active">
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
+                <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
+                <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
+                <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
+                <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
+                <div class="btn-group-action">
+                    <button class="tab-btn-action" style="background:var(--primary);" onclick="handleUpdate()">Update / Add</button>
+                    <button class="tab-btn-action" style="background:#1D6F42;" onclick="downloadTodayStockExcel()">Stock Excel 📊</button>
+                </div>
+            </div>
+        </div>
+        <table id="inventoryTable">
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
+            <tbody id="inventoryBody"></tbody>
+        </table>
+    </div>
+
+    <div id="stockHist" class="content">
+        <div class="filter-section no-print">
+            <h3 style="color:var(--primary); margin-top:0;">තොග ඇතුළත් කිරීමේ සාරාංශය</h3>
+            <input type="date" id="stockHistFilterDate" onchange="renderStockHistory()">
+        </div>
+        <table>
+            <thead><tr><th>දිනය & වේලාව</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මිල</th><th class="no-print">මකන්න</th></tr></thead>
+            <tbody id="stockHistBody"></tbody>
+        </table>
+    </div>
+
+    <div id="shortage" class="content">
+        <h3>තොග අඩු භාණ්ඩ</h3>
+        <table id="shortageTable">
+            <thead><tr><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>ඒකකය</th></tr></thead>
+            <tbody id="shortageBody"></tbody>
+        </table>
+    </div>
+
+    <div id="expenses" class="content">
+        <h3>වියදම් පාලනය</h3>
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <input type="text" id="expNote" placeholder="විස්තර">
+                <input type="number" id="expAmount" placeholder="මුදල">
+                <button class="tab-btn" onclick="addExpense()">එක් කරන්න</button>
+            </div>
+        </div>
+        <table id="expenseTable">
+            <thead><tr><th>දිනය</th><th>විස්තර</th><th>මුදල</th></tr></thead>
+            <tbody id="expenseBody"></tbody>
+        </table>
+    </div>
+
+    <div id="customers" class="content">
+        <h3>පාරිභෝගිකයන්</h3>
+        <table id="customerTable">
+            <thead><tr><th>නම</th><th>දුරකථනය</th><th>විස්තර</th></tr></thead>
+            <tbody id="customerBody"></tbody>
+        </table>
+    </div>
+
+    <div id="loyalty" class="content">
+        <h3> Loyalty 🎁</h3>
+        <table id="loyaltyTable">
+            <thead><tr><th>දිනය</th><th>පාරිභෝගිකයා</th><th>වට්ටම</th></tr></thead>
+            <tbody id="loyaltyBody"></tbody>
+        </table>
+    </div>
+
+    <div id="cashier" class="content">
+        <h3>කැෂියර් බැලන්ස්</h3>
+        <div class="cash-summary-box">
+            <h2 id="expectedCash">Rs. 0.00</h2>
         </div>
     </div>
 
-    <script>
-        // fetchData() ඇතුළු සියලුම JS ශ්‍රිත මෙහි තිබිය යුතුය.
-        // සර්වර් එරර් එක මග හැරීමට fetchData තුළ:
-        // const token = await user.getIdToken(true); භාවිතා කරන්න.
-        
-        function printSpecificBill() {
-            const bNo = document.getElementById('reprintBillNo').value;
-            if(!bNo) return alert("අංකයක් ඇතුළත් කරන්න");
-            // බිල්පත සොයා මුද්‍රණය කරන logic එක
-            window.print();
+    <div id="analytics" class="content">
+        <h3>විශ්ලේෂණය 📊</h3>
+        <div class="charts-flex">
+            <div class="chart-box"><canvas id="salesChart"></canvas></div>
+            <div class="chart-box"><canvas id="expensePieChart"></canvas></div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyB-KExZu3r71Z8KZsMzddNJ-i20Y6bptXY",
+        authDomain: "cgi-pos.firebaseapp.com",
+        databaseURL: "https://cgi-pos-default-rtdb.firebaseio.com/",
+        projectId: "cgi-pos",
+        storageBucket: "cgi-pos.firebasestorage.app",
+        messagingSenderId: "425200021707",
+        appId: "1:425200021707:web:c72bbeb221d8afa3deab4e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.handleLogin = function() {
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        signInWithEmailAndPassword(auth, email, pass).catch(() => {
+            document.getElementById('loginError').style.display = 'block';
+        });
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            fetchData();
         }
-    </script>
+    });
+
+    window.auth = auth;
+</script>
+
+<script>
+    const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
+    let inventory = [], salesList = [], expenses = [], customers = [], loyaltyRecords = [], stockHistory = [];
+
+    async function fetchData() {
+        const user = window.auth.currentUser;
+        const token = await user.getIdToken(true); // Forces token refresh to avoid 500 error
+
+        try {
+            const [invRes, salesRes, expRes, custRes, loyRes, histRes] = await Promise.all([
+                fetch(`${BASE_URL}inventory.json?auth=${token}`),
+                fetch(`${BASE_URL}sales.json?auth=${token}`),
+                fetch(`${BASE_URL}expenses.json?auth=${token}`),
+                fetch(`${BASE_URL}customers.json?auth=${token}`),
+                fetch(`${BASE_URL}loyalty.json?auth=${token}`),
+                fetch(`${BASE_URL}stock_history.json?auth=${token}`)
+            ]);
+            
+            inventory = await invRes.json() || {};
+            inventory = Object.keys(inventory).map(k => ({...inventory[k], id: k}));
+            
+            const salesData = await salesRes.json() || {};
+            salesList = Object.keys(salesData).map(k => ({...salesData[k], firebaseKey: k}));
+            
+            expenses = await expRes.json() || {};
+            expenses = Object.keys(expenses).map(k => ({...expenses[k], id: k}));
+
+            customers = await custRes.json() || {};
+            customers = Object.keys(customers).map(k => ({...customers[k], id: k}));
+
+            loyaltyRecords = await loyRes.json() || {};
+            loyaltyRecords = Object.keys(loyaltyRecords).map(k => ({...loyaltyRecords[k], id: k}));
+
+            stockHistory = await histRes.json() || {};
+            stockHistory = Object.keys(stockHistory).map(k => ({...stockHistory[k], id: k}));
+
+            renderInventory(); renderSales(); renderShortage();
+        } catch (e) { console.error(e); }
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function renderSales() {
+        const filter = document.getElementById('reportFilter').value;
+        const body = document.getElementById('salesBody');
+        body.innerHTML = salesList.map(s => `<tr><td>${s.bNo}</td><td>${s.date}</td><td>${s.name}</td><td>${s.qty}</td><td>${s.total}</td><td>${s.profit || 0}</td><td>❌</td></tr>`).join('');
+    }
+
+    function printSpecificBill() {
+        const billNo = document.getElementById('reprintBillNo').value;
+        if (!billNo) return alert("බිල් අංකයක් ඇතුළත් කරන්න!");
+
+        const items = salesList.filter(s => String(s.bNo) === String(billNo));
+        if (items.length === 0) return alert("බිල හමුවුනේ නැත!");
+
+        document.getElementById('prBillNo').innerText = billNo;
+        document.getElementById('prBillDate').innerText = items[0].date;
+        let total = 0;
+        document.getElementById('prBillBody').innerHTML = items.map(i => {
+            total += parseFloat(i.total);
+            return `<tr><td>${i.name}</td><td>${i.qty}</td><td style="text-align:right;">${i.total}</td></tr>`;
+        }).join('');
+        document.getElementById('prTotal').innerText = total.toFixed(2);
+
+        document.body.classList.add('printing-bill');
+        window.print();
+        document.body.classList.remove('printing-bill');
+    }
+
+    function renderInventory() {
+        document.getElementById('inventoryBody').innerHTML = inventory.map(i => `<tr><td>Img</td><td>${i.name}</td><td>${i.unit}</td><td>${i.buy}</td><td>${i.sell}</td><td>0%</td><td>${i.stock}</td><td>✎</td></tr>`).join('');
+    }
+
+    function renderShortage() {
+        document.getElementById('shortageBody').innerHTML = inventory.filter(i => parseFloat(i.stock) < 2).map(i => `<tr><td>${i.name}</td><td>${i.stock}</td><td>${i.unit}</td></tr>`).join('');
+    }
+
+    function checkEx(val) {
+        let item = inventory.find(i => i.name === val);
+        if(item) {
+            document.getElementById('itemUnit').value = item.unit;
+            document.getElementById('buyPrice').value = item.buy;
+            document.getElementById('sellPrice').value = item.sell;
+        }
+    }
+</script>
 </body>
 </html>
