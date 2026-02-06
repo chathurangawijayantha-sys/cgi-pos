@@ -629,56 +629,102 @@
         }
     };
 
-    window.viewOldBill = function(bill) {
-        const modal = document.getElementById('viewBillModal');
-        const area = document.getElementById('reprintArea');
-        const itemsList = bill.items || [];
-        
-        let itemsHtml = itemsList.map(i => 
-            `<div style="display:flex; justify-content:space-between; font-size:12px; border-bottom:1px dashed #eee; padding:4px 0;">
-                <span>${i.n} <small>(${i.dq})</small></span>
-                <span>${i.t.toFixed(2)}</span>
-            </div>`
-        ).join('');
+// =========================================================
+// අලුත් කළ PDF සහ Re-print කොටස (Screenshot එකට ගැලපෙන ලෙස)
+// =========================================================
 
-        area.innerHTML = `
-            <div style="text-align:center; font-family:sans-serif;">
-                <h3 style="margin:0; color:#2e7d32;">ගැමි එළවළු</h3>
-                <p style="font-size:10px; margin:2px;">POS Reprint</p>
-                <hr style="border:0.5px solid #333;">
-                <div style="text-align:left; font-size:11px;">
-                    <b>Bill No: ${bill.billNo}</b><br>
-                    Date: ${bill.date}
+window.viewOldBill = function(bill) {
+    const modal = document.getElementById('viewBillModal');
+    const area = document.getElementById('reprintArea');
+    const itemsList = bill.items || [];
+    
+    // බිලෙහි ඇති භාණ්ඩ ලිස්ට් එක Table Rows ලෙස සැකසීම
+    let itemsRows = itemsList.map(i => 
+        `<tr>
+            <td style="padding:4px 0; text-align:left;">${i.n}</td>
+            <td style="padding:4px 0; text-align:center;">${i.up}</td>
+            <td style="padding:4px 0; text-align:center;">${i.dq}</td>
+            <td style="padding:4px 0; text-align:right;">${i.t.toFixed(2)}</td>
+        </tr>`
+    ).join('');
+
+    // Screenshot එකේ ඇති ආකාරයටම HTML සැකසීම
+    area.innerHTML = `
+        <div style="font-family: 'Segoe UI', sans-serif; padding: 10px; color: #000;">
+            
+            <div style="text-align:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:#2e7d32; font-size:18px;">ගැමි එළවළු කොළ කඩේ</h3>
+                <p style="margin:2px 0; font-size:11px; font-weight:bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:5px;">
+                <span>බිල් අංකය: ${bill.billNo}</span>
+                <span>${bill.date}</span>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead>
+                    <tr style="border-bottom:2px solid #000;">
+                        <th style="text-align:left; padding:5px 0;">භාණ්ඩය</th>
+                        <th style="text-align:center; padding:5px 0;">මිල</th>
+                        <th style="text-align:center; padding:5px 0;">ප්‍රමාණ</th>
+                        <th style="text-align:right; padding:5px 0;">මුදල</th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom:2px solid #000;">
+                    ${itemsRows}
+                </tbody>
+            </table>
+
+            <div style="margin-top:10px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span>භාණ්ඩ ගණන:</span>
+                    <span>${itemsList.length}</span>
                 </div>
-                <div style="margin-top:10px;">${itemsHtml}</div>
-                <hr style="border:0.5px solid #333;">
-                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;">
-                    <span>Total:</span>
+                
+                <div style="border-top:1px dashed #000; padding-top:5px; display:flex; justify-content:space-between; font-weight:bold; font-size:15px;">
+                    <span>මුළු එකතුව:</span>
                     <span>Rs. ${bill.total}</span>
                 </div>
+                
+                <p style="text-align:right; font-size:10px; margin:2px 0; color:#555;">(රිසිට් පතකි)</p>
+                
+                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:red; font-size:14px;">
+                        <span>ගෙවූ/ඉතිරි මුදල:</span>
+                        <span>Rs. ${bill.total} (Cash)</span>
+                    </div>
+                </div>
             </div>
-        `;
-        
-        document.getElementById('historyModal').style.display = 'none';
-        modal.style.display = 'block';
-    };
 
-    window.downloadPDF = function() {
-        const element = document.getElementById('reprintArea');
-        const opt = {
-            margin:       2,
-            filename:     'Bill_Copy.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: [80, 150], orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(element).save();
+            <div style="text-align:center; margin-top:15px; border-top:1px dashed #000; padding-top:10px;">
+                <p style="margin:0; font-weight:bold; font-size:12px;">ස්තුතියියි, නැවත එන්න !</p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('historyModal').style.display = 'none';
+    modal.style.display = 'block';
+};
+
+// PDF එක High Quality ගන්න Function එක
+window.downloadPDF = function() {
+    const element = document.getElementById('reprintArea');
+    const bNo = document.querySelector('#reprintArea h3').nextElementSibling.innerText.includes('53') ? "Bill" : "Receipt"; 
+    
+    // PDF සැකසුම් (ප්‍රමාණය සහ ගුණාත්මකභාවය වැඩි කර ඇත)
+    const opt = {
+        margin:       [0, 0, 0, 0], // වටේ ඉඩ (Margins) ඉවත් කිරීම
+        filename:     `Bill_Copy.pdf`,
+        image:        { type: 'jpeg', quality: 1 }, // උපරිම Quality
+        html2canvas:  { scale: 3, useCORS: true, letterRendering: true }, // Scale 3 මගින් අකුරු බොඳ වීම වලකී
+        jsPDF:        { unit: 'mm', format: [80, 200], orientation: 'portrait' } // 80mm පළල රෝල් එකක් ලෙස
     };
     
-    window.closeHistory = function() {
-        document.getElementById('historyModal').style.display='none';
-        document.getElementById('overlay').style.display='none';
-    }
+    // PDF එක සේව් කිරීම
+    html2pdf().set(opt).from(element).save();
+};
 </script>
 </body>
 </html>
+
