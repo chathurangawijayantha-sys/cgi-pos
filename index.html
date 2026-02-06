@@ -633,72 +633,72 @@
 // අලුත් කළ PDF සහ Re-print කොටස (Screenshot එකට ගැලපෙන ලෙස)
 // =========================================================
 
+// =========================================================
+// 58mm ප්‍රමාණයට සැකසූ PDF සහ Re-print කොටස
+// =========================================================
+
 window.viewOldBill = function(bill) {
     const modal = document.getElementById('viewBillModal');
     const area = document.getElementById('reprintArea');
     const itemsList = bill.items || [];
     
-    // බිලෙහි ඇති භාණ්ඩ ලිස්ට් එක Table Rows ලෙස සැකසීම
+    // භාණ්ඩ ලිස්ට් එක (58mm නිසා අකුරු 9px/10px වලට අඩු කළෙමි)
     let itemsRows = itemsList.map(i => 
         `<tr>
-            <td style="padding:4px 0; text-align:left;">${i.n}</td>
-            <td style="padding:4px 0; text-align:center;">${i.up}</td>
-            <td style="padding:4px 0; text-align:center;">${i.dq}</td>
-            <td style="padding:4px 0; text-align:right;">${i.t.toFixed(2)}</td>
+            <td style="padding:2px 0; text-align:left;">${i.n}</td>
+            <td style="padding:2px 0; text-align:center;">${i.up}</td>
+            <td style="padding:2px 0; text-align:center;">${i.dq}</td>
+            <td style="padding:2px 0; text-align:right;">${i.t.toFixed(2)}</td>
         </tr>`
     ).join('');
 
-    // Screenshot එකේ ඇති ආකාරයටම HTML සැකසීම
     area.innerHTML = `
-        <div style="font-family: 'Segoe UI', sans-serif; padding: 10px; color: #000;">
+        <div style="font-family: 'Segoe UI', sans-serif; padding: 5px; color: #000; width: 100%;">
             
-            <div style="text-align:center; margin-bottom:10px;">
-                <h3 style="margin:0; color:#2e7d32; font-size:18px;">ගැමි එළවළු කොළ කඩේ</h3>
-                <p style="margin:2px 0; font-size:11px; font-weight:bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+            <div style="text-align:center; margin-bottom:5px;">
+                <h3 style="margin:0; color:#2e7d32; font-size:14px;">ගැමි එළවළු කොළ කඩේ</h3>
+                <p style="margin:2px 0; font-size:9px; font-weight:bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
             </div>
 
-            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:5px;">
-                <span>බිල් අංකය: ${bill.billNo}</span>
-                <span>${bill.date}</span>
-            </div>
+            <div style="display:flex; justify-content:space-between; font-size:9px; font-weight:bold; border-bottom:1px solid #000; padding-bottom:3px; margin-bottom:3px;">
+                <span>අංකය: ${bill.billNo}</span>
+                <span>${bill.date.split(',')[0]}</span> </div>
 
-            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <table style="width:100%; border-collapse:collapse; font-size:9px;">
                 <thead>
-                    <tr style="border-bottom:2px solid #000;">
-                        <th style="text-align:left; padding:5px 0;">භාණ්ඩය</th>
-                        <th style="text-align:center; padding:5px 0;">මිල</th>
-                        <th style="text-align:center; padding:5px 0;">ප්‍රමාණ</th>
-                        <th style="text-align:right; padding:5px 0;">මුදල</th>
+                    <tr style="border-bottom:1px solid #000;">
+                        <th style="text-align:left; padding:3px 0; width:35%;">භාණ්ඩය</th>
+                        <th style="text-align:center; padding:3px 0; width:20%;">මිල</th>
+                        <th style="text-align:center; padding:3px 0; width:20%;">ප්‍රමාණ</th>
+                        <th style="text-align:right; padding:3px 0; width:25%;">මුදල</th>
                     </tr>
                 </thead>
-                <tbody style="border-bottom:2px solid #000;">
+                <tbody style="border-bottom:1px solid #000;">
                     ${itemsRows}
                 </tbody>
             </table>
 
-            <div style="margin-top:10px; font-size:13px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <div style="margin-top:5px; font-size:10px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
                     <span>භාණ්ඩ ගණන:</span>
                     <span>${itemsList.length}</span>
                 </div>
                 
-                <div style="border-top:1px dashed #000; padding-top:5px; display:flex; justify-content:space-between; font-weight:bold; font-size:15px;">
+                <div style="border-top:1px dashed #000; padding-top:3px; display:flex; justify-content:space-between; font-weight:bold; font-size:12px;">
                     <span>මුළු එකතුව:</span>
                     <span>Rs. ${bill.total}</span>
                 </div>
                 
-                <p style="text-align:right; font-size:10px; margin:2px 0; color:#555;">(රිසිට් පතකි)</p>
-                
-                <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px;">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:red; font-size:14px;">
-                        <span>ගෙවූ/ඉතිරි මුදල:</span>
-                        <span>Rs. ${bill.total} (Cash)</span>
+                <div style="margin-top:5px; border-top:1px solid #eee; padding-top:2px;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:red; font-size:10px;">
+                        <span>ගෙවීම:</span>
+                        <span>Rs. ${bill.total}</span>
                     </div>
                 </div>
             </div>
 
-            <div style="text-align:center; margin-top:15px; border-top:1px dashed #000; padding-top:10px;">
-                <p style="margin:0; font-weight:bold; font-size:12px;">ස්තුතියියි, නැවත එන්න !</p>
+            <div style="text-align:center; margin-top:10px; border-top:1px dashed #000; padding-top:5px;">
+                <p style="margin:0; font-weight:bold; font-size:9px;">ස්තුතියියි, නැවත එන්න !</p>
             </div>
         </div>
     `;
@@ -707,24 +707,23 @@ window.viewOldBill = function(bill) {
     modal.style.display = 'block';
 };
 
-// PDF එක High Quality ගන්න Function එක
+// 58mm PDF සෑදීමේ Function එක
 window.downloadPDF = function() {
     const element = document.getElementById('reprintArea');
-    const bNo = document.querySelector('#reprintArea h3').nextElementSibling.innerText.includes('53') ? "Bill" : "Receipt"; 
     
-    // PDF සැකසුම් (ප්‍රමාණය සහ ගුණාත්මකභාවය වැඩි කර ඇත)
     const opt = {
-        margin:       [0, 0, 0, 0], // වටේ ඉඩ (Margins) ඉවත් කිරීම
-        filename:     `Bill_Copy.pdf`,
-        image:        { type: 'jpeg', quality: 1 }, // උපරිම Quality
-        html2canvas:  { scale: 3, useCORS: true, letterRendering: true }, // Scale 3 මගින් අකුරු බොඳ වීම වලකී
-        jsPDF:        { unit: 'mm', format: [80, 200], orientation: 'portrait' } // 80mm පළල රෝල් එකක් ලෙස
+        margin:       [0, 0, 0, 0], 
+        filename:     `Bill_58mm.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 3, useCORS: true },
+        // 58mm පළල සහ උස (උස 200mm දමා ඇත, අවශ්‍ය නම් වැඩි කළ හැක)
+        jsPDF:        { unit: 'mm', format: [58, 200], orientation: 'portrait' } 
     };
     
-    // PDF එක සේව් කිරීම
     html2pdf().set(opt).from(element).save();
 };
 </script>
 </body>
 </html>
+
 
