@@ -62,64 +62,45 @@
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 
-        /* Stock Summary Print Specific Style */
-        #stockPrintArea { display: none; }
-        
         /* Receipt / Bill Print Style */
         #receipt-print-area { display: none; }
+        #stockPrintArea { display: none; }
 
         @media print {
-            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button { display: none !important; }
+            .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button, #inventorySearch { display: none !important; }
             .content { display: none !important; }
             
-            /* If printing Stock History */
-            #stockHist { display: block !important; }
-            #stockPrintArea { display: block !important; margin-top: 20px; border: 1px solid #000; padding: 10px; }
-            
-            /* If printing Receipt */
+            /* Stock History Print Specific */
+            body.printing-stock #stockHist { display: block !important; }
+            body.printing-stock #stockPrintArea { display: block !important; margin-top: 10px; }
+            body.printing-stock table.no-print { display: none !important; }
+
+            /* Receipt Print Specific */
             body.printing-bill * { visibility: hidden; }
             body.printing-bill #receipt-print-area, body.printing-bill #receipt-print-area * { visibility: visible; }
-            body.printing-bill #receipt-print-area { 
-                display: block !important; 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                margin: 0; 
-                padding: 10px;
-                color: black;
-            }
-            body.printing-bill #stockHist, body.printing-bill #stockPrintArea { display: none !important; }
+            body.printing-bill #receipt-print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
             
-            table { width: 100% !important; border: 1px solid #000 !important; }
-            th { background: #eee !important; color: #000 !important; }
-            body { margin: 0; padding: 10px; }
+            table { width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
+            th { background: #eee !important; color: #000 !important; border: 1px solid #000 !important; }
+            td { border: 1px solid #000 !important; }
         }
         
-        /* Receipt Specific CSS for Thermal Look - Updated to Match Image */
-        .receipt-box {
-            width: 300px; 
-            margin: 0 auto;
-            font-family: 'Iskoola Pota', 'Abhaya Libre', 'Courier New', sans-serif; /* Sinhala friendly fonts */
-            padding: 5px;
-            color: #000;
-        }
+        /* Receipt Look */
+        .receipt-box { width: 300px; margin: 0 auto; font-family: 'Iskoola Pota', sans-serif; padding: 5px; color: #000; }
         .receipt-header { text-align: center; margin-bottom: 10px; }
-        .receipt-header h2 { margin: 0; font-size: 18px; color: #1e6d30; font-weight: bold; } /* Green Header */
+        .receipt-header h2 { margin: 0; font-size: 18px; color: #1e6d30; font-weight: bold; }
         .receipt-header p { margin: 2px 0; font-size: 12px; font-weight: bold; }
-        
         .bill-details { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; border-top: 1px solid #999; padding-top: 5px; font-weight: bold; }
-        
-        .receipt-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px; border: none !important; }
-        .receipt-table th { border-bottom: 2px solid #000 !important; border-top: 2px solid #000 !important; padding: 5px 0; text-align: left; background: none !important; color: #000 !important; font-weight: bold; }
+        .receipt-table { width: 100%; border-collapse: collapse; font-size: 12px; border: none !important; }
+        .receipt-table th { border-bottom: 2px solid #000 !important; border-top: 2px solid #000 !important; padding: 5px 0; text-align: left; background: none !important; color: #000 !important; }
         .receipt-table td { padding: 8px 0; border-bottom: 1px dashed #ccc !important; }
-        .receipt-table .r-right { text-align: right; }
-        .receipt-table .r-center { text-align: center; }
-
         .receipt-summary { margin-top: 10px; border-top: 2px solid #000; padding-top: 5px; font-size: 13px; font-weight: bold; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        
         .receipt-footer { margin-top: 15px; font-size: 12px; text-align: center; font-weight: bold; border-top: 1px dashed #000; padding-top: 10px; }
+
+        /* Stock Summary Specific Look (Match with Receipt) */
+        .stock-summary-header { text-align: center; margin-bottom: 15px; }
+        .stock-summary-header h2 { color: #1e6d30; margin: 0; }
     </style>
 </head>
 <body>
@@ -201,30 +182,37 @@
                     <input type="date" id="stockHistFilterDate" onchange="renderStockHistory()">
                 </div>
                 <div style="display:flex; align-items:flex-end;">
-                    <button class="tab-btn" style="background:#34495e; color:white; width:100%;" onclick="window.print()">වාර්තාව මුද්‍රණය (Print)</button>
+                    <button class="tab-btn" style="background:#34495e; color:white; width:100%;" onclick="printStockSummary()">වාර්තාව මුද්‍රණය (Print)</button>
                 </div>
             </div>
         </div>
 
         <div id="stockPrintArea">
-            <h2 style="text-align:center; margin-bottom:5px;">තොග ඇතුළත් කිරීමේ සාරාංශය</h2>
-            <p style="text-align:center; margin:0 0 15px 0;">දිනය: <span id="printDateLabel"></span></p>
+            <div class="stock-summary-header">
+                <h2 style="font-size:22px;">ගැමි එළවළු කොළ කඩේ</h2>
+                <p style="font-size:12px; font-weight:bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
+                <h3 style="margin-top:15px; font-size:16px; text-decoration: underline;">තොග ඇතුළත් කිරීමේ සාරාංශය</h3>
+                <p style="margin-top:5px; font-size:13px;">දිනය: <span id="printDateLabel"></span></p>
+            </div>
             <table border="1" style="width:100%; border-collapse:collapse;">
                 <thead>
                     <tr>
-                        <th>භාණ්ඩය</th>
-                        <th style="text-align:right;">මුළු ප්‍රමාණය</th>
-                        <th style="text-align:right;">වැයවූ මුදල (Rs.)</th>
+                        <th style="padding:10px;">භාණ්ඩය</th>
+                        <th style="text-align:right; padding:10px;">මුළු ප්‍රමාණය</th>
+                        <th style="text-align:right; padding:10px;">වැයවූ මුදල (Rs.)</th>
                     </tr>
                 </thead>
                 <tbody id="stockSummaryBody"></tbody>
                 <tfoot>
                     <tr style="background:#f2f2f2; font-weight:bold;">
-                        <td>මුළු එකතුව</td>
-                        <td colspan="2" id="stockSummaryTotal" style="text-align:right;">Rs. 0.00</td>
+                        <td style="padding:10px;">මුළු එකතුව</td>
+                        <td colspan="2" id="stockSummaryTotal" style="text-align:right; padding:10px;">Rs. 0.00</td>
                     </tr>
                 </tfoot>
             </table>
+            <div style="margin-top:30px; text-align:center; font-size:12px;">
+                <p>ස්තූතියි! - Software by CGI Pro</p>
+            </div>
         </div>
 
         <h3 class="no-print" style="color:var(--primary); margin-top:20px;">විස්තරාත්මක ඉතිහාසය 📜</h3>
@@ -410,9 +398,9 @@
             <thead>
                 <tr>
                     <th>භාණ්ඩය</th>
-                    <th class="r-center">මිල</th>
-                    <th class="r-center">ප්‍රමාණ</th>
-                    <th class="r-right">මුදල</th>
+                    <th style="text-align:center;">මිල</th>
+                    <th style="text-align:center;">ප්‍රමාණ</th>
+                    <th style="text-align:right;">මුදල</th>
                 </tr>
             </thead>
             <tbody id="receiptBody"></tbody>
@@ -470,7 +458,7 @@
         }
     });
 
-    window.auth = auth; // Global access for fetchData
+    window.auth = auth;
 </script>
 
 <script>
@@ -523,7 +511,6 @@ function renderStockHistory() {
     const histBody = document.getElementById('stockHistBody');
     const summaryBody = document.getElementById('stockSummaryBody');
     
-    // Set default date if not selected
     if (!filterDate) {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('stockHistFilterDate').value = today;
@@ -531,15 +518,13 @@ function renderStockHistory() {
 
     const selectedDateStr = document.getElementById('stockHistFilterDate').value;
     const [y, m, d] = selectedDateStr.split('-');
-    const formattedFilterDate = `${d}/${m}/${y}`; // Matches DD/MM/YYYY
+    const formattedFilterDate = `${d}/${m}/${y}`;
 
     document.getElementById('printDateLabel').innerText = formattedFilterDate;
 
-    // Detailed Table rendering (Filtered by date)
     const filteredHist = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedFilterDate);
     histBody.innerHTML = filteredHist.map(h => `<tr><td>${h.dateTime}</td><td><strong>${h.name}</strong></td><td>${h.addedQty} ${h.unit}</td><td>Rs. ${parseFloat(h.buyPrice).toFixed(2)}</td><td class="no-print"><button onclick="delStockHist('${h.id}')" style="color:red; border:none; background:none; cursor:pointer;">❌</button></td></tr>`).reverse().join('');
 
-    // Summary Calculation for Print
     const summaryMap = {};
     let grandTotalCost = 0;
 
@@ -556,14 +541,21 @@ function renderStockHistory() {
 
     summaryBody.innerHTML = Object.keys(summaryMap).map(name => `
         <tr>
-            <td>${name}</td>
-            <td style="text-align:right;">${summaryMap[name].qty.toFixed(2)} ${summaryMap[name].unit}</td>
-            <td style="text-align:right;">${summaryMap[name].cost.toFixed(2)}</td>
+            <td style="padding:10px;">${name}</td>
+            <td style="text-align:right; padding:10px;">${summaryMap[name].qty.toFixed(2)} ${summaryMap[name].unit}</td>
+            <td style="text-align:right; padding:10px;">${summaryMap[name].cost.toFixed(2)}</td>
         </tr>
     `).join('');
 
     document.getElementById('stockSummaryTotal').innerText = "Rs. " + grandTotalCost.toFixed(2);
 }
+
+// Special Function to Print Stock Summary
+window.printStockSummary = function() {
+    document.body.classList.add('printing-stock');
+    window.print();
+    document.body.classList.remove('printing-stock');
+};
 
 async function delStockHist(id) {
     const token = await window.auth.currentUser.getIdToken();
@@ -644,84 +636,37 @@ function renderSales() {
     let totalRev = 0, totalProf = 0;
     document.getElementById('salesBody').innerHTML = filtered.map(s => {
         let revVal = parseFloat(s.total || 0);
-        
         let profVal = parseFloat(s.profit || 0);
-        if (s.bNo !== "WASTAGE" && profVal === 0) {
-            // බඩඉරිඟු සඳහා විශේෂ හඳුනාගැනීමක් සහිත සෙවුම
-            let searchName = s.name.toLowerCase();
-            if (searchName.includes("බඩඉරිඟු")) searchName = "බඩඉරිඟු";
-            
-            let itm = inventory.find(i => i.name.toLowerCase() === searchName);
-            if (itm) {
-                let rawQty = parseFloat(s.qty) || 0;
-                let unitPart = String(s.qty).replace(/[0-9.]/g, '').trim().toLowerCase();
-                let qtyBase = (unitPart === 'g') ? rawQty / 1000 : rawQty;
-                profVal = revVal - (parseFloat(itm.buy) * qtyBase);
-            }
-        }
-
         totalRev += revVal; totalProf += profVal;
         let isWaste = (s.bNo === "WASTAGE"), rowStyle = isWaste ? "background-color: #fff3e0; color: #e65100; font-weight: bold;" : "";
         let rawQtyDisplay = parseFloat(s.qty), unitPartDisplay = String(s.qty).replace(/[0-9.]/g, '').trim(), formattedQty = (unitPartDisplay.toLowerCase() === 'kg') ? rawQtyDisplay.toFixed(3) + " " + unitPartDisplay : rawQtyDisplay + " " + unitPartDisplay;
-        
-        // Modified Bill No to be Clickable
         let billNoDisplay = isWaste ? s.bNo : `<strong onclick="reprintBill('${s.bNo}')" style="cursor:pointer; color:#2980b9; text-decoration:underline;" title="බිල මුද්‍රණය කරන්න">${s.bNo}</strong>`;
-
         return `<tr style="${rowStyle}"><td>${billNoDisplay}</td><td>${s.date}</td><td>${s.name}</td><td>${formattedQty}</td><td class="txt-right">${revVal.toFixed(2)}</td><td class="txt-right">${profVal.toFixed(2)}</td><td class="no-print"><button onclick="deleteSingleSale('${s.firebaseKey}')" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">❌</button></td></tr>`;
     }).reverse().join('');
     updateDashboard(totalRev, totalProf, filtered);
 }
 
-// Function to handle Reprinting Bill - UPDATED FOR NEW LAYOUT
 window.reprintBill = function(bNo) {
     if(!bNo || bNo === "WASTAGE") return;
-
-    // Filter items belonging to this Bill No
     const billItems = salesList.filter(s => s.bNo === bNo);
     if(billItems.length === 0) return alert("බිල්පත සොයාගත නොහැක!");
 
-    // Populate Receipt Template
     document.getElementById('receiptBillNo').innerText = bNo;
     document.getElementById('receiptDate').innerText = billItems[0].date;
-    
-    // Set Item Count
     document.getElementById('receiptItemCount').innerText = billItems.length;
 
     let totalBillAmount = 0;
     document.getElementById('receiptBody').innerHTML = billItems.map(item => {
         let amount = parseFloat(item.total);
         totalBillAmount += amount;
-        
-        // Clean quantity display
         let rawQty = parseFloat(item.qty);
         let unit = String(item.qty).replace(/[0-9.]/g, '').trim().toLowerCase(); 
-        
-        // Display Qty String
         let qtyDisplay = (unit === 'kg') ? rawQty.toFixed(3) + "kg" : item.qty;
-
-        // Calculate Unit Price
-        let unitPrice = 0;
-        if (rawQty > 0) {
-            if (unit === 'g') {
-                unitPrice = (amount / rawQty) * 1000;
-            } else {
-                unitPrice = amount / rawQty;
-            }
-        }
-
-        return `
-            <tr>
-                <td>${item.name}</td>
-                <td class="r-center">${unitPrice.toFixed(2)}</td>
-                <td class="r-center">${qtyDisplay}</td>
-                <td class="r-right">${amount.toFixed(2)}</td>
-            </tr>
-        `;
+        let unitPrice = rawQty > 0 ? (unit === 'g' ? (amount / rawQty) * 1000 : amount / rawQty) : 0;
+        return `<tr><td>${item.name}</td><td style="text-align:center;">${unitPrice.toFixed(2)}</td><td style="text-align:center;">${qtyDisplay}</td><td style="text-align:right;">${amount.toFixed(2)}</td></tr>`;
     }).join('');
 
     document.getElementById('receiptTotal').innerText = totalBillAmount.toFixed(2);
-
-    // Trigger Print
     document.body.classList.add('printing-bill');
     window.print();
     document.body.classList.remove('printing-bill');
@@ -765,24 +710,17 @@ async function handleUpdate() {
     const token = await window.auth.currentUser.getIdToken();
     let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
     if(!n) return;
-    
     let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
     let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
-    
-    // Update Inventory
     await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
-    
-    // Add to Stock History if stock was added
     if(st > 0) {
         let now = new Date();
         let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
         let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: formattedDT };
         await fetch(`${BASE_URL}stock_history.json?auth=${token}`, { method: 'POST', body: JSON.stringify(histEntry) });
     }
-
     addedToday.push({ "භාණ්ඩයේ නම": n, "විකුණුම් මිල (Rs)": s.toFixed(2) }); 
-    fetchData(); 
-    clearForm();
+    fetchData(); clearForm();
 }
 
 function downloadTodayStockExcel() {
@@ -817,15 +755,12 @@ function renderAnalytics() {
         const sDateParts = s.date.split(',')[0].trim().split('/');
         let sDate = new Date(sDateParts[2], sDateParts[1]-1, sDateParts[0]);
         const sDateISO = sDate.toLocaleDateString('en-GB');
-        
         let include = false;
         if(period === 'all') include = true;
         else if(period === 'today') include = sDateISO === now.toLocaleDateString('en-GB');
         else if(period === 'custom') include = sDateISO === targetISO;
-        else if(period === 'weekly') {
-            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
-            include = sDate >= lastWeek;
-        } else if(period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
+        else if(period === 'weekly') { const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7); include = sDate >= lastWeek; }
+        else if(period === 'monthly') include = sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear();
         else if(period === 'yearly') include = sDate.getFullYear() === now.getFullYear();
 
         if (include) {
@@ -840,17 +775,13 @@ function renderAnalytics() {
         const eDateISO = eDate.toLocaleDateString('en-GB');
         const monthYear = eDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         monthlyExp[monthYear] = (monthlyExp[monthYear] || 0) + parseFloat(e.amount);
-        
         let include = false;
         if(period === 'all') include = true;
         else if(period === 'today') include = eDateISO === now.toLocaleDateString('en-GB');
         else if(period === 'custom') include = eDateISO === targetISO;
-        else if(period === 'weekly') {
-            const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7);
-            include = eDate >= lastWeek;
-        } else if(period === 'monthly') include = eDate.getMonth() === now.getMonth() && eDate.getFullYear() === now.getFullYear();
+        else if(period === 'weekly') { const lastWeek = new Date(); lastWeek.setDate(now.getDate() - 7); include = eDate >= lastWeek; }
+        else if(period === 'monthly') include = eDate.getMonth() === now.getMonth() && eDate.getFullYear() === now.getFullYear();
         else if(period === 'yearly') include = eDate.getFullYear() === now.getFullYear();
-
         if(include) expStats[e.note] = (expStats[e.note] || 0) + parseFloat(e.amount);
     });
 
@@ -924,4 +855,3 @@ function downloadExcel() { const ws = XLSX.utils.json_to_sheet(salesList); const
 </script>
 </body>
 </html>
-
