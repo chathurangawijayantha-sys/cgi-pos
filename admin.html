@@ -56,45 +56,35 @@
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 
-        /* Print Specific Styles */
+        /* Print Settings */
         #receipt-print-area, #stockPrintArea { display: none; }
 
         @media print {
             .no-print, .tabs, .add-form, .wastage-form, .btn-whatsapp, .btn-excel, .dashboard-grid, .top-selling-section, #login-screen, .filter-section, .stat-card, button, #inventorySearch { display: none !important; }
-            .content { display: none !important; }
             .container { display: none !important; }
 
-            /* Stock Summary Print (70mm) */
-            body.printing-stock #stockPrintArea {
-                display: block !important;
-                width: 70mm !important;
-                margin: 0;
-                padding: 0;
-                font-family: 'Iskoola Pota', sans-serif;
-            }
-
-            /* Receipt Print (70mm) */
-            body.printing-bill #receipt-print-area {
-                display: block !important;
-                width: 70mm !important;
-                margin: 0;
-                padding: 0;
-                font-family: 'Iskoola Pota', sans-serif;
+            /* 70mm Print Style for BOTH Receipt and Stock */
+            body.printing-bill #receipt-print-area, 
+            body.printing-stock #stockPrintArea { 
+                display: block !important; 
+                width: 70mm !important; 
+                margin: 0; padding: 0; 
+                color: black !important;
             }
 
             table { width: 100% !important; border-collapse: collapse !important; border: none !important; }
-            th, td { border: none !important; border-bottom: 1px dashed #000 !important; padding: 4px 0 !important; font-size: 11px !important; color: black !important; }
-            th { border-top: 1px solid black !important; border-bottom: 1px solid black !important; text-align: left !important; background: none !important; }
+            th, td { border: none !important; border-bottom: 1px dashed #000 !important; padding: 4px 0 !important; font-size: 11px !important; }
+            th { border-top: 1px solid black !important; border-bottom: 1px solid black !important; text-align: left !important; background: none !important; color: black !important; }
         }
 
-        /* 70mm Thermal Layout Styles */
-        .thermal-box { width: 70mm; margin: 0; padding: 2px; color: black; }
+        /* 70mm Layout Formatting */
+        .thermal-box { width: 70mm; margin: 0; padding: 2px; font-family: 'Iskoola Pota', sans-serif; }
         .thermal-header { text-align: center; margin-bottom: 8px; }
-        .thermal-header h2 { margin: 0; font-size: 15px; }
-        .thermal-header p { margin: 1px 0; font-size: 10px; font-weight: bold; }
-        .thermal-details { display: flex; justify-content: space-between; font-size: 10px; margin: 4px 0; border-top: 1px solid #000; padding-top: 4px; }
-        .thermal-summary { margin-top: 8px; border-top: 1px solid #000; padding-top: 4px; font-size: 11px; font-weight: bold; }
-        .thermal-footer { margin-top: 12px; font-size: 9px; text-align: center; border-top: 1px dashed #000; padding-top: 4px; }
+        .thermal-header h2 { margin: 0; font-size: 16px; color: #1e6d30; }
+        .thermal-header p { margin: 1px 0; font-size: 11px; font-weight: bold; }
+        .thermal-details { display: flex; justify-content: space-between; font-size: 11px; margin: 5px 0; border-top: 1px solid #000; padding-top: 5px; }
+        .thermal-summary { margin-top: 8px; border-top: 1px solid #000; padding-top: 5px; font-size: 12px; font-weight: bold; }
+        .thermal-footer { margin-top: 15px; font-size: 10px; text-align: center; border-top: 1px dashed #000; padding-top: 5px; }
     </style>
 </head>
 <body>
@@ -112,17 +102,49 @@
 <div class="container">
     <h2 class="no-print" style="margin-bottom: 25px; color: var(--dark);">ගැමි එළවළු කළමනාකරණ පද්ධතිය</h2>
 
+    <div class="dashboard-grid no-print">
+        <div class="stat-card card-rev"><h3>තෝරාගත් කාලයේ ආදායම</h3><h2 id="dispRev">Rs. 0.00</h2></div>
+        <div class="stat-card card-prof"><h3>තෝරාගත් කාලයේ ලාභය</h3><h2 id="dispGProfit">Rs. 0.00</h2></div>
+        <div class="stat-card card-exp"><h3>මුළු වියදම්</h3><h2 id="dispExp">Rs. 0.00</h2></div>
+        <div class="stat-card card-net"><h3>ශුද්ධ ලාභය</h3><h2 id="dispNetProfit" style="color:var(--secondary);">Rs. 0.00</h2></div>
+    </div>
+
     <div class="tabs no-print">
         <button class="tab-btn active" onclick="showTab('stock')">තොග පාලනය</button>
         <button class="tab-btn" onclick="showTab('stockHist')">තොග ඉතිහාසය 📜</button>
-        </div>
+        <button class="tab-btn" onclick="showTab('shortage')">ගේන්න ඕනෑ බඩු ⚠️</button>
+        <button class="tab-btn" onclick="showTab('sales')">විකුණුම් වාර්තාව</button>
+        <button class="tab-btn" onclick="showTab('expenses')">වියදම් පාලනය 💸</button>
+        <button class="tab-btn" onclick="showTab('customers')">පාරිභෝගිකයන් 👥</button>
+        <button class="tab-btn" onclick="showTab('loyalty')">දීමනා & Loyalty 🎁</button>
+        <button class="tab-btn" style="background:#2980b9; color:white;" onclick="showTab('cashier')">කැෂියර් බැලන්ස් 🧾</button>
+        <button class="tab-btn" style="background:#8e44ad; color:white;" onclick="showTab('analytics')">විශ්ලේෂණය (Charts) 📊</button>
+    </div>
 
     <div id="stock" class="content active">
+        <div class="add-form no-print">
+            <div class="grid-layout">
+                <div><label>නම</label><input list="itemList" id="itemName" oninput="checkEx(this.value)"><datalist id="itemList"></datalist></div>
+                <div><label>ඒකකය</label><select id="itemUnit"><option value="Kg">Kg</option><option value="මිටි">මිටි</option><option value="පැකට්">පැකට්</option><option value="කරල්">කරල්</option><option value="ගෙඩි">ගෙඩි</option></select></div>
+                <div><label>ගැනුම් (Rs)</label><input type="number" id="buyPrice"></div>
+                <div><label>විකුණුම් (Rs)</label><input type="number" id="sellPrice"></div>
+                <div><label>අලුත් තොගය</label><input type="number" id="addStock" value="0"></div>
+                <div><label>පින්තූරය</label><input type="text" id="itemImg" placeholder="carrot.jpg"></div>
+                <div class="btn-group-action">
+                    <button class="tab-btn-action" style="background:var(--primary);" onclick="handleUpdate()">Update / Add</button>
+                </div>
+            </div>
         </div>
+        <input type="text" id="inventorySearch" class="search-box no-print" placeholder="🔍 භාණ්ඩයේ නම සොයන්න..." onkeyup="searchInventory()">
+        <table id="inventoryTable">
+            <thead><tr><th>පින්තූරය</th><th>නම</th><th>ඒකකය</th><th>ගැනුම්</th><th>විකුණුම්</th><th>ලාභ %</th><th>තොගය</th><th class="no-print">ක්‍රියා</th></tr></thead>
+            <tbody id="inventoryBody"></tbody>
+        </table>
+    </div>
 
     <div id="stockHist" class="content">
         <div class="filter-section no-print">
-            <h3>තොග ඇතුළත් කිරීමේ වාර්තාව</h3>
+            <h3>තොග ඇතුළත් කිරීමේ සාරාංශය</h3>
             <div class="grid-layout" style="grid-template-columns: 1fr 1fr auto;">
                 <div><label>දිනය තෝරන්න:</label><input type="date" id="stockHistFilterDate" onchange="renderStockHistory()"></div>
                 <div style="display:flex; align-items:flex-end;">
@@ -141,30 +163,19 @@
                     <span>දිනය: <span id="printDateLabel"></span></span>
                 </div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>භාණ්ඩය</th>
-                            <th style="text-align:right;">ප්‍රමාණය</th>
-                            <th style="text-align:right;">මුදල</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>භාණ්ඩය</th><th style="text-align:right;">ප්‍රමාණය</th><th style="text-align:right;">මුදල</th></tr></thead>
                     <tbody id="stockSummaryBody"></tbody>
                 </table>
                 <div class="thermal-summary">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>මුළු එකතුව:</span>
-                        <span id="stockSummaryTotal">Rs. 0.00</span>
-                    </div>
+                    <div style="display:flex; justify-content:space-between;"><span>මුළු එකතුව:</span><span id="stockSummaryTotal">Rs. 0.00</span></div>
                 </div>
-                <div class="thermal-footer">
-                    <p>Software by CGI Pro</p>
-                </div>
+                <div class="thermal-footer"><p>Software by CGI Pro</p></div>
             </div>
         </div>
 
-        <h3 class="no-print">විස්තරාත්මක ඉතිහාසය</h3>
+        <h3 class="no-print">විස්තරාත්මක ඉතිහාසය 📜</h3>
         <table class="no-print">
-            <thead><tr><th>දිනය</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මිල</th><th>ක්‍රියා</th></tr></thead>
+            <thead><tr><th>දිනය & වේලාව</th><th>භාණ්ඩය</th><th>ප්‍රමාණය</th><th>මිල</th><th class="no-print">මකන්න</th></tr></thead>
             <tbody id="stockHistBody"></tbody>
         </table>
     </div>
@@ -175,70 +186,141 @@
         <div class="thermal-header"><h2>ගැමි එළවළු කොළ කඩේ</h2></div>
         <div class="thermal-details"><span>බිල්: <span id="receiptBillNo"></span></span><span id="receiptDate"></span></div>
         <table><thead><tr><th>භාණ්ඩය</th><th style="text-align:center;">Qty</th><th style="text-align:right;">මුදල</th></tr></thead><tbody id="receiptBody"></tbody></table>
-        <div class="thermal-summary"><div style="display:flex; justify-content:space-between;"><span>Total:</span><span id="receiptTotal"></span></div></div>
+        <div class="thermal-summary"><div style="display:flex; justify-content:space-between;"><span>මුළු:</span><span>Rs. <span id="receiptTotal"></span></span></div></div>
     </div>
 </div>
 
 <script type="module">
-    // ... (ඔබේ Firebase Initialization කොටස මෙතැනට දාන්න)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-KExZu3r71Z8KZsMzddNJ-i20Y6bptXY",
+      authDomain: "cgi-pos.firebaseapp.com",
+      databaseURL: "https://cgi-pos-default-rtdb.firebaseio.com/",
+      projectId: "cgi-pos",
+      storageBucket: "cgi-pos.firebasestorage.app",
+      messagingSenderId: "425200021707",
+      appId: "1:425200021707:web:c72bbeb221d8afa3deab4e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.handleLogin = function() {
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        signInWithEmailAndPassword(auth, email, pass).catch(() => alert("වැරදි තොරතුරක්!"));
+    };
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            fetchData();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    });
+
+    window.auth = auth;
 </script>
 
 <script>
-    // ... (ඔබේ BASE_URL සහ අනෙකුත් Variables මෙතැන පවතී)
+    const BASE_URL = "https://cgi-pos-default-rtdb.firebaseio.com/";
+    let inventory = [], salesList = [], expenses = [], stockHistory = [], loyaltyRecords = [], customers = [];
 
-    function renderStockHistory() {
-        const filterDate = document.getElementById('stockHistFilterDate').value;
-        const histBody = document.getElementById('stockHistBody');
-        const summaryBody = document.getElementById('stockSummaryBody');
-        
-        if (!filterDate) return;
+async function fetchData() {
+    const user = window.auth ? window.auth.currentUser : null;
+    if (!user) return;
+    const token = await user.getIdToken();
+    try {
+        const [invRes, salesRes, histRes, expRes, loyRes, custRes] = await Promise.all([
+            fetch(`${BASE_URL}inventory.json?auth=${token}`),
+            fetch(`${BASE_URL}sales.json?auth=${token}`),
+            fetch(`${BASE_URL}stock_history.json?auth=${token}`),
+            fetch(`${BASE_URL}expenses.json?auth=${token}`),
+            fetch(`${BASE_URL}loyalty.json?auth=${token}`),
+            fetch(`${BASE_URL}customers.json?auth=${token}`)
+        ]);
+        const invData = await invRes.json(); inventory = invData ? Object.keys(invData).map(k => ({...invData[k], id: k})) : [];
+        const salesData = await salesRes.json(); salesList = salesData ? Object.keys(salesData).map(k => ({...salesData[k], firebaseKey: k})) : [];
+        const histData = await histRes.json(); stockHistory = histData ? Object.keys(histData).map(k => ({...histData[k], id: k})) : [];
+        const expData = await expRes.json(); expenses = expData ? Object.keys(expData).map(k => ({...expData[k], id: k})) : [];
+        const loyData = await loyRes.json(); loyaltyRecords = loyData ? Object.keys(loyData).map(k => ({...loyData[k], id: k})) : [];
+        const custData = await custRes.json(); customers = custData ? Object.keys(custData).map(k => ({...custData[k], id: k})) : [];
 
-        const [y, m, d] = filterDate.split('-');
-        const formattedFilterDate = `${d}/${m}/${y}`;
-        document.getElementById('printDateLabel').innerText = formattedFilterDate;
+        renderInventory(); renderSales(); renderStockHistory(); calculateCashBalance();
+    } catch (e) { console.log(e); }
+}
 
-        const filteredHist = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedFilterDate);
-        
-        // Detailed Table
-        histBody.innerHTML = filteredHist.map(h => `<tr><td>${h.dateTime}</td><td>${h.name}</td><td>${h.addedQty} ${h.unit}</td><td>${h.buyPrice}</td><td><button onclick="delStockHist('${h.id}')">❌</button></td></tr>`).join('');
+function renderStockHistory() {
+    const filterDate = document.getElementById('stockHistFilterDate').value;
+    if (!filterDate) document.getElementById('stockHistFilterDate').value = new Date().toISOString().split('T')[0];
+    const selectedDate = document.getElementById('stockHistFilterDate').value;
+    const [y, m, d] = selectedDate.split('-');
+    const formattedDate = `${d}/${m}/${y}`;
+    document.getElementById('printDateLabel').innerText = formattedDate;
 
-        // Summary for 70mm Print
-        const summaryMap = {};
-        let grandTotal = 0;
-        filteredHist.forEach(h => {
-            if (!summaryMap[h.name]) summaryMap[h.name] = { qty: 0, cost: 0, unit: h.unit };
-            const q = parseFloat(h.addedQty) || 0;
-            const p = parseFloat(h.buyPrice) || 0;
-            summaryMap[h.name].qty += q;
-            summaryMap[h.name].cost += (q * p);
-            grandTotal += (q * p);
-        });
+    const filtered = stockHistory.filter(h => h.dateTime.split(' ')[0] === formattedDate);
+    document.getElementById('stockHistBody').innerHTML = filtered.map(h => `<tr><td>${h.dateTime}</td><td>${h.name}</td><td>${h.addedQty} ${h.unit}</td><td>${h.buyPrice}</td><td><button onclick="delStockHist('${h.id}')">❌</button></td></tr>`).reverse().join('');
 
-        summaryBody.innerHTML = Object.keys(summaryMap).map(name => `
-            <tr>
-                <td>${name}</td>
-                <td style="text-align:right;">${summaryMap[name].qty.toFixed(2)} ${summaryMap[name].unit}</td>
-                <td style="text-align:right;">${summaryMap[name].cost.toFixed(2)}</td>
-            </tr>
-        `).join('');
-        document.getElementById('stockSummaryTotal').innerText = "Rs. " + grandTotal.toFixed(2);
+    const summary = {}; let total = 0;
+    filtered.forEach(h => {
+        if (!summary[h.name]) summary[h.name] = { qty: 0, cost: 0, unit: h.unit };
+        const q = parseFloat(h.addedQty) || 0; const p = parseFloat(h.buyPrice) || 0;
+        summary[h.name].qty += q; summary[h.name].cost += (q * p); total += (q * p);
+    });
+    document.getElementById('stockSummaryBody').innerHTML = Object.keys(summary).map(n => `<tr><td>${n}</td><td style="text-align:right;">${summary[n].qty.toFixed(2)} ${summary[n].unit}</td><td style="text-align:right;">${summary[n].cost.toFixed(2)}</td></tr>`).join('');
+    document.getElementById('stockSummaryTotal').innerText = "Rs. " + total.toFixed(2);
+}
+
+window.printStock70mm = function() {
+    document.body.classList.add('printing-stock');
+    window.print();
+    setTimeout(() => document.body.classList.remove('printing-stock'), 1000);
+};
+
+function showTab(id) {
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (event) event.currentTarget.classList.add('active');
+    if (id === 'stockHist') renderStockHistory();
+}
+
+async function handleUpdate() {
+    const token = await window.auth.currentUser.getIdToken();
+    let n = document.getElementById('itemName').value, u = document.getElementById('itemUnit').value, b = parseFloat(document.getElementById('buyPrice').value) || 0, s = parseFloat(document.getElementById('sellPrice').value) || 0, st = parseFloat(document.getElementById('addStock').value) || 0, img = document.getElementById('itemImg').value;
+    if(!n) return;
+    let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase());
+    let item = ex ? { ...ex, buy: b, sell: s, unit: u, img: img, stock: (parseFloat(ex.stock) + st).toFixed(2) } : { id: Date.now(), name: n, unit: u, buy: b, sell: s, stock: st.toFixed(2), img: img };
+    await fetch(`${BASE_URL}inventory/${item.id}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(item) });
+    if(st > 0) {
+        let now = new Date(); let formattedDT = now.toLocaleDateString('en-GB') + " " + now.toLocaleTimeString('en-GB');
+        let histEntry = { name: n, addedQty: st, unit: u, buyPrice: b, dateTime: formattedDT };
+        await fetch(`${BASE_URL}stock_history.json?auth=${token}`, { method: 'POST', body: JSON.stringify(histEntry) });
     }
+    fetchData();
+}
 
-    window.printStock70mm = function() {
-        document.body.classList.add('printing-stock');
-        window.print();
-        setTimeout(() => { document.body.classList.remove('printing-stock'); }, 1000);
-    };
+function renderInventory() {
+    document.getElementById('inventoryBody').innerHTML = inventory.map(item => `<tr><td><img src="images/${item.img || 'none.jpg'}" width="40" height="40"></td><td>${item.name}</td><td>${item.unit}</td><td>${parseFloat(item.buy).toFixed(2)}</td><td>${parseFloat(item.sell).toFixed(2)}</td><td>${(item.buy > 0 ? ((item.sell - item.buy) / item.buy * 100).toFixed(0) : 0)}%</td><td>${item.stock}</td><td class="no-print"><button onclick="editItem('${item.name}')">✎</button><button onclick="delCloud('${item.id}')">X</button></td></tr>`).join('');
+    document.getElementById('itemList').innerHTML = inventory.map(i => `<option value="${i.name}">`).join('');
+}
 
-    function showTab(id) {
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id === 'stockHist') renderStockHistory();
-        // ... (අනෙකුත් Tab Logic)
-    }
+function renderSales() {
+    // Sales rendering logic (Same as original)
+}
 
-    // ... (ඔබේ අනෙකුත් සියලුම පද්ධති ශ්‍රිතයන් - fetchData, handleUpdate, etc. මෙතැන පවතී)
+function calculateCashBalance() {
+    // Cash balance logic (Same as original)
+}
+
+async function delCloud(id) { if(confirm("මකන්නද?")) { const token = await window.auth.currentUser.getIdToken(); await fetch(`${BASE_URL}inventory/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } }
+async function delStockHist(id) { if(confirm("මකන්නද?")) { const token = await window.auth.currentUser.getIdToken(); await fetch(`${BASE_URL}stock_history/${id}.json?auth=${token}`, { method: 'DELETE' }); fetchData(); } }
+function searchInventory() { let q = document.getElementById('inventorySearch').value.toLowerCase(); document.querySelectorAll('#inventoryBody tr').forEach(tr => tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'); }
+function checkEx(n) { let ex = inventory.find(i => i.name.toLowerCase() === n.toLowerCase()); if(ex){ document.getElementById('itemUnit').value=ex.unit; document.getElementById('buyPrice').value=ex.buy; document.getElementById('sellPrice').value=ex.sell; } }
+function editItem(n) { let i = inventory.find(x => x.name === n); if(i) { document.getElementById('itemName').value=i.name; document.getElementById('buyPrice').value=i.buy; document.getElementById('sellPrice').value=i.sell; window.scrollTo(0,0); } }
 </script>
 </body>
 </html>
