@@ -43,7 +43,6 @@
         .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 300px; text-align: center; color: #333; }
         .login-box input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 
-        /* නව History Modal Styles */
         #historyModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:10px; box-shadow:0 0 30px rgba(0,0,0,0.3); z-index:200; width: 320px; max-height: 80vh; overflow-y: auto; }
         #viewBillModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; z-index:210; width: 300px; padding:15px; box-shadow:0 0 50px rgba(0,0,0,0.5); border-radius: 10px; }
 
@@ -364,6 +363,19 @@
                     <h4>තම්බපු බඩඉරිඟු</h4><div class="price-tag">Rs. 120</div><div class="stock-tag">තොග: ${stock}</div>
                     ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
                 </div>`;
+            } else if(p.name === "පොල්") {
+                const coconutTypes = [
+                    { n: "ලොකු පොල්", p: 220, img: "coconut-l.jpg" },
+                    { n: "මධ්‍යම පොල්", p: 200, img: "coconut-m.jpg" },
+                    { n: "පොඩි පොල්", p: 180, img: "coconut-s.jpg" }
+                ];
+                coconutTypes.forEach(type => {
+                    html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', '${type.n}', ${type.p})">
+                        <img src="images/${type.img}" onerror="this.src='https://via.placeholder.com/100'">
+                        <h4>${type.n}</h4><div class="price-tag">Rs. ${type.p}</div><div class="stock-tag">තොග: ${stock}</div>
+                        ${isOut ? '<div class="out-of-stock-label">තොග අවසන්!</div>' : ''}
+                    </div>`;
+                });
             } else {
                 html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}')">
                     <img src="images/${p.img}" onerror="this.src='https://via.placeholder.com/100'">
@@ -390,6 +402,10 @@
             uSel.value = "main"; uSel.disabled = true;
             document.getElementById('uDisp').innerText = "ඒකකය: කරල්";
             document.getElementById('pricePreview').innerHTML = `කරලක මිල: <b>Rs. ${tempPrice}</b>`;
+        } else if(tempDispName.includes("පොල්")) {
+            uSel.value = "main"; uSel.disabled = true;
+            document.getElementById('uDisp').innerText = "ඒකකය: ගෙඩි";
+            document.getElementById('pricePreview').innerHTML = `ගෙඩියක මිල: <b>Rs. ${tempPrice}</b>`;
         } else if(tempItem.unit === "Kg") {
             uSel.value = "g"; uSel.disabled = false;
             document.getElementById('uDisp').innerText = "ඒකකය: Kg";
@@ -451,7 +467,7 @@
             if(d > parseFloat(tempItem.stock)) return alert("තොග මදි!");
             await updateStock(tempItem.id, d, 'sub');
             let t = (u==='g') ? (tempPrice/1000)*q : tempPrice*q;
-            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (u === 'g' ? 'g' : (tempItem.unit || ''));
+            let ul = (tempDispName.includes("බඩඉරිඟු")) ? "කරල්" : (tempDispName.includes("පොල්") ? "ගෙඩි" : (u === 'g' ? 'g' : (tempItem.unit || '')));
             cart.push({ id: tempItem.id, n: tempDispName, up: tempPrice, buy: tempItem.buy || 0, dq: q + " " + ul, t: t, d: d });
         }
         localStorage.setItem('active_cart', JSON.stringify(cart));
@@ -524,10 +540,6 @@
     }
     document.getElementById('bNoDisplay').innerText = Math.floor(1000 + Math.random() * 9000);
 
-    // ==========================================
-    // UPDATED FUNCTIONS FOR HISTORY & PDF
-    // ==========================================
-
     window.finalizeBillAndPrint = async function(shouldPrint) {
         if(cart.length === 0) return;
         isCompletingBill = true;
@@ -539,7 +551,6 @@
         const formattedDate = new Date().toLocaleString('en-GB'); 
         const totalAmount = document.getElementById('gTot').innerText;
 
-        // 1. SAVE TO HISTORY (Cloud)
         if(navigator.onLine && window.auth && window.auth.currentUser) {
             try {
                 const token = await window.auth.currentUser.getIdToken(true);
@@ -557,7 +568,6 @@
             } catch(e) { console.log("History Save Error", e); }
         }
 
-        // 2. SAVE SALES DATA (Original Logic)
         const saveSale = async (entry) => {
             if (navigator.onLine) {
                 try {
@@ -576,7 +586,6 @@
             await saveSale(entry);
         }
 
-        // 3. PRINT & RESET
         if(shouldPrint) { 
             window.print(); 
             setTimeout(() => { resetSystemAfterBill(); document.querySelector('.btn-print').innerText = btnText; }, 1000); 
@@ -629,22 +638,6 @@
         }
     };
 
-// =========================================================
-// අලුත් කළ PDF සහ Re-print කොටස (Screenshot එකට ගැලපෙන ලෙස)
-// =========================================================
-
-// =========================================================
-// 58mm ප්‍රමාණයට සැකසූ PDF සහ Re-print කොටස
-// =========================================================
-
-// =========================================================
-// 58mm PDF නිවැරදි කිරීම (දකුණු පස කැපීම වැළැක්වීමට)
-// =========================================================
-
-// =========================================================
-// 70mm ප්‍රමාණයට සැකසූ PDF (දෙපැත්තෙන් Margins සහිතව)
-// =========================================================
-
 window.viewOldBill = function(bill) {
     const modal = document.getElementById('viewBillModal');
     const area = document.getElementById('reprintArea');
@@ -653,29 +646,22 @@ window.viewOldBill = function(bill) {
     let itemsRows = itemsList.map(i => 
         `<tr>
             <td style="padding:3px 0; text-align:left; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:80px;">${i.n}</td>
-            
             <td style="padding:3px 0; text-align:center;">${i.up}</td>
-            
             <td style="padding:3px 0; text-align:center; font-size:9px;">${i.dq}</td> 
-            
             <td style="padding:3px 0; text-align:right;">${i.t.toFixed(2)}</td>
         </tr>`
     ).join('');
 
-    // --- වැදගත්: පළල 60mm ලෙස දැමීම (70mm කොළය මැදට වදින්න) ---
     area.innerHTML = `
         <div style="width: 60mm; margin: 0 auto; font-family: 'Segoe UI', sans-serif; color: #000; padding: 2px;">
-            
             <div style="text-align:center; margin-bottom:8px;">
                 <h3 style="margin:0; color:#2e7d32; font-size:13px;">ගැමි එළවළු කොළ කඩේ</h3>
                 <p style="margin:2px 0; font-size:9px; font-weight:bold;">නො. 53, කළුතර පාර, බණ්ඩාරගම</p>
             </div>
-
             <div style="display:flex; justify-content:space-between; font-size:10px; border-bottom:1px solid #000; padding-bottom:4px; margin-bottom:4px;">
                 <span>අංකය: ${bill.billNo}</span>
                 <span>${bill.date.split(',')[0]}</span>
             </div>
-
             <table style="width:100%; border-collapse:collapse; font-size:10px; table-layout: fixed;">
                 <thead>
                     <tr style="border-bottom:1px solid #000;">
@@ -689,13 +675,11 @@ window.viewOldBill = function(bill) {
                     ${itemsRows}
                 </tbody>
             </table>
-
             <div style="margin-top:6px; font-size:11px;">
                 <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:12px; margin-top:5px;">
                     <span>එකතුව:</span>
                     <span>Rs. ${bill.total}</span>
                 </div>
-                
                  <div style="margin-top:3px; padding-top:2px;">
                     <div style="display:flex; justify-content:space-between; font-weight:bold; color:red; font-size:10px;">
                         <span>ගෙවීම:</span>
@@ -703,39 +687,26 @@ window.viewOldBill = function(bill) {
                     </div>
                 </div>
             </div>
-
             <div style="text-align:center; margin-top:10px; border-top:1px dashed #000; padding-top:5px;">
                 <p style="margin:0; font-weight:bold; font-size:9px;">ස්තුතියි, නැවත එන්න !</p>
             </div>
         </div>
     `;
-    
     document.getElementById('historyModal').style.display = 'none';
     modal.style.display = 'block';
 };
 
 window.downloadPDF = function() {
     const element = document.getElementById('reprintArea');
-    
-    // 70mm PDF සැකසුම්
     const opt = {
         margin:       0, 
-        filename:     `Bill_70mm.pdf`,
+        filename:      `Bill_70mm.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 4, useCORS: true },
-        // පළල 70mm ලෙස සකසා ඇත
         jsPDF:        { unit: 'mm', format: [70, 200], orientation: 'portrait' } 
     };
-    
     html2pdf().set(opt).from(element).save();
 };
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
