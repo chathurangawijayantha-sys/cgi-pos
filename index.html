@@ -365,9 +365,9 @@
                 </div>`;
             } else if(p.name === "පොල්") {
                 const coconutTypes = [
-                    { n: "ලොකු පොල්", p: 220, img: "coconut-l.jpg" },
-                    { n: "මධ්‍යම පොල්", p: 200, img: "coconut-l.jpg" },
-                    { n: "පොඩි පොල්", p: 180, img: "coconut-l.jpg" }
+                    { n: "ලොකු පොල්", p: 210, img: "coconut-l.jpg" },
+                    { n: "මධ්‍යම පොල්", p: 190, img: "coconut-l.jpg" },
+                    { n: "පොඩි පොල්", p: 170, img: "coconut-l.jpg" }
                 ];
                 coconutTypes.forEach(type => {
                     html += `<div class="item-card ${isOut ? 'out-of-stock' : ''}" onclick="openM('${p.id}', '${type.n}', ${type.p})">
@@ -710,4 +710,5 @@ window.downloadPDF = function() {
 </script>
 </body>
 </html>
+
 
